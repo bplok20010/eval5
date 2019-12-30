@@ -1,0 +1,29 @@
+{
+    "name": "evaljs2",
+    "version": "1.0.0",
+    "description": "A JavaScript interpreter written in JavaScript",
+    "main": "lib/index.js",
+    "module": "esm/index.js",
+    "scripts": {
+        "start": "transform-es src -d lib -c -w",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/bplok20010/evaljs2.git"
+    },
+    "keywords": [],
+    "author": "nobo.zhou@foxmail.com",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/bplok20010/evaljs2/issues"
+    },
+    "homepage": "https://github.com/bplok20010/evaljs2#readme",
+    "devDependencies": {
+        "packez": "^3.1.0",
+        "transform-es": "^4.6.5"
+    },
+    "dependencies": {
+        "acorn": "^7.1.0"
+    }
+}
