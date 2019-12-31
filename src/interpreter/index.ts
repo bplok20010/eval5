@@ -113,12 +113,10 @@ export default class Interpreter {
             SwitchStatement: this.switchStatement
         };
 
-        const closure = (
-            typeHandlers[node.type] ||
+        const closure = (typeHandlers[node.type] ||
             function() {
                 console.warn("Not implemented yet: " + node.type);
-            }
-        )(node);
+            })(node);
 
         return closure;
     }
@@ -166,11 +164,11 @@ export default class Interpreter {
         return () => {
             const obj = objectGetter();
             let key = propertyGetter();
-            //处理 function.length
+            // function.length
             if (obj.$isFunction && key === "length") {
                 key = "$length";
             }
-            //处理 function.name
+            // function.name
             if (obj.$isFunction && key === "name") {
                 key = "$name";
             }
@@ -180,7 +178,19 @@ export default class Interpreter {
     thisExpressionHandler = () => {
         return () => this.currentThis;
     };
-    sequenceExpressionHandler = () => {};
+    sequenceExpressionHandler = (node: Node) => {
+        const expressions = node.expressions.map(item => this.create(item));
+
+        return () => {
+            let result;
+
+            expressions.forEach(expression => {
+                result = expression();
+            });
+
+            return result;
+        };
+    };
     literalHandler = (node: Node) => {
         return () => {
             return node.value;
@@ -192,9 +202,6 @@ export default class Interpreter {
         };
     };
     assignmentExpressionHandler = (node: Node) => {
-        function setter(context, name, value): void {
-            context[name] = value;
-        }
         const contextGetter = this.createNodeContextGetter(node.left);
         const nameGetter = this.createAssignmentNameGetter(node.left);
         const rightValueGetter = this.create(node.right);
@@ -248,7 +255,9 @@ export default class Interpreter {
                     );
             }
 
-            setter(context, name, value);
+            context[name] = value;
+
+            return value;
         };
     };
     functionDeclarationHandler = () => {};
