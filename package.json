@@ -6,7 +6,7 @@
     "module": "esm/index.js",
     "scripts": {
         "start": "transform-es src -d lib -c -w",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "node test/index.js"
     },
     "repository": {
         "type": "git",
@@ -25,5 +25,14 @@
     },
     "dependencies": {
         "acorn": "^7.1.0"
-    }
+    },
+    "browserslist": [
+        ">=0.2%",
+        "not dead",
+        "not op_mini all",
+        "not Android 4.4.3-4.4.4",
+        "not ios_saf < 10",
+        "not Chrome < 50",
+        "firefox ESR"
+    ]
 }
