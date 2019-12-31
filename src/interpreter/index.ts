@@ -124,7 +124,27 @@ export default class Interpreter {
     binaryExpressionHandler = () => {};
     logicalExpressionHandler = () => {};
     unaryExpressionHandler = () => {};
-    updateExpressionHandler = () => {};
+    updateExpressionHandler = (node: Node) => {
+        const objectGetter = this.createObjectGetter(node.argument);
+        const nameGetter = this.createNameGetter(node.argument);
+        return () => {
+            const obj = objectGetter();
+            const name = nameGetter();
+
+            let result;
+
+            switch (node.operator) {
+                case "++":
+                    result = node.prefix ? ++obj[name] : obj[name]++;
+                    break;
+                case "--":
+                    result = node.prefix ? --obj[name] : obj[name]--;
+                    break;
+            }
+
+            return result;
+        };
+    };
     objectExpressionHandler = (node: Node) => {
         //todo: get/set
         const items: {
@@ -160,10 +180,10 @@ export default class Interpreter {
     newExpressionHandler = () => {};
     memberExpressionHandler = (node: Node) => {
         var objectGetter = this.create(node.object);
-        var propertyGetter = this.createMemberExpressionPropertyGetter(node);
+        var keyGetter = this.createKeyGetter(node);
         return () => {
             const obj = objectGetter();
-            let key = propertyGetter();
+            let key = keyGetter();
             // function.length
             if (obj.$isFunction && key === "length") {
                 key = "$length";
@@ -202,8 +222,8 @@ export default class Interpreter {
         };
     };
     assignmentExpressionHandler = (node: Node) => {
-        const contextGetter = this.createNodeContextGetter(node.left);
-        const nameGetter = this.createAssignmentNameGetter(node.left);
+        const contextGetter = this.createObjectGetter(node.left);
+        const nameGetter = this.createNameGetter(node.left);
         const rightValueGetter = this.create(node.right);
 
         return () => {
@@ -321,7 +341,7 @@ export default class Interpreter {
     breakStatementHandler = () => {};
     switchStatement = () => {};
 
-    createNodeContextGetter(node: Node) {
+    createObjectGetter(node: Node) {
         switch (node.type) {
             case "Identifier":
                 return () => this.getContextFromName(node.name);
@@ -332,23 +352,23 @@ export default class Interpreter {
         }
     }
 
-    createAssignmentNameGetter(node: Node) {
-        switch (node.type) {
-            case "Identifier":
-                return () => node.name;
-            case "MemberExpression":
-                return this.createMemberExpressionPropertyGetter(node);
-            default:
-                throw SyntaxError("Unknown assignment type: " + node.type);
-        }
-    }
-
-    createMemberExpressionPropertyGetter(node: Node) {
+    createKeyGetter(node: Node) {
         // s['a'];  node.computed = true
         // s.foo;  node.computed = false
         return node.computed
             ? this.create(node.property)
             : () => node.property.name;
+    }
+
+    createNameGetter(node: Node) {
+        switch (node.type) {
+            case "Identifier":
+                return () => node.name;
+            case "MemberExpression":
+                return this.createKeyGetter(node);
+            default:
+                throw SyntaxError("Unknown assignment type: " + node.type);
+        }
     }
 
     createObjectKeyGetter(node: Node) {
