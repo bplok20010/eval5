@@ -121,9 +121,112 @@ export default class Interpreter {
         return closure;
     }
 
-    binaryExpressionHandler = () => {};
-    logicalExpressionHandler = () => {};
-    unaryExpressionHandler = () => {};
+    binaryExpressionHandler = (node: Node) => {
+        const leftExpression = this.create(node.left);
+        const rightExpression = this.create(node.right);
+
+        return () => {
+            switch (node.operator) {
+                case "==":
+                    return leftExpression() == rightExpression();
+                case "!=":
+                    return leftExpression() != rightExpression();
+                case "===":
+                    return leftExpression() === rightExpression();
+                case "!==":
+                    return leftExpression() !== rightExpression();
+                case "<":
+                    return leftExpression() < rightExpression();
+                case "<=":
+                    return leftExpression() <= rightExpression();
+                case ">":
+                    return leftExpression() > rightExpression();
+                case ">=":
+                    return leftExpression() >= rightExpression();
+                case "<<":
+                    return leftExpression() << rightExpression();
+                case ">>":
+                    return leftExpression() >> rightExpression();
+                case ">>>":
+                    return leftExpression() >>> rightExpression();
+                case "+":
+                    return leftExpression() + rightExpression();
+                case "-":
+                    return leftExpression() - rightExpression();
+                case "*":
+                    return leftExpression() * rightExpression();
+                case "/":
+                    return leftExpression() / rightExpression();
+                case "%":
+                    return leftExpression() % rightExpression();
+                case "|":
+                    return leftExpression() | rightExpression();
+                case "^":
+                    return leftExpression() ^ rightExpression();
+                case "&":
+                    return leftExpression() & rightExpression();
+                case "in":
+                    return leftExpression() in rightExpression();
+                case "instanceof":
+                    return leftExpression() instanceof rightExpression();
+                default:
+                    throw SyntaxError(
+                        "Unknown binary operator: " + node.operator
+                    );
+            }
+        };
+    };
+    logicalExpressionHandler = (node: Node) => {
+        const leftExpression = this.create(node.left);
+        const rightExpression = this.create(node.right);
+
+        return () => {
+            switch (node.operator) {
+                case "||":
+                    return leftExpression() || rightExpression();
+                case "&&":
+                    return leftExpression() && rightExpression();
+                default:
+                    throw SyntaxError(
+                        "Unknown logical operator: " + node.operator
+                    );
+            }
+        };
+    };
+    unaryExpressionHandler = (node: Node) => {
+        if (node.operator === "delete") {
+            const objectGetter = this.createObjectGetter(node.argument);
+            const nameGetter = this.createNameGetter(node.argument);
+
+            return () => {
+                let obj = objectGetter();
+                const name = nameGetter();
+                return delete obj[name];
+            };
+        } else {
+            const expression = this.create(node.argument);
+            return () => {
+                switch (node.operator) {
+                    case "-":
+                        return -expression();
+                    case "+":
+                        return +expression();
+                    case "!":
+                        return !expression();
+                    case "~":
+                        return ~expression();
+                    case "typeof":
+                        return typeof expression();
+                    case "void":
+                        return void expression();
+                    default:
+                        throw SyntaxError(
+                            "Unknown unary operator: " + node.operator
+                        );
+                }
+            };
+        }
+    };
     updateExpressionHandler = (node: Node) => {
         const objectGetter = this.createObjectGetter(node.argument);
         const nameGetter = this.createNameGetter(node.argument);
@@ -131,18 +234,16 @@ export default class Interpreter {
             const obj = objectGetter();
             const name = nameGetter();
 
-            let result;
-
             switch (node.operator) {
                 case "++":
-                    result = node.prefix ? ++obj[name] : obj[name]++;
-                    break;
+                    return node.prefix ? ++obj[name] : obj[name]++;
                 case "--":
-                    result = node.prefix ? --obj[name] : obj[name]--;
-                    break;
+                    return node.prefix ? --obj[name] : obj[name]--;
+                default:
+                    throw SyntaxError(
+                        "Unknown update operator: " + node.operator
+                    );
             }
-
-            return result;
         };
     };
     objectExpressionHandler = (node: Node) => {
@@ -177,7 +278,15 @@ export default class Interpreter {
         };
     };
     callExpressionHandler = () => {};
-    newExpressionHandler = () => {};
+    newExpressionHandler = (node: Node) => {
+        const expression = this.create(node.callee);
+        const args = node.arguments.map(arg => this.create(arg));
+
+        return () => {
+            const construct = expression();
+            return new construct(...args.map(arg => arg()));
+        };
+    };
     memberExpressionHandler = (node: Node) => {
         var objectGetter = this.create(node.object);
         var keyGetter = this.createKeyGetter(node);
