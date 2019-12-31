@@ -24,6 +24,8 @@
         "transform-es": "^4.6.5"
     },
     "dependencies": {
+        "@types/acorn": "^4.0.5",
+        "@types/estree": "^4.0.2",
         "acorn": "^7.1.0"
     },
     "browserslist": [

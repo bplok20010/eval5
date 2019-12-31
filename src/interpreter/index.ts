@@ -1,7 +1,9 @@
+import * as ESTree from "estree";
 import { parse } from "acorn";
+
 const hasOwnProperty = Object.prototype.hasOwnProperty;
-const Break = {};
-const Continue = {};
+const Break = Symbol("Break");
+const Continue = Symbol("Continue");
 
 interface Node {
     [prop: string]: any;
@@ -20,35 +22,34 @@ interface Options {
     context?: {};
 }
 
-interface Scope {
+class Scope {
+    name: string;
     parent: Scope | null;
-    context: {};
-}
-
-function createScope(context: {} = {}, parent: Scope | null = null): Scope {
-    return {
-        parent: parent,
-        context: context
-    };
+    data: {};
+    constructor(context: {} = {}, parent: Scope | null = null, name?: string) {
+        this.name = name;
+        this.parent = parent;
+        this.data = context;
+    }
 }
 
 function noop() {}
 
 export default class Interpreter {
-    context: {};
+    rootContext: {};
     ast: Node;
     source: string;
     // currentDeclarations: {};
     currentScope: Scope;
     rootScope: Scope;
-    currentThis: {};
+    currentContext: {};
     options: Options;
 
     constructor(code: string | Code, options: Options = {}) {
         this.options = {
             context: options.context || {}
         };
-        this.context = options.context || {};
+        this.rootContext = options.context || {};
 
         if (typeof code === "string") {
             this.ast = parse(code, {
@@ -64,10 +65,18 @@ export default class Interpreter {
         this.run();
     }
 
+    setCurrentContext($this) {
+        this.currentContext = $this;
+    }
+
+    setCurrentScope(scope: Scope) {
+        this.currentScope = scope;
+    }
+
     run() {
-        this.rootScope = createScope(this.context, null);
+        this.rootScope = new Scope(this.rootContext, null, "root");
         this.currentScope = this.rootScope;
-        this.currentThis = this.context;
+        this.currentContext = this.rootContext;
 
         const resp = this.create(this.ast);
         resp();
@@ -76,52 +85,82 @@ export default class Interpreter {
     }
 
     create(node: Node) {
-        const typeHandlers = {
-            BinaryExpression: this.binaryExpressionHandler,
-            LogicalExpression: this.logicalExpressionHandler,
-            UnaryExpression: this.unaryExpressionHandler,
-            UpdateExpression: this.updateExpressionHandler,
-            ObjectExpression: this.objectExpressionHandler,
-            ArrayExpression: this.arrayExpressionHandler,
-            CallExpression: this.callExpressionHandler,
-            NewExpression: this.newExpressionHandler,
-            MemberExpression: this.memberExpressionHandler,
-            ThisExpression: this.thisExpressionHandler,
-            SequenceExpression: this.sequenceExpressionHandler,
-            Literal: this.literalHandler,
-            Identifier: this.identifierHandler,
-            AssignmentExpression: this.assignmentExpressionHandler,
-            FunctionDeclaration: this.functionDeclarationHandler,
-            VariableDeclaration: this.variableDeclarationHandler,
-            BlockStatement: this.programHandler,
-            Program: this.programHandler,
-            ExpressionStatement: this.expressionStatementHandler,
-            EmptyStatement: this.emptyStatementHandler,
-            ReturnStatement: this.returnStatementHandler,
-            FunctionExpression: this.functionExpressionHandler,
-            IfStatement: this.ifStatementHandler,
-            ConditionalExpression: this.conditionalExpressionHandler,
-            ForStatement: this.forStatementHandler,
-            WhileStatement: this.whileStatementHandler,
-            DoWhileStatement: this.doWhileStatementHandler,
-            ForInStatement: this.forInStatementHandler,
-            WithStatement: this.withStatementHandler,
-            ThrowStatement: this.throwStatementHandler,
-            TryStatement: this.tryStatementHandler,
-            ContinueStatement: this.continueStatementHandler,
-            BreakStatement: this.breakStatementHandler,
-            SwitchStatement: this.switchStatement
-        };
-
-        const closure = (typeHandlers[node.type] ||
-            function() {
-                console.warn("Not implemented yet: " + node.type);
-            })(node);
-
-        return closure;
+        switch (node.type) {
+            case "BinaryExpression":
+                return this.binaryExpressionHandler(node);
+            case "LogicalExpression":
+                return this.logicalExpressionHandler(node);
+            case "UnaryExpression":
+                return this.unaryExpressionHandler(node);
+            case "UpdateExpression":
+                return this.updateExpressionHandler(node);
+            case "ObjectExpression":
+                return this.objectExpressionHandler(node);
+            case "ArrayExpression":
+                return this.arrayExpressionHandler(node);
+            case "CallExpression":
+                return this.callExpressionHandler(node);
+            case "NewExpression":
+                return this.newExpressionHandler(node);
+            case "MemberExpression":
+                return this.memberExpressionHandler(node);
+            case "ThisExpression":
+                return this.thisExpressionHandler(node);
+            case "SequenceExpression":
+                return this.sequenceExpressionHandler(node);
+            case "Literal":
+                return this.literalHandler(node);
+            case "Identifier":
+                return this.identifierHandler(node);
+            case "AssignmentExpression":
+                return this.assignmentExpressionHandler(node);
+            case "FunctionDeclaration":
+                return this.functionDeclarationHandler(node);
+            case "VariableDeclaration":
+                return this.variableDeclarationHandler(node);
+            case "BlockStatement":
+            case "Program":
+                return this.programHandler(node);
+            case "ExpressionStatement":
+                return this.expressionStatementHandler(node);
+            case "EmptyStatement":
+                return this.emptyStatementHandler(node);
+            case "ReturnStatement":
+                return this.returnStatementHandler(node);
+            case "FunctionExpression":
+                return this.functionExpressionHandler(node);
+            case "IfStatement":
+                return this.ifStatementHandler(node);
+            case "ConditionalExpression":
+                return this.conditionalExpressionHandler(node);
+            case "ForStatement":
+                return this.forStatementHandler(node);
+            case "WhileStatement":
+                return this.whileStatementHandler(node);
+            case "DoWhileStatement":
+                return this.doWhileStatementHandler(node);
+            case "ForInStatement":
+                return this.forInStatementHandler(node);
+            case "WithStatement":
+                return this.withStatementHandler(node);
+            case "ThrowStatement":
+                return this.throwStatementHandler(node);
+            case "TryStatement":
+                return this.tryStatementHandler(node);
+            case "ContinueStatement":
+                return this.continueStatementHandler(node);
+            case "BreakStatement":
+                return this.breakStatementHandler(node);
+            case "SwitchStatement":
+                return this.switchStatementHandler(node);
+            case "LabeledStatement":
+                return this.labeledStatementHandler(node);
+            default:
+                throw SyntaxError("Unknown node type: " + node.type);
+        }
     }
 
-    binaryExpressionHandler = (node: Node) => {
+    binaryExpressionHandler(node: Node) {
         const leftExpression = this.create(node.left);
         const rightExpression = this.create(node.right);
 
@@ -175,8 +214,8 @@ export default class Interpreter {
                     );
             }
         };
-    };
-    logicalExpressionHandler = (node: Node) => {
+    }
+    logicalExpressionHandler(node: Node) {
         const leftExpression = this.create(node.left);
         const rightExpression = this.create(node.right);
 
@@ -192,8 +231,8 @@ export default class Interpreter {
                     );
             }
         };
-    };
-    unaryExpressionHandler = (node: Node) => {
+    }
+    unaryExpressionHandler(node: Node) {
         if (node.operator === "delete") {
             const objectGetter = this.createObjectGetter(node.argument);
             const nameGetter = this.createNameGetter(node.argument);
@@ -226,8 +265,8 @@ export default class Interpreter {
                 }
             };
         }
-    };
-    updateExpressionHandler = (node: Node) => {
+    }
+    updateExpressionHandler(node: Node) {
         const objectGetter = this.createObjectGetter(node.argument);
         const nameGetter = this.createNameGetter(node.argument);
         return () => {
@@ -245,8 +284,8 @@ export default class Interpreter {
                     );
             }
         };
-    };
-    objectExpressionHandler = (node: Node) => {
+    }
+    objectExpressionHandler(node: Node) {
         //todo: get/set
         const items: {
             key: string;
@@ -267,8 +306,8 @@ export default class Interpreter {
             });
             return result;
         };
-    };
-    arrayExpressionHandler = (node: Node) => {
+    }
+    arrayExpressionHandler(node: Node) {
         const items: Array<() => any> = node.elements.map(element =>
             this.create(element)
         );
@@ -276,9 +315,51 @@ export default class Interpreter {
         return () => {
             return items.map(item => item());
         };
-    };
-    callExpressionHandler = () => {};
-    newExpressionHandler = (node: Node) => {
+    }
+    callExpressionHandler(node: Node) {
+        const funcGetter = this.create(node.callee);
+        const argsGetter = node.arguments.map(arg => this.create(arg));
+        // TODO:
+        // MemberExpression
+        return () => {
+            const func = funcGetter();
+            const args = argsGetter.map(arg => arg());
+            return func.apply(this.rootContext, args);
+        };
+    }
+    functionExpressionHandler(node: Node) {
+        const self = this;
+        const currentScope = this.getCurrentScope();
+        const newScope = new Scope({}, currentScope);
+        const params = node.params;
+        // set scope
+        this.setCurrentScope(newScope);
+        const bodyGetter = this.create(node.body);
+        // restore scope
+        this.setCurrentScope(currentScope);
+        return () => {
+            function func(...args) {
+                // init arguments var
+                params.forEach((param, i) => {
+                    newScope.data[param.name] = args[i];
+                });
+                // init this
+                const prevContext = self.getCurrentContext();
+                //for ThisExpression
+                self.setCurrentContext(this);
+                const result = bodyGetter();
+                self.setCurrentContext(prevContext);
+
+                if (result instanceof Return) {
+                    return result.value;
+                }
+            }
+
+            //TODO: function.length function.name
+            return func;
+        };
+    }
+    newExpressionHandler(node: Node) {
         const expression = this.create(node.callee);
         const args = node.arguments.map(arg => this.create(arg));
 
@@ -286,28 +367,29 @@ export default class Interpreter {
             const construct = expression();
             return new construct(...args.map(arg => arg()));
         };
-    };
-    memberExpressionHandler = (node: Node) => {
+    }
+    memberExpressionHandler(node: Node) {
         var objectGetter = this.create(node.object);
         var keyGetter = this.createKeyGetter(node);
         return () => {
             const obj = objectGetter();
             let key = keyGetter();
+            //TODO:
             // function.length
-            if (obj.$isFunction && key === "length") {
-                key = "$length";
-            }
-            // function.name
-            if (obj.$isFunction && key === "name") {
-                key = "$name";
-            }
+            // if (obj.$isFunction && key === "length") {
+            //     key = "$length";
+            // }
+            // // function.name
+            // if (obj.$isFunction && key === "name") {
+            //     key = "$name";
+            // }
             return obj[key];
         };
-    };
-    thisExpressionHandler = () => {
-        return () => this.currentThis;
-    };
-    sequenceExpressionHandler = (node: Node) => {
+    }
+    thisExpressionHandler(node: Node) {
+        return () => this.getCurrentContext();
+    }
+    sequenceExpressionHandler(node: Node) {
         const expressions = node.expressions.map(item => this.create(item));
 
         return () => {
@@ -319,18 +401,20 @@ export default class Interpreter {
 
             return result;
         };
-    };
-    literalHandler = (node: Node) => {
+    }
+    literalHandler(node: Node) {
         return () => {
             return node.value;
         };
-    };
-    identifierHandler = (node: Node) => {
+    }
+    identifierHandler(node: Node) {
+        const data = this.getContextFromName(node.name);
+
         return () => {
-            return this.getScopeValue(node.name);
+            return data[node.name];
         };
-    };
-    assignmentExpressionHandler = (node: Node) => {
+    }
+    assignmentExpressionHandler(node: Node) {
         const contextGetter = this.createObjectGetter(node.left);
         const nameGetter = this.createNameGetter(node.left);
         const rightValueGetter = this.create(node.right);
@@ -388,9 +472,8 @@ export default class Interpreter {
 
             return value;
         };
-    };
-    functionDeclarationHandler = () => {};
-    variableDeclarationHandler = (node: Node) => {
+    }
+    variableDeclarationHandler(node: Node) {
         const assignments = [];
         for (var i = 0; i < node.declarations.length; i++) {
             var decl = node.declarations[i];
@@ -410,8 +493,8 @@ export default class Interpreter {
                 body: assignments
             })();
         };
-    };
-    programHandler = (node: Node) => {
+    }
+    programHandler(node: Node) {
         var stmtClosures = node.body.map(stmt => {
             return this.create(stmt);
         });
@@ -430,25 +513,33 @@ export default class Interpreter {
             }
             return result;
         };
-    };
-    expressionStatementHandler = (node: Node) => {
+    }
+    expressionStatementHandler(node: Node) {
         return this.create(node.expression);
-    };
-    emptyStatementHandler = () => {};
-    returnStatementHandler = () => {};
-    functionExpressionHandler = () => {};
-    ifStatementHandler = () => {};
-    conditionalExpressionHandler = () => {};
-    forStatementHandler = () => {};
-    whileStatementHandler = () => {};
-    doWhileStatementHandler = () => {};
-    forInStatementHandler = () => {};
-    withStatementHandler = () => {};
-    throwStatementHandler = () => {};
-    tryStatementHandler = () => {};
-    continueStatementHandler = () => {};
-    breakStatementHandler = () => {};
-    switchStatement = () => {};
+    }
+    emptyStatementHandler(node: Node) {}
+    returnStatementHandler(node: Node) {}
+    functionDeclarationHandler(node: Node) {
+        this.funcDeclaration(
+            node.id.name,
+            this.functionExpressionHandler(node)
+        );
+        return noop;
+    }
+
+    ifStatementHandler(node: Node) {}
+    conditionalExpressionHandler(node: Node) {}
+    forStatementHandler(node: Node) {}
+    whileStatementHandler(node: Node) {}
+    doWhileStatementHandler(node: Node) {}
+    forInStatementHandler(node: Node) {}
+    withStatementHandler(node: Node) {}
+    throwStatementHandler(node: Node) {}
+    tryStatementHandler(node: Node) {}
+    continueStatementHandler(node: Node) {}
+    breakStatementHandler(node: Node) {}
+    switchStatementHandler(node: Node) {}
+    labeledStatementHandler(node: Node) {}
 
     createObjectGetter(node: Node) {
         switch (node.type) {
@@ -500,13 +591,23 @@ export default class Interpreter {
         }
     }
 
+    funcDeclaration(name: string, func: () => any): void {
+        const context = this.getCurrentContext();
+        if (
+            !hasOwnProperty.call(context, name) ||
+            context[name] === undefined
+        ) {
+            context[name] = func;
+        }
+    }
+
     getScopeValue(name: string): any {
         const scope = this.getScopeFromName(name);
-        return scope.context[name];
+        return scope.data[name];
     }
 
     getContextFromName(name: string) {
-        return this.getScopeFromName(name).context;
+        return this.getScopeFromName(name).data;
     }
 
     getScopeFromName(name: string) {
@@ -526,7 +627,7 @@ export default class Interpreter {
     }
 
     getCurrentContext() {
-        return this.currentScope.context;
+        return this.currentContext;
     }
 
     next() {}
