@@ -1,16 +1,15 @@
-import * as ESTree from "estree";
 import { parse } from "acorn";
+import { Node, ESTree } from "./nodes";
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 const Break = Symbol("Break");
 const Continue = Symbol("Continue");
 
-interface Node {
-    [prop: string]: any;
-}
-
 class Return {
     value: any;
+    constructor(value: any) {
+        this.value = value;
+    }
 }
 
 interface Code {
@@ -26,17 +25,25 @@ class Scope {
     name: string;
     parent: Scope | null;
     data: {};
-    constructor(context: {} = {}, parent: Scope | null = null, name?: string) {
+    constructor(
+        context: Context = {},
+        parent: Scope | null = null,
+        name?: string
+    ) {
         this.name = name;
         this.parent = parent;
         this.data = context;
     }
 }
 
+type Context = {};
+
 function noop() {}
 
+function empty() {}
+
 export default class Interpreter {
-    rootContext: {};
+    rootContext: Context;
     ast: Node;
     source: string;
     // currentDeclarations: {};
@@ -65,8 +72,8 @@ export default class Interpreter {
         this.run();
     }
 
-    setCurrentContext($this) {
-        this.currentContext = $this;
+    setCurrentContext(ctx) {
+        this.currentContext = ctx;
     }
 
     setCurrentScope(scope: Scope) {
@@ -80,11 +87,11 @@ export default class Interpreter {
 
         const resp = this.create(this.ast);
         resp();
-        console.log(this.currentScope);
+        // console.log(this.currentScope);
         // return resp;
     }
 
-    create(node: Node) {
+    create(node: ESTree.Node) {
         switch (node.type) {
             case "BinaryExpression":
                 return this.binaryExpressionHandler(node);
@@ -160,7 +167,8 @@ export default class Interpreter {
         }
     }
 
-    binaryExpressionHandler(node: Node) {
+    // a==b a/b
+    binaryExpressionHandler(node: ESTree.BinaryExpression) {
         const leftExpression = this.create(node.left);
         const rightExpression = this.create(node.right);
 
@@ -215,7 +223,9 @@ export default class Interpreter {
             }
         };
     }
-    logicalExpressionHandler(node: Node) {
+
+    // a && b
+    logicalExpressionHandler(node: ESTree.LogicalExpression) {
         const leftExpression = this.create(node.left);
         const rightExpression = this.create(node.right);
 
@@ -232,7 +242,9 @@ export default class Interpreter {
             }
         };
     }
-    unaryExpressionHandler(node: Node) {
+
+    // typeof a !a()
+    unaryExpressionHandler(node: ESTree.UnaryExpression) {
         if (node.operator === "delete") {
             const objectGetter = this.createObjectGetter(node.argument);
             const nameGetter = this.createNameGetter(node.argument);
@@ -266,7 +278,9 @@ export default class Interpreter {
             };
         }
     }
-    updateExpressionHandler(node: Node) {
+
+    // ++a --a
+    updateExpressionHandler(node: ESTree.UpdateExpression) {
         const objectGetter = this.createObjectGetter(node.argument);
         const nameGetter = this.createNameGetter(node.argument);
         return () => {
@@ -285,7 +299,9 @@ export default class Interpreter {
             }
         };
     }
-    objectExpressionHandler(node: Node) {
+
+    // var o = {a: 1, b: 's'}
+    objectExpressionHandler(node: ESTree.ObjectExpression) {
         //todo: get/set
         const items: {
             key: string;
@@ -307,7 +323,9 @@ export default class Interpreter {
             return result;
         };
     }
-    arrayExpressionHandler(node: Node) {
+
+    // [1,2,3]
+    arrayExpressionHandler(node: ESTree.ArrayExpression) {
         const items: Array<() => any> = node.elements.map(element =>
             this.create(element)
         );
@@ -316,8 +334,25 @@ export default class Interpreter {
             return items.map(item => item());
         };
     }
-    callExpressionHandler(node: Node) {
-        const funcGetter = this.create(node.callee);
+    createCallFunctionGetter(node: Node) {
+        switch (node.type) {
+            case "MemberExpression":
+                const objectGetter = this.create(node.object);
+                const keyGetter = this.createMemberKeyGetter(node);
+                return () => {
+                    const obj = objectGetter();
+                    const key = keyGetter();
+                    // bind for js function
+                    return obj[key].bind(obj);
+                };
+            default:
+                return this.create(node);
+        }
+    }
+
+    // func()
+    callExpressionHandler(node: ESTree.CallExpression) {
+        const funcGetter = this.createCallFunctionGetter(node.callee);
         const argsGetter = node.arguments.map(arg => this.create(arg));
         // TODO:
         // MemberExpression
@@ -327,7 +362,9 @@ export default class Interpreter {
             return func.apply(this.rootContext, args);
         };
     }
-    functionExpressionHandler(node: Node) {
+
+    // var f = function() {...}
+    functionExpressionHandler(node: ESTree.FunctionExpression) {
         const self = this;
         const currentScope = this.getCurrentScope();
         const newScope = new Scope({}, currentScope);
@@ -338,7 +375,7 @@ export default class Interpreter {
         // restore scope
         this.setCurrentScope(currentScope);
         return () => {
-            function func(...args) {
+            function func(...args: any[]) {
                 // init arguments var
                 params.forEach((param, i) => {
                     newScope.data[param.name] = args[i];
@@ -355,11 +392,31 @@ export default class Interpreter {
                 }
             }
 
-            //TODO: function.length function.name
+            Object.defineProperty(func, "$length", {
+                value: params.length,
+                writable: false,
+                configurable: false,
+                enumerable: false
+            });
+            Object.defineProperty(func, "$name", {
+                value: node.id ? node.id.name : "",
+                writable: false,
+                configurable: false,
+                enumerable: false
+            });
+            Object.defineProperty(func, "$isFunction", {
+                value: true,
+                writable: false,
+                configurable: false,
+                enumerable: false
+            });
+
             return func;
         };
     }
-    newExpressionHandler(node: Node) {
+
+    // new Ctrl()
+    newExpressionHandler(node: ESTree.NewExpression) {
         const expression = this.create(node.callee);
         const args = node.arguments.map(arg => this.create(arg));
 
@@ -368,28 +425,33 @@ export default class Interpreter {
             return new construct(...args.map(arg => arg()));
         };
     }
-    memberExpressionHandler(node: Node) {
+
+    // a.b a['b']
+    memberExpressionHandler(node: ESTree.MemberExpression) {
         var objectGetter = this.create(node.object);
-        var keyGetter = this.createKeyGetter(node);
+        var keyGetter = this.createMemberKeyGetter(node);
         return () => {
             const obj = objectGetter();
             let key = keyGetter();
-            //TODO:
-            // function.length
-            // if (obj.$isFunction && key === "length") {
-            //     key = "$length";
-            // }
-            // // function.name
-            // if (obj.$isFunction && key === "name") {
-            //     key = "$name";
-            // }
+            // get function.length
+            if (obj.$isFunction && key === "length") {
+                key = "$length";
+            }
+            // get function.name
+            if (obj.$isFunction && key === "name") {
+                key = "$name";
+            }
             return obj[key];
         };
     }
-    thisExpressionHandler(node: Node) {
+
+    //this
+    thisExpressionHandler(node: ESTree.ThisExpression) {
         return () => this.getCurrentContext();
     }
-    sequenceExpressionHandler(node: Node) {
+
+    // var1,var2,...
+    sequenceExpressionHandler(node: ESTree.SequenceExpression) {
         const expressions = node.expressions.map(item => this.create(item));
 
         return () => {
@@ -402,25 +464,31 @@ export default class Interpreter {
             return result;
         };
     }
-    literalHandler(node: Node) {
+
+    // 1 'name'
+    literalHandler(node: ESTree.Literal) {
         return () => {
             return node.value;
         };
     }
-    identifierHandler(node: Node) {
-        const data = this.getContextFromName(node.name);
+
+    // var1 ...
+    identifierHandler(node: ESTree.Identifier) {
+        const data = this.getScopeDataFromName(node.name);
 
         return () => {
             return data[node.name];
         };
     }
-    assignmentExpressionHandler(node: Node) {
-        const contextGetter = this.createObjectGetter(node.left);
+
+    // a=1 a+=2
+    assignmentExpressionHandler(node: ESTree.AssignmentExpression) {
+        const dataGetter = this.createObjectGetter(node.left);
         const nameGetter = this.createNameGetter(node.left);
         const rightValueGetter = this.create(node.right);
 
         return () => {
-            const context = contextGetter();
+            const context = dataGetter();
             const name = nameGetter();
             const rightValue = rightValueGetter();
             let value = context[name];
@@ -473,7 +541,18 @@ export default class Interpreter {
             return value;
         };
     }
-    variableDeclarationHandler(node: Node) {
+
+    // function test(){}
+    functionDeclarationHandler(node: ESTree.FunctionDeclaration) {
+        this.funcDeclaration(
+            node.id.name,
+            this.functionExpressionHandler(node)()
+        );
+        return noop;
+    }
+    // var i;
+    // var i=1;
+    variableDeclarationHandler(node: ESTree.VariableDeclaration) {
         const assignments = [];
         for (var i = 0; i < node.declarations.length; i++) {
             var decl = node.declarations[i];
@@ -494,7 +573,8 @@ export default class Interpreter {
             })();
         };
     }
-    programHandler(node: Node) {
+    // {...}
+    programHandler(node: ESTree.Program) {
         var stmtClosures = node.body.map(stmt => {
             return this.create(stmt);
         });
@@ -502,7 +582,11 @@ export default class Interpreter {
         return () => {
             var result;
             for (var i = 0; i < stmtClosures.length; i++) {
-                result = stmtClosures[i]();
+                const stmtClosure = stmtClosures[i];
+
+                if (stmtClosure === empty) continue;
+
+                result = stmtClosure();
                 if (
                     result === Break ||
                     result === Continue ||
@@ -514,45 +598,39 @@ export default class Interpreter {
             return result;
         };
     }
-    expressionStatementHandler(node: Node) {
+    // 所有表达式: a+1 a&&b a() a.b ...
+    expressionStatementHandler(node: ESTree.ExpressionStatement) {
         return this.create(node.expression);
     }
-    emptyStatementHandler(node: Node) {}
-    returnStatementHandler(node: Node) {}
-    functionDeclarationHandler(node: Node) {
-        this.funcDeclaration(
-            node.id.name,
-            this.functionExpressionHandler(node)
-        );
-        return noop;
+    emptyStatementHandler(node: Node) {
+        return empty;
     }
 
-    ifStatementHandler(node: Node) {}
-    conditionalExpressionHandler(node: Node) {}
-    forStatementHandler(node: Node) {}
-    whileStatementHandler(node: Node) {}
-    doWhileStatementHandler(node: Node) {}
-    forInStatementHandler(node: Node) {}
-    withStatementHandler(node: Node) {}
-    throwStatementHandler(node: Node) {}
-    tryStatementHandler(node: Node) {}
-    continueStatementHandler(node: Node) {}
-    breakStatementHandler(node: Node) {}
-    switchStatementHandler(node: Node) {}
-    labeledStatementHandler(node: Node) {}
+    // return xx;
+    returnStatementHandler(node: ESTree.ReturnStatement) {
+        const resultGetter = this.create(node.argument);
 
-    createObjectGetter(node: Node) {
-        switch (node.type) {
-            case "Identifier":
-                return () => this.getContextFromName(node.name);
-            case "MemberExpression":
-                return this.create(node.object);
-            default:
-                throw SyntaxError("Unknown assignment type: " + node.type);
-        }
+        return () => {
+            return new Return(resultGetter());
+        };
     }
 
-    createKeyGetter(node: Node) {
+    // if else
+    ifStatementHandler(node: ESTree.IfStatement) {}
+    conditionalExpressionHandler(node: ESTree.ConditionalExpression) {}
+    forStatementHandler(node: ESTree.ForStatement) {}
+    whileStatementHandler(node: ESTree.WhileStatement) {}
+    doWhileStatementHandler(node: ESTree.DoWhileStatement) {}
+    forInStatementHandler(node: ESTree.ForInStatement) {}
+    withStatementHandler(node: ESTree.WithStatement) {}
+    throwStatementHandler(node: ESTree.ThrowStatement) {}
+    tryStatementHandler(node: ESTree.TryStatement) {}
+    continueStatementHandler(node: ESTree.ContinueStatement) {}
+    breakStatementHandler(node: ESTree.BreakStatement) {}
+    switchStatementHandler(node: ESTree.SwitchStatement) {}
+    labeledStatementHandler(node: ESTree.LabeledStatement) {}
+
+    createMemberKeyGetter(node: ESTree.MemberExpression) {
         // s['a'];  node.computed = true
         // s.foo;  node.computed = false
         return node.computed
@@ -560,12 +638,25 @@ export default class Interpreter {
             : () => node.property.name;
     }
 
+    // for UnaryExpression UpdateExpression AssignmentExpression
+    createObjectGetter(node: Node) {
+        switch (node.type) {
+            case "Identifier":
+                return () => this.getScopeDataFromName(node.name);
+            case "MemberExpression":
+                return this.create(node.object);
+            default:
+                throw SyntaxError("Unknown assignment type: " + node.type);
+        }
+    }
+
+    // for UnaryExpression UpdateExpression AssignmentExpression
     createNameGetter(node: Node) {
         switch (node.type) {
             case "Identifier":
                 return () => node.name;
             case "MemberExpression":
-                return this.createKeyGetter(node);
+                return this.createMemberKeyGetter(node);
             default:
                 throw SyntaxError("Unknown assignment type: " + node.type);
         }
@@ -606,7 +697,7 @@ export default class Interpreter {
         return scope.data[name];
     }
 
-    getContextFromName(name: string) {
+    getScopeDataFromName(name: string) {
         return this.getScopeFromName(name).data;
     }
 

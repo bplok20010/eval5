@@ -42,9 +42,27 @@ var d = new Date()
 
 function f1(){
     obj.scp = 1;
+   console.log('f1', obj.scp, this)
 }
 
-f1()
+f1.call(123)
+
+function t(a,b,c){
+    return 'c'
+}
+
+var s = {
+    a:1,
+    b:2,
+    c1:2
+}
+
+delete s.a;
+delete s['b'];
+delete s[t()+ '1' ]
+console.log(s, t.name, t.length)
+
+// console.log('hello world!', f1)
 
 `;
-new Interpreter(code, { context: { Array, Date } });
+new Interpreter(code, { context: { Array, Date, console } });
