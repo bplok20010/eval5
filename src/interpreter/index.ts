@@ -1,9 +1,14 @@
-import { parse } from "acorn";
+import { parse, Node as AST } from "acorn";
 import { Node, ESTree } from "./nodes";
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 const Break = Symbol("Break");
 const Continue = Symbol("Continue");
+
+interface Program extends AST {
+	body?: any;
+	sourceType?: any;
+}
 
 type Getter = () => any;
 type BaseClosure = () => any;
@@ -17,7 +22,7 @@ class Return {
 }
 
 interface Code {
-	node: ESTree.Program;
+	node: Node;
 	source?: string;
 }
 
@@ -25,14 +30,16 @@ interface Options {
 	context?: {};
 }
 
+type ScopeData = {};
+
 class Scope {
 	name: string;
 	parent: Scope | null;
-	data: {};
-	constructor(context: Context = {}, parent: Scope | null = null, name?: string) {
+	data: ScopeData;
+	constructor(data: ScopeData = {}, parent: Scope | null = null, name?: string) {
 		this.name = name;
 		this.parent = parent;
-		this.data = context;
+		this.data = data;
 	}
 }
 
@@ -40,11 +47,12 @@ type Context = {};
 
 function noop() {}
 
-function empty() {}
+function emptyReturn() {}
 
 export default class Interpreter {
 	rootContext: Context;
-	ast: ESTree.Program;
+	//TODO:
+	ast: Node;
 	source: string;
 	// currentDeclarations: {};
 	currentScope: Scope;
@@ -59,10 +67,11 @@ export default class Interpreter {
 		this.rootContext = options.context || {};
 
 		if (typeof code === "string") {
-			this.ast = parse(code, {
+			const ast: Program = <Program>parse(code, {
 				ranges: true,
 				locations: true,
 			});
+			this.ast = <ESTree.Program>ast;
 			this.source = code;
 		} else {
 			this.ast = code.node;
@@ -324,6 +333,7 @@ export default class Interpreter {
 			return items.map(item => item());
 		};
 	}
+
 	createCallFunctionGetter(node: Node) {
 		switch (node.type) {
 			case "MemberExpression":
@@ -332,11 +342,23 @@ export default class Interpreter {
 				return () => {
 					const obj = objectGetter();
 					const key = keyGetter();
-					// bind for js function
+					// method call
+					// tips:
+					// test.call(ctx, ...) === test.call.bind(test)(ctx, ...)
+					// test.apply(ctx, ...) === test.apply.bind(test)(ctx, ...)
+					// test.f(...) === test.f.bind(test)(...)
+					// ...others
 					return obj[key].bind(obj);
 				};
 			default:
-				return this.create(node);
+				const closure = this.create(node);
+				return () => {
+					// function call
+					// this = rootContext
+					// tips:
+					// test(...) === test.call(this.rootContext, ...)
+					return closure().bind(this.rootContext);
+				};
 		}
 	}
 
@@ -344,12 +366,10 @@ export default class Interpreter {
 	callExpressionHandler(node: ESTree.CallExpression): BaseClosure {
 		const funcGetter = this.createCallFunctionGetter(node.callee);
 		const argsGetter = node.arguments.map(arg => this.create(arg));
-		// TODO:
-		// MemberExpression
 		return () => {
 			const func = funcGetter();
 			const args = argsGetter.map(arg => arg());
-			return func.apply(this.rootContext, args);
+			return func(...args);
 		};
 	}
 
@@ -357,7 +377,7 @@ export default class Interpreter {
 	functionExpressionHandler(node: ESTree.FunctionExpression | ESTree.FunctionDeclaration) {
 		const self = this;
 		const currentScope = this.getCurrentScope();
-		const newScope = new Scope({}, currentScope);
+		const newScope = new Scope({} /*Object.create(null)*/, currentScope);
 		const paramsGetter = node.params.map(param => this.createParamNameGetter(param));
 		const paramLength = node.params.length;
 		// set scope
@@ -368,6 +388,7 @@ export default class Interpreter {
 		return () => {
 			function func(...args: any[]) {
 				// init arguments var
+				newScope.data["arguments"] = arguments;
 				paramsGetter.forEach((getter, i) => {
 					newScope.data[getter()] = args[i];
 				});
@@ -465,9 +486,12 @@ export default class Interpreter {
 
 	// var1 ...
 	identifierHandler(node: ESTree.Identifier): BaseClosure {
-		const data = this.getScopeDataFromName(node.name);
+		const currentScope = this.getCurrentScope();
 
 		return () => {
+			// console.log(node.name, currentScope, "ssc");
+			const data = this.getScopeDataFromName(node.name, currentScope);
+			// console.log(data, "ssc data");
 			return data[node.name];
 		};
 	}
@@ -562,10 +586,12 @@ export default class Interpreter {
 			}
 		}
 		return () => {
-			this.create({
-				type: "BlockStatement",
-				body: assignments,
-			})();
+			if (assignments.length) {
+				this.create({
+					type: "BlockStatement",
+					body: assignments,
+				})();
+			}
 		};
 	}
 
@@ -580,7 +606,7 @@ export default class Interpreter {
 			for (var i = 0; i < stmtClosures.length; i++) {
 				const stmtClosure = stmtClosures[i];
 
-				if (stmtClosure === empty) continue;
+				if (stmtClosure === emptyReturn) continue;
 
 				result = stmtClosure();
 				if (result === Break || result === Continue || result instanceof Return) {
@@ -595,7 +621,7 @@ export default class Interpreter {
 		return this.create(node.expression);
 	}
 	emptyStatementHandler(node: Node): BaseClosure {
-		return empty;
+		return emptyReturn;
 	}
 
 	// return xx;
@@ -608,38 +634,179 @@ export default class Interpreter {
 	}
 
 	// if else
-	ifStatementHandler(node: ESTree.IfStatement): BaseClosure {
-		return () => {};
+	ifStatementHandler(node: ESTree.IfStatement | ESTree.ConditionalExpression): BaseClosure {
+		const testClosure = this.create(node.test);
+		const consequentClosure = this.create(node.consequent);
+		const alternateClosure = node.alternate
+			? this.create(node.alternate)
+			: /*!important*/ () => emptyReturn;
+		return () => {
+			return testClosure() ? consequentClosure() : alternateClosure();
+		};
 	}
+	// test() ? true : false
 	conditionalExpressionHandler(node: ESTree.ConditionalExpression): BaseClosure {
-		return () => {};
+		return this.ifStatementHandler(node);
 	}
-	forStatementHandler(node: ESTree.ForStatement): BaseClosure {
-		return () => {};
+	// for(var i = 0; i < 10; i++) {...}
+	forStatementHandler(
+		node: ESTree.ForStatement | ESTree.WhileStatement | ESTree.DoWhileStatement
+	): BaseClosure {
+		let initClosure = noop;
+		let testClosure = node.test ? this.create(node.test) : () => true;
+		let updateClosure = noop;
+		const bodyClosure = this.create(node.body);
+
+		if (node.type === "ForStatement") {
+			initClosure = node.init ? this.create(node.init) : initClosure;
+			updateClosure = node.update ? this.create(node.update) : initClosure;
+		}
+
+		return () => {
+			let result: any;
+			let shouldInitExec = node.type === "DoWhileStatement";
+
+			for (initClosure(); shouldInitExec || testClosure(); updateClosure()) {
+				shouldInitExec = false;
+
+				const ret = bodyClosure();
+
+				// EmptyStatement
+				if (ret === emptyReturn || ret === Continue) continue;
+
+				if (ret === Break) {
+					break;
+				}
+
+				result = ret;
+
+				if (result instanceof Return) {
+					break;
+				}
+			}
+
+			return result;
+		};
 	}
+
+	// while(1) {...}
 	whileStatementHandler(node: ESTree.WhileStatement): BaseClosure {
-		return () => {};
+		return this.forStatementHandler(node);
 	}
 	doWhileStatementHandler(node: ESTree.DoWhileStatement): BaseClosure {
-		return () => {};
+		return this.forStatementHandler(node);
 	}
 	forInStatementHandler(node: ESTree.ForInStatement): BaseClosure {
-		return () => {};
+		// for( k in obj) or for(o.k in obj) ...
+		let left = node.left;
+		const rightClosure = this.create(node.right);
+		const bodyClosure = this.create(node.body);
+		// for(var k in obj) {...}
+		if (node.left.type === "VariableDeclaration") {
+			// init var k
+			this.create(node.left)();
+			// reset left
+			// for( k in obj)
+			left = node.left.declarations[0].id;
+		}
+
+		return () => {
+			let result: any;
+			let x: string;
+			for (x in rightClosure()) {
+				// assign left to scope
+				// k = x
+				// o.k = x
+				this.assignmentExpressionHandler({
+					type: "AssignmentExpression",
+					operator: "=",
+					left: left as ESTree.Pattern,
+					right: {
+						type: "Literal",
+						value: x,
+					},
+				});
+
+				const ret = bodyClosure();
+
+				// EmptyStatement
+				if (ret === emptyReturn) continue;
+
+				result = ret;
+
+				if (result === Break) {
+					break;
+				}
+
+				if (result === Continue) {
+					continue;
+				}
+
+				if (result instanceof Return) {
+					break;
+				}
+			}
+
+			return result;
+		};
 	}
 	withStatementHandler(node: ESTree.WithStatement): BaseClosure {
-		return () => {};
+		const currentScope = this.getCurrentScope();
+		const objectClosure = this.create(node.object);
+		const newScope = new Scope({}, currentScope);
+
+		this.setCurrentScope(newScope);
+		const bodyClosure = this.create(node.body);
+		this.setCurrentScope(currentScope);
+
+		return () => {
+			const data = objectClosure();
+			// newScope.data = data;
+			// copy all property
+			for (var k in data) {
+				newScope.data[k] = data[k];
+			}
+
+			return bodyClosure();
+		};
 	}
 	throwStatementHandler(node: ESTree.ThrowStatement): BaseClosure {
-		return () => {};
+		const argumentClosure = this.create(node.argument);
+		return () => {
+			throw argumentClosure();
+		};
 	}
+	// try{...}catch(e){...}finally{}
 	tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
-		return () => {};
+		var blockClosure = this.create(node.block);
+		var handlerClosure = this.catchClauseHandler(node.handler);
+		var finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
+		return () => {
+			let result: any;
+			try {
+				result = blockClosure();
+				if (finalizerClosure) {
+					result = finalizerClosure();
+				}
+			} catch (err) {
+				result = handlerClosure(err);
+				if (finalizerClosure) {
+					result = finalizerClosure();
+				}
+			}
+
+			return result;
+		};
+	}
+	catchClauseHandler(node: ESTree.CatchClause) {
+		// TODO:
+		return err => {};
 	}
 	continueStatementHandler(node: ESTree.ContinueStatement): BaseClosure {
-		return () => {};
+		return () => Continue;
 	}
 	breakStatementHandler(node: ESTree.BreakStatement): BaseClosure {
-		return () => {};
+		return () => Break;
 	}
 	switchStatementHandler(node: ESTree.SwitchStatement): BaseClosure {
 		return () => {};
@@ -680,9 +847,11 @@ export default class Interpreter {
 
 	// for UnaryExpression UpdateExpression AssignmentExpression
 	createObjectGetter(node: ESTree.Expression | ESTree.Pattern): Getter {
+		const currentScope = this.getCurrentScope();
+
 		switch (node.type) {
 			case "Identifier":
-				return () => this.getScopeDataFromName(node.name);
+				return () => this.getScopeDataFromName(node.name, currentScope);
 			case "MemberExpression":
 				return this.create(node.object);
 			default:
@@ -716,20 +885,20 @@ export default class Interpreter {
 		}
 	}
 
-	getScopeValue(name: string): any {
-		const scope = this.getScopeFromName(name);
+	getScopeValue(name: string, startScope: Scope): any {
+		const scope = this.getScopeFromName(name, startScope);
 		return scope.data[name];
 	}
 
-	getScopeDataFromName(name: string) {
-		return this.getScopeFromName(name).data;
+	getScopeDataFromName(name: string, startScope: Scope) {
+		return this.getScopeFromName(name, startScope).data;
 	}
 
-	getScopeFromName(name: string) {
-		let scope = this.getCurrentScope();
+	getScopeFromName(name: string, scope: Scope) {
+		const data: ScopeData = scope.data;
 
 		do {
-			if (hasOwnProperty.call(scope, name)) {
+			if (hasOwnProperty.call(data, name)) {
 				return scope;
 			}
 		} while ((scope = scope.parent));

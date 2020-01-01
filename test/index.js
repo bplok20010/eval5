@@ -45,7 +45,13 @@ function f1(){
    console.log('f1', obj.scp, this)
 }
 
+obj.fc = f1;
+
+
+obj.fc()
+
 f1.call(123)
+
 
 function t(a,b,c){
     return 'c'
@@ -61,6 +67,88 @@ delete s.a;
 delete s['b'];
 delete s[t()+ '1' ]
 console.log(s, t.name, t.length)
+
+console.log(1? 't': 'f')
+console.log(0? 't': 'f')
+
+if( 1 ) {
+    console.log('t');
+}
+
+if( 0 ) {
+    
+} else {
+    console.log('f')
+}
+
+if( 0 ) {
+    
+} else if(1){
+    console.log('t1')
+}
+ console.log('for')
+for(var i = 0 ;i< 10; i++) {
+    if( i > 3 )  break;
+    ;
+  console.log(i)
+}
+
+ console.log('ab',i);
+ console.log('while')
+
+var i = 2;
+while(i<10) {
+    console.log(i);
+
+    if(i > 5) break;
+    i++
+}
+
+console.log(i)
+
+ console.log('do while')
+
+var i = 2;
+do {
+    console.log(i);
+
+    break;
+} while(i<10)
+
+console.log(i)
+
+ console.log('with')
+with(obj){
+  console.log(a1)
+}
+
+
+// arguments
+ console.log('arguments')
+function arg(ta,tb){
+    console.log(arguments)
+}
+
+arg(1,2,3,4)
+
+var m1 = {
+    obj:1,
+    a: 'x'
+}
+ console.log('with')
+with(m1) {
+    console.log(obj, a)
+}
+ console.log('with3')
+
+ function o(){}
+ o.prototype.x = 100;
+ var z = new o();
+
+ with(z) {
+     console.log(x)
+ }
+
 
 // console.log('hello world!', f1)
 
