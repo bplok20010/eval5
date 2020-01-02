@@ -38,4 +38,5 @@ export type Node =
 	| ESTree.ContinueStatement
 	| ESTree.BreakStatement
 	| ESTree.SwitchStatement
+	| ESTree.SwitchCase
 	| ESTree.LabeledStatement;

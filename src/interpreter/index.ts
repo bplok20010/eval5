@@ -4,6 +4,7 @@ import { Node, ESTree } from "./nodes";
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 const Break = Symbol("Break");
 const Continue = Symbol("Continue");
+const DefaultCase = Symbol("DefaultCase");
 
 interface Program extends AST {
 	body?: any;
@@ -12,6 +13,11 @@ interface Program extends AST {
 
 type Getter = () => any;
 type BaseClosure = () => any;
+type CaseItem = {
+	testClosure: BaseClosure;
+	bodyClosure: BaseClosure;
+};
+type SwitchCaseClosure = () => CaseItem;
 type ReturnStringClosure = () => string;
 
 class Return {
@@ -50,6 +56,8 @@ function noop() {}
 function emptyReturn() {}
 
 export default class Interpreter {
+	// last expression value
+	value: any;
 	rootContext: Context;
 	//TODO:
 	ast: Node;
@@ -64,6 +72,7 @@ export default class Interpreter {
 		this.options = {
 			context: options.context || {},
 		};
+		this.value = undefined;
 		this.rootContext = options.context || {};
 
 		if (typeof code === "string") {
@@ -303,7 +312,7 @@ export default class Interpreter {
 
 	// var o = {a: 1, b: 's'}
 	objectExpressionHandler(node: ESTree.ObjectExpression) {
-		//todo: get/set
+		//TODO: get/set
 		const items: {
 			key: string;
 			valueGetter: () => any;
@@ -598,25 +607,29 @@ export default class Interpreter {
 	// {...}
 	programHandler(node: ESTree.Program | ESTree.BlockStatement): BaseClosure {
 		const stmtClosures: Array<BaseClosure> = (node.body as Node[]).map((stmt: Node) => {
+			// if (stmt.type === "EmptyStatement") return null;
 			return this.create(stmt);
 		});
 
 		return () => {
-			var result;
-			for (var i = 0; i < stmtClosures.length; i++) {
+			let result: any = emptyReturn;
+			for (let i = 0; i < stmtClosures.length; i++) {
 				const stmtClosure = stmtClosures[i];
+				const ret = stmtClosure();
+				// if (!stmtClosure) continue;
+				if (ret === emptyReturn) continue;
 
-				if (stmtClosure === emptyReturn) continue;
+				result = ret;
 
-				result = stmtClosure();
 				if (result === Break || result === Continue || result instanceof Return) {
 					break;
 				}
 			}
+
 			return result;
 		};
 	}
-	// 所有表达式: a+1 a&&b a() a.b ...
+	// all expression: a+1 a&&b a() a.b ...
 	expressionStatementHandler(node: ESTree.ExpressionStatement): BaseClosure {
 		return this.create(node.expression);
 	}
@@ -626,10 +639,10 @@ export default class Interpreter {
 
 	// return xx;
 	returnStatementHandler(node: ESTree.ReturnStatement): BaseClosure {
-		const resultGetter = this.create(node.argument);
+		const argumentClosure = node.argument ? this.create(node.argument) : noop;
 
 		return () => {
-			return new Return(resultGetter());
+			return new Return(argumentClosure());
 		};
 	}
 
@@ -663,7 +676,7 @@ export default class Interpreter {
 		}
 
 		return () => {
-			let result: any;
+			let result: any = emptyReturn;
 			let shouldInitExec = node.type === "DoWhileStatement";
 
 			for (initClosure(); shouldInitExec || testClosure(); updateClosure()) {
@@ -711,7 +724,7 @@ export default class Interpreter {
 		}
 
 		return () => {
-			let result: any;
+			let result: any = emptyReturn;
 			let x: string;
 			for (x in rightClosure()) {
 				// assign left to scope
@@ -725,22 +738,18 @@ export default class Interpreter {
 						type: "Literal",
 						value: x,
 					},
-				});
+				})();
 
 				const ret = bodyClosure();
 
 				// EmptyStatement
-				if (ret === emptyReturn) continue;
+				if (ret === emptyReturn || ret === Continue) continue;
 
-				result = ret;
-
-				if (result === Break) {
+				if (ret === Break) {
 					break;
 				}
 
-				if (result === Continue) {
-					continue;
-				}
+				result = ret;
 
 				if (result instanceof Return) {
 					break;
@@ -778,29 +787,63 @@ export default class Interpreter {
 	}
 	// try{...}catch(e){...}finally{}
 	tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
-		var blockClosure = this.create(node.block);
-		var handlerClosure = this.catchClauseHandler(node.handler);
-		var finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
+		const blockClosure = this.create(node.block);
+		const handlerClosure = this.catchClauseHandler(node.handler);
+		const finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
+
 		return () => {
-			let result: any;
+			let result: any = emptyReturn;
+			let ret: any;
 			try {
-				result = blockClosure();
-				if (finalizerClosure) {
-					result = finalizerClosure();
+				ret = blockClosure();
+				if (ret !== emptyReturn) {
+					result = ret;
 				}
-			} catch (err) {
-				result = handlerClosure(err);
-				if (finalizerClosure) {
-					result = finalizerClosure();
+			} catch (e) {
+				ret = handlerClosure(e);
+				if (ret !== emptyReturn) {
+					result = ret;
+				}
+			}
+
+			if (finalizerClosure) {
+				ret = finalizerClosure();
+				if (ret !== emptyReturn) {
+					result = ret;
 				}
 			}
 
 			return result;
 		};
 	}
-	catchClauseHandler(node: ESTree.CatchClause) {
-		// TODO:
-		return err => {};
+	// ... catch(e){...}
+	catchClauseHandler(node: ESTree.CatchClause): (e: Error) => any {
+		const currentScope = this.getCurrentScope();
+		const paramNameGetter = this.createParamNameGetter(node.param);
+		const bodyClosure = this.create(node.body);
+
+		return (e: Error) => {
+			let result: any;
+			const scopeData = currentScope.data;
+			// get param name "e"
+			const paramName = paramNameGetter();
+			const isInScope: boolean = hasOwnProperty.call(scopeData, paramName); //paramName in scopeData;
+			// save "e"
+			const oldValue = scopeData[paramName];
+			// add "e" to scope
+			scopeData[paramName] = e;
+			// run
+			result = bodyClosure();
+
+			// reset "e"
+			if (isInScope) {
+				scopeData[paramName] = oldValue;
+			} else {
+				delete scopeData[paramName];
+			}
+
+			return result;
+		};
 	}
 	continueStatementHandler(node: ESTree.ContinueStatement): BaseClosure {
 		return () => Continue;
@@ -809,13 +852,61 @@ export default class Interpreter {
 		return () => Break;
 	}
 	switchStatementHandler(node: ESTree.SwitchStatement): BaseClosure {
-		return () => {};
+		const discriminantClosure = this.create(node.discriminant);
+		const caseClosures = node.cases.map(item => this.switchCaseHandler(item));
+		return () => {
+			const value = discriminantClosure();
+			let match = false;
+			let result: any;
+			let ret: any, defaultCase: CaseItem;
+
+			for (let i = 0; i < caseClosures.length; i++) {
+				const item = caseClosures[i]();
+				const test = item.testClosure();
+
+				if (test === DefaultCase) {
+					defaultCase = item;
+					continue;
+				}
+
+				if (match || test === value) {
+					match = true;
+					ret = item.bodyClosure();
+
+					if (ret === Break || ret === Continue || ret instanceof Return) {
+						break;
+					}
+
+					result = ret;
+				}
+			}
+
+			if (!match && defaultCase) {
+				result = defaultCase.bodyClosure();
+			}
+
+			return result;
+		};
 	}
+
+	switchCaseHandler(node: ESTree.SwitchCase): SwitchCaseClosure {
+		const testClosure = node.test ? this.create(node.test) : () => DefaultCase;
+		const bodyClosure = this.create({
+			type: "BlockStatement",
+			body: node.consequent,
+		});
+
+		return () => ({
+			testClosure,
+			bodyClosure,
+		});
+	}
+
 	labeledStatementHandler(node: ESTree.LabeledStatement): BaseClosure {
 		return () => {};
 	}
 
-	// 获取 ES3 ES5 参数名
+	// get es3/5 param name
 	createParamNameGetter(node: ESTree.Pattern): ReturnStringClosure {
 		if (node.type === "Identifier") {
 			return () => node.name;
@@ -913,6 +1004,4 @@ export default class Interpreter {
 	getCurrentContext() {
 		return this.currentContext;
 	}
-
-	next() {}
 }
