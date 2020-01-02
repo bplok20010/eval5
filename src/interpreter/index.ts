@@ -108,10 +108,11 @@ export default class Interpreter {
 		this.currentScope = this.rootScope;
 		this.currentContext = this.rootContext;
 
-		const resp = this.create(this.ast);
-		resp();
-		// console.log(this.currentScope);
-		// return resp;
+		const bodyClosure = this.create(this.ast);
+
+		const result = bodyClosure();
+
+		return result === emptyReturn ? undefined : result;
 	}
 
 	create(node: Node) {
@@ -545,9 +546,7 @@ export default class Interpreter {
 		const currentScope = this.getCurrentScope();
 
 		return () => {
-			// console.log(node.name, currentScope, "ssc");
 			const data = this.getScopeDataFromName(node.name, currentScope);
-			// console.log(data, "ssc data");
 			return data[node.name];
 		};
 	}
@@ -666,14 +665,12 @@ export default class Interpreter {
 				// if (!stmtClosure) continue;
 				// EmptyStatement
 				if (ret === emptyReturn) continue;
-				////BlockStatement: break label;  continue label;
-				if (result === Break || result === Continue) {
-					break;
-				}
 
 				result = ret;
-				// return
-				if (result instanceof Return) {
+
+				// BlockStatement: break label;  continue label;
+				// ReturnStatement: return xx;
+				if (result === Break || result === Continue || result instanceof Return) {
 					break;
 				}
 			}
@@ -891,6 +888,7 @@ export default class Interpreter {
 			if (isInScope) {
 				scopeData[paramName] = oldValue;
 			} else {
+				//unset
 				delete scopeData[paramName];
 			}
 
@@ -925,11 +923,17 @@ export default class Interpreter {
 					match = true;
 					ret = item.bodyClosure();
 
-					if (ret === Break || ret === Continue || ret instanceof Return) {
+					if (ret === emptyReturn) continue;
+
+					if (ret === Break || ret === Continue) {
 						break;
 					}
 
 					result = ret;
+
+					if (ret instanceof Return) {
+						break;
+					}
 				}
 			}
 
