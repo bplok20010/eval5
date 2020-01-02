@@ -37,15 +37,21 @@ interface Options {
 }
 
 type ScopeData = {};
+type Labels = {};
 
 class Scope {
 	name: string;
 	parent: Scope | null;
 	data: ScopeData;
+	labels: Labels;
+	currentLabel: string;
+	labelStack: string[];
 	constructor(data: ScopeData = {}, parent: Scope | null = null, name?: string) {
 		this.name = name;
 		this.parent = parent;
 		this.data = data;
+		this.labels = Object.create(null);
+		this.labelStack = [];
 	}
 }
 
@@ -59,7 +65,6 @@ export default class Interpreter {
 	// last expression value
 	value: any;
 	rootContext: Context;
-	//TODO:
 	ast: Node;
 	source: string;
 	// currentDeclarations: {};
@@ -310,26 +315,68 @@ export default class Interpreter {
 		};
 	}
 
-	// var o = {a: 1, b: 's'}
+	// var o = {a: 1, b: 's', get name(){}, ...}
 	objectExpressionHandler(node: ESTree.ObjectExpression) {
-		//TODO: get/set
 		const items: {
 			key: string;
-			valueGetter: () => any;
 		}[] = [];
+
+		function getKey(keyNode: ESTree.Expression): string {
+			if (keyNode.type === "Identifier") {
+				return keyNode.name;
+			} else if (keyNode.type === "Literal") {
+				return keyNode.value as string;
+			} else {
+				throw SyntaxError("Unknown object structure: " + keyNode.type);
+			}
+		}
+		// collect value, getter, and/or setter.
+		const properties: {
+			[prop: string]: {
+				init?: Getter;
+				get?: Getter;
+				set?: Getter;
+			};
+		} = Object.create(null);
+
 		node.properties.forEach(property => {
-			const key = this.createObjectKeyGetter(property.key)();
+			const kind = property.kind;
+			const key = getKey(property.key);
+
+			if (!properties[key] || kind === "init") {
+				properties[key] = {};
+			}
+
+			properties[key][kind] = this.create(property.value);
+
 			items.push({
-				key: key,
-				valueGetter: this.create(property.value),
+				key,
 			});
 		});
 
 		return () => {
 			const result = {};
+
 			items.forEach(function(item) {
-				result[item.key] = item.valueGetter();
+				const key = item.key;
+				const kinds = properties[key];
+				const value = kinds.init ? kinds.init() : undefined;
+				const getter = kinds.get ? kinds.get() : function() {};
+				const setter = kinds.set ? kinds.set() : function(a: any) {};
+
+				if ("set" in kinds || "get" in kinds) {
+					const descriptor = {
+						configurable: true,
+						enumerable: true,
+						get: getter,
+						set: setter,
+					};
+					Object.defineProperty(result, key, descriptor);
+				} else {
+					result[key] = value;
+				}
 			});
+
 			return result;
 		};
 	}
@@ -617,11 +664,16 @@ export default class Interpreter {
 				const stmtClosure = stmtClosures[i];
 				const ret = stmtClosure();
 				// if (!stmtClosure) continue;
+				// EmptyStatement
 				if (ret === emptyReturn) continue;
+				////BlockStatement: break label;  continue label;
+				if (result === Break || result === Continue) {
+					break;
+				}
 
 				result = ret;
-
-				if (result === Break || result === Continue || result instanceof Return) {
+				// return
+				if (result instanceof Return) {
 					break;
 				}
 			}
@@ -902,8 +954,25 @@ export default class Interpreter {
 		});
 	}
 
+	// label: xxx
 	labeledStatementHandler(node: ESTree.LabeledStatement): BaseClosure {
-		return () => {};
+		//TODO:
+		const currentScope = this.getCurrentScope();
+		const labelName = node.label.name;
+		const bodyClosure = this.create(node.body);
+
+		currentScope.labels[labelName] = bodyClosure;
+
+		return () => {
+			let result: any;
+			currentScope.labelStack.push(labelName);
+
+			result = bodyClosure();
+
+			currentScope.labelStack.pop();
+
+			return result;
+		};
 	}
 
 	// get es3/5 param name
@@ -917,9 +986,12 @@ export default class Interpreter {
 
 	createObjectKeyGetter(node: ESTree.Expression): Getter {
 		let getter: Getter;
+		// var obj = { title: "" }
 		if (node.type === "Identifier") {
 			getter = () => node.name;
 		} else {
+			// Literal or ...
+			// var obj = { "title": "" } or others...
 			getter = this.create(node);
 		}
 
