@@ -13,7 +13,7 @@ interface Program extends AST {
 }
 
 type Getter = () => any;
-type BaseClosure = () => any;
+type BaseClosure = (pNode?: Node) => any;
 type CaseItem = {
 	testClosure: BaseClosure;
 	bodyClosure: BaseClosure;
@@ -24,6 +24,27 @@ type ReturnStringClosure = () => string;
 class Return {
 	value: any;
 	constructor(value: any) {
+		this.value = value;
+	}
+}
+
+class BreakLabel {
+	value: string;
+	constructor(value: string) {
+		this.value = value;
+	}
+}
+
+class ContinueLabel {
+	value: string;
+	constructor(value: string) {
+		this.value = value;
+	}
+}
+
+class Throw {
+	value: Error;
+	constructor(value: Error) {
 		this.value = value;
 	}
 }
@@ -59,9 +80,15 @@ function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope({} /* or Object.create(null)? */, parent, name);
 }
 
+function last(array: string[]) {
+	const len = array.length;
+
+	return array[len - 1];
+}
+
 export default class Interpreter {
-	// last expression value
 	context: Context;
+	// last expression value
 	value: any;
 	rootContext: Context;
 	ast: Node;
@@ -494,6 +521,20 @@ export default class Interpreter {
 				configurable: false,
 				enumerable: false,
 			});
+			Object.defineProperty(func, "toString", {
+				value: () => {
+					return this.source.slice(node.start, node.end);
+				},
+				configurable: false,
+				enumerable: false,
+			});
+			Object.defineProperty(func, "valueOf", {
+				value: () => {
+					return this.source.slice(node.start, node.end);
+				},
+				configurable: false,
+				enumerable: false,
+			});
 
 			return func;
 		};
@@ -680,6 +721,7 @@ export default class Interpreter {
 
 	// {...}
 	programHandler(node: ESTree.Program | ESTree.BlockStatement): BaseClosure {
+		const currentScope = this.getCurrentScope();
 		const stmtClosures: Array<BaseClosure> = (node.body as Node[]).map((stmt: Node) => {
 			// if (stmt.type === "EmptyStatement") return null;
 			return this.create(stmt);
@@ -697,11 +739,29 @@ export default class Interpreter {
 				// EmptyStatement
 				if (ret === EmptyStatementReturn) continue;
 
+				// continue label;
+				// if (
+				// 	ret instanceof ContinueLabel &&
+				// 	currentScope.labelStack.indexOf(ret.value) === -1
+				// ) {
+				// 	if (last(currentScope.labelStack) === ret.value) {
+				// 		continue;
+				// 	} else {
+				// 		break;
+				// 	}
+				// }
+
 				result = ret;
 
 				// BlockStatement: break label;  continue label; for(){ break ... }
 				// ReturnStatement: return xx;
-				if (result instanceof Return || result === Break || result === Continue) {
+				if (
+					result instanceof Return ||
+					result instanceof BreakLabel ||
+					result instanceof ContinueLabel ||
+					result === Break ||
+					result === Continue
+				) {
 					break;
 				}
 			}
@@ -756,9 +816,14 @@ export default class Interpreter {
 			updateClosure = node.update ? this.create(node.update) : initClosure;
 		}
 
-		return () => {
+		return pNode => {
+			let labelName: string;
 			let result: any = EmptyStatementReturn;
 			let shouldInitExec = node.type === "DoWhileStatement";
+
+			if (pNode && pNode.type === "LabeledStatement") {
+				labelName = pNode.label.name;
+			}
 
 			for (initClosure(); shouldInitExec || testClosure(); updateClosure()) {
 				shouldInitExec = false;
@@ -774,7 +839,17 @@ export default class Interpreter {
 
 				result = ret;
 
-				if (result instanceof Return) {
+				// stop continue label
+				if (result instanceof ContinueLabel && result.value === labelName) {
+					result = undefined;
+					continue;
+				}
+
+				if (
+					result instanceof Return ||
+					result instanceof BreakLabel ||
+					result instanceof ContinueLabel
+				) {
 					break;
 				}
 			}
@@ -804,9 +879,15 @@ export default class Interpreter {
 			left = node.left.declarations[0].id;
 		}
 
-		return () => {
+		return pNode => {
+			let labelName: string;
 			let result: any = EmptyStatementReturn;
 			let x: string;
+
+			if (pNode && pNode.type === "LabeledStatement") {
+				labelName = pNode.label.name;
+			}
+
 			for (x in rightClosure()) {
 				// assign left to scope
 				// k = x
@@ -832,7 +913,17 @@ export default class Interpreter {
 
 				result = ret;
 
-				if (result instanceof Return) {
+				// stop continue label
+				if (result instanceof ContinueLabel && result.value === labelName) {
+					result = undefined;
+					continue;
+				}
+
+				if (
+					result instanceof Return ||
+					result instanceof BreakLabel ||
+					result instanceof ContinueLabel
+				) {
 					break;
 				}
 			}
@@ -877,25 +968,16 @@ export default class Interpreter {
 
 		return () => {
 			let result: any = EmptyStatementReturn;
-			let ret: any;
+			// let ret: any;
 			try {
 				result = this.setValue(blockClosure());
-				// if (ret !== EmptyStatementReturn) {
-				// 	result = ret;
-				// }
 			} catch (e) {
 				this.callStack = callStack;
 				result = this.setValue(handlerClosure(e));
-				// if (ret !== EmptyStatementReturn) {
-				// 	result = ret;
-				// }
 			}
 
 			if (finalizerClosure) {
 				result = this.setValue(finalizerClosure());
-				// if (ret !== EmptyStatementReturn) {
-				// 	result = ret;
-				// }
 			}
 
 			return result;
@@ -932,10 +1014,10 @@ export default class Interpreter {
 		};
 	}
 	continueStatementHandler(node: ESTree.ContinueStatement): BaseClosure {
-		return () => Continue;
+		return () => (node.label ? new ContinueLabel(node.label.name) : Continue);
 	}
 	breakStatementHandler(node: ESTree.BreakStatement): BaseClosure {
-		return () => Break;
+		return () => (node.label ? new BreakLabel(node.label.name) : Break);
 	}
 	switchStatementHandler(node: ESTree.SwitchStatement): BaseClosure {
 		const discriminantClosure = this.create(node.discriminant);
@@ -967,7 +1049,11 @@ export default class Interpreter {
 
 					result = ret;
 
-					if (result instanceof Return) {
+					if (
+						result instanceof Return ||
+						result instanceof BreakLabel ||
+						result instanceof ContinueLabel
+					) {
 						break;
 					}
 				}
@@ -1014,7 +1100,12 @@ export default class Interpreter {
 			let result: any;
 			currentScope.labelStack.push(labelName);
 
-			result = bodyClosure();
+			result = bodyClosure(node);
+
+			// stop break label
+			if (result instanceof BreakLabel && result.value === labelName) {
+				result = undefined;
+			}
 
 			currentScope.labelStack.pop();
 
@@ -1131,7 +1222,9 @@ export default class Interpreter {
 			isFunctionCall ||
 			value === EmptyStatementReturn ||
 			value === Break ||
-			value === Continue
+			value === Continue ||
+			value instanceof BreakLabel ||
+			value instanceof ContinueLabel
 		) {
 			return value;
 		}
