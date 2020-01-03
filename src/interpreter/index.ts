@@ -61,7 +61,7 @@ type ScopeData = {};
 type Labels = {};
 
 class Scope {
-	name: string;
+	name: string | undefined;
 	parent: Scope | null;
 	data: ScopeData;
 	labels: Labels;
@@ -694,7 +694,9 @@ export default class Interpreter {
 
 	// function test(){}
 	functionDeclarationHandler(node: ESTree.FunctionDeclaration): BaseClosure {
-		this.funcDeclaration(node.id.name, this.functionExpressionHandler(node)());
+		if (node.id) {
+			this.funcDeclaration(node.id.name, this.functionExpressionHandler(node)());
+		}
 		return noop;
 	}
 
@@ -709,7 +711,7 @@ export default class Interpreter {
 	// var i;
 	// var i=1;
 	variableDeclarationHandler(node: ESTree.VariableDeclaration): BaseClosure {
-		const assignments = [];
+		const assignments: Array<ESTree.AssignmentExpression> = [];
 		for (let i = 0; i < node.declarations.length; i++) {
 			const decl = node.declarations[i];
 			this.varDeclaration(this.getVariableName(decl.id));
@@ -726,7 +728,7 @@ export default class Interpreter {
 			if (assignments.length) {
 				this.create({
 					type: "BlockStatement",
-					body: assignments,
+					body: assignments as unknown as ESTree.Statement[],
 				})();
 			}
 		};
@@ -831,7 +833,7 @@ export default class Interpreter {
 		}
 
 		return pNode => {
-			let labelName: string;
+			let labelName: string | undefined;
 			let result: any = EmptyStatementReturn;
 			let shouldInitExec = node.type === "DoWhileStatement";
 
@@ -895,7 +897,7 @@ export default class Interpreter {
 		}
 
 		return pNode => {
-			let labelName: string;
+			let labelName: string | undefined;
 			let result: any = EmptyStatementReturn;
 			let x: string;
 
@@ -977,7 +979,7 @@ export default class Interpreter {
 
 	// try{...}catch(e){...}finally{}
 	tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
-		const callStack = [].concat(this.callStack);
+		// const callStack = [].concat(this.callStack);
 		const blockClosure = this.create(node.block);
 		const handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
 		const finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
@@ -1077,7 +1079,7 @@ export default class Interpreter {
 			const value = discriminantClosure();
 			let match = false;
 			let result: any;
-			let ret: any, defaultCase: CaseItem;
+			let ret: any, defaultCase: CaseItem | undefined;
 
 			for (let i = 0; i < caseClosures.length; i++) {
 				const item = caseClosures[i]();
@@ -1246,7 +1248,8 @@ export default class Interpreter {
 		return this.getScopeFromName(name, startScope).data;
 	}
 
-	getScopeFromName(name: string, scope: Scope) {
+	getScopeFromName(name: string, startScope: Scope) {
+		let scope: Scope | null = startScope;
 		const data: ScopeData = scope.data;
 
 		do {
