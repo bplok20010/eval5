@@ -140,7 +140,12 @@ export default class Interpreter {
 		this.source = source;
 		this.ast = node;
 
-		this.create(node)();
+		const result = this.create(node)();
+
+		// Uncaught error
+		if (result instanceof Throw) {
+			throw result.value;
+		}
 
 		return this.getValue();
 	}
@@ -498,6 +503,10 @@ export default class Interpreter {
 
 				self.callStack.pop();
 
+				if (result instanceof Throw) {
+					return result;
+				}
+
 				if (result instanceof Return) {
 					return result.value;
 				}
@@ -721,7 +730,7 @@ export default class Interpreter {
 
 	// {...}
 	programHandler(node: ESTree.Program | ESTree.BlockStatement): BaseClosure {
-		const currentScope = this.getCurrentScope();
+		// const currentScope = this.getCurrentScope();
 		const stmtClosures: Array<BaseClosure> = (node.body as Node[]).map((stmt: Node) => {
 			// if (stmt.type === "EmptyStatement") return null;
 			return this.create(stmt);
@@ -759,6 +768,7 @@ export default class Interpreter {
 					result instanceof Return ||
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
+					result instanceof Throw ||
 					result === Break ||
 					result === Continue
 				) {
@@ -848,7 +858,8 @@ export default class Interpreter {
 				if (
 					result instanceof Return ||
 					result instanceof BreakLabel ||
-					result instanceof ContinueLabel
+					result instanceof ContinueLabel ||
+					result instanceof Throw
 				) {
 					break;
 				}
@@ -922,7 +933,8 @@ export default class Interpreter {
 				if (
 					result instanceof Return ||
 					result instanceof BreakLabel ||
-					result instanceof ContinueLabel
+					result instanceof ContinueLabel ||
+					result instanceof Throw
 				) {
 					break;
 				}
@@ -953,32 +965,67 @@ export default class Interpreter {
 			return this.setValue(bodyClosure());
 		};
 	}
+
 	throwStatementHandler(node: ESTree.ThrowStatement): BaseClosure {
 		const argumentClosure = this.create(node.argument);
-		return () => {
-			throw argumentClosure();
-		};
+		return () => new Throw(argumentClosure());
 	}
+
 	// try{...}catch(e){...}finally{}
 	tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
 		const callStack = [].concat(this.callStack);
 		const blockClosure = this.create(node.block);
-		const handlerClosure = this.catchClauseHandler(node.handler);
+		const handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
 		const finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
 
 		return () => {
 			let result: any = EmptyStatementReturn;
-			// let ret: any;
-			try {
-				result = this.setValue(blockClosure());
-			} catch (e) {
-				this.callStack = callStack;
-				result = this.setValue(handlerClosure(e));
-			}
+			let ret: any;
 
+			/**
+			 * try{...}catch(e){...}finally{...} execution sequence:
+			 * try stmt
+			 * try throw
+			 * catch stmt
+			 * finally stmt
+			 * finally throw or finally return
+			 * catch throw or catch return or try return
+			 */
+
+			// try{
+			result = this.setValue(blockClosure());
+			if (result instanceof Return) {
+				ret = result;
+			}
+			// }
+			// catch (e) {
+			if (handlerClosure) {
+				if (result instanceof Throw) {
+					result = this.setValue(handlerClosure(result.value));
+					if (result instanceof Return || result instanceof Throw) {
+						ret = result;
+					}
+				}
+			}
+			// } finally {
 			if (finalizerClosure) {
 				result = this.setValue(finalizerClosure());
+
+				if (result instanceof Return) {
+					return result;
+				}
+
+				if (result instanceof Throw) {
+					return result;
+				}
 			}
+			// }
+
+			if (ret) {
+				return ret;
+			}
+
+			this.setValue(result);
 
 			return result;
 		};
@@ -1052,7 +1099,8 @@ export default class Interpreter {
 					if (
 						result instanceof Return ||
 						result instanceof BreakLabel ||
-						result instanceof ContinueLabel
+						result instanceof ContinueLabel ||
+						result instanceof Throw
 					) {
 						break;
 					}
@@ -1089,7 +1137,6 @@ export default class Interpreter {
 
 	// label: xxx
 	labeledStatementHandler(node: ESTree.LabeledStatement): BaseClosure {
-		//TODO:
 		const currentScope = this.getCurrentScope();
 		const labelName = node.label.name;
 		const bodyClosure = this.create(node.body);
@@ -1224,7 +1271,8 @@ export default class Interpreter {
 			value === Break ||
 			value === Continue ||
 			value instanceof BreakLabel ||
-			value instanceof ContinueLabel
+			value instanceof ContinueLabel ||
+			value instanceof Throw
 		) {
 			return value;
 		}
