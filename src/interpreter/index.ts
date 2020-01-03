@@ -2,6 +2,9 @@ import { parse, Node as AST } from "acorn";
 import { Node, ESTree } from "./nodes";
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
+const FunctionNameSymbol = Symbol("name");
+const FunctionLengthSymbol = Symbol("length");
+const isFunctionSymbol = Symbol("isFunction");
 const Break = Symbol("Break");
 const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
@@ -50,6 +53,7 @@ class Throw {
 }
 
 interface Options {
+	//TODO:
 	timeout?: number;
 }
 
@@ -61,7 +65,6 @@ class Scope {
 	parent: Scope | null;
 	data: ScopeData;
 	labels: Labels;
-	currentLabel: string;
 	labelStack: string[];
 	constructor(data: ScopeData, parent: Scope | null = null, name?: string) {
 		this.name = name;
@@ -512,19 +515,19 @@ export default class Interpreter {
 				}
 			}
 
-			Object.defineProperty(func, "$length", {
+			Object.defineProperty(func, FunctionLengthSymbol, {
 				value: paramLength,
 				writable: false,
 				configurable: false,
 				enumerable: false,
 			});
-			Object.defineProperty(func, "$name", {
+			Object.defineProperty(func, FunctionNameSymbol, {
 				value: name,
 				writable: false,
 				configurable: false,
 				enumerable: false,
 			});
-			Object.defineProperty(func, "$isFunction", {
+			Object.defineProperty(func, isFunctionSymbol, {
 				value: true,
 				writable: false,
 				configurable: false,
@@ -567,13 +570,14 @@ export default class Interpreter {
 		return () => {
 			const obj = objectGetter();
 			let key = keyGetter();
+
 			// get function.length
-			if (obj.$isFunction && key === "length") {
-				key = "$length";
+			if (obj[isFunctionSymbol] && key === "length") {
+				key = FunctionLengthSymbol;
 			}
 			// get function.name
-			if (obj.$isFunction && key === "name") {
-				key = "$name";
+			if (obj[isFunctionSymbol] && key === "name") {
+				key = FunctionNameSymbol;
 			}
 			return obj[key];
 		};
