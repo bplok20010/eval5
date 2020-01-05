@@ -78,7 +78,6 @@ interface CollectDeclarations {
 }
 
 type ScopeData = {};
-type Labels = {};
 
 class Scope {
 	name: string | undefined;
@@ -101,7 +100,7 @@ function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope({} /* or Object.create(null)? */, parent, name);
 }
 
-export default class Interpreter {
+export class Interpreter {
 	static interrupt() {
 		return new Interrupt();
 	}
@@ -527,18 +526,18 @@ export default class Interpreter {
 	// typeof a !a()
 	unaryExpressionHandler(node: ESTree.UnaryExpression): BaseClosure {
 		switch (node.operator) {
-			case "typeof":
-				if (node.argument.type === "Identifier" || node.argument.type === "Literal") {
-					const expression = this.create(node.argument);
-					return () => {
-						const ret = expression();
-						// typeof adfffd => undefined
-						if (ret instanceof Throw) {
-							return "undefined";
-						}
-						return typeof ret;
-					};
-				}
+			// case "typeof":
+			// 	if (node.argument.type === "Identifier" || node.argument.type === "Literal") {
+			// 		const expression = this.create(node.argument);
+			// 		return () => {
+			// 			const ret = expression();
+			// 			// typeof adfffd => undefined
+			// 			if (ret instanceof Throw) {
+			// 				return "undefined";
+			// 			}
+			// 			return typeof ret;
+			// 		};
+			// 	}
 			case "delete":
 				const objectGetter = this.createObjectGetter(node.argument);
 				const nameGetter = this.createNameGetter(node.argument);
@@ -561,16 +560,20 @@ export default class Interpreter {
 						return throwError;
 					}
 
-					// for typeof undefined var
-					// typeof adf9ad
-					if (node.operator === "typeof") {
-						return typeof obj[name];
-					} else {
-						return delete obj[name];
-					}
+					return delete obj[name];
 				};
 			default:
-				const expression = this.create(node.argument);
+				let expression: BaseClosure;
+				// for typeof undefined var
+				// typeof adf9ad
+				if (node.operator === "typeof" && node.argument.type === "Identifier") {
+					const objectGetter = this.createObjectGetter(node.argument);
+					const nameGetter = this.createNameGetter(node.argument);
+
+					expression = () => objectGetter()[nameGetter()];
+				} else {
+					expression = this.create(node.argument);
+				}
 
 				return () => {
 					const value = expression();
@@ -589,6 +592,8 @@ export default class Interpreter {
 							return ~value;
 						case "void":
 							return void value;
+						case "typeof":
+							return typeof value;
 						default:
 							this.throwError(Messages.UnaryOperatorSyntaxError, node.operator, node);
 					}
@@ -828,8 +833,11 @@ export default class Interpreter {
 
 				args.push(result);
 			}
-
-			return func(...args);
+			try {
+				return func(...args);
+			} catch (e) {
+				return new Throw(e);
+			}
 		};
 	}
 
@@ -1274,7 +1282,13 @@ export default class Interpreter {
 		const argumentClosure = node.argument ? this.create(node.argument) : noop;
 
 		return () => {
-			return new Return(argumentClosure());
+			const result = argumentClosure();
+
+			if (result instanceof Throw) {
+				return result;
+			}
+
+			return new Return(result);
 		};
 	}
 
@@ -1366,6 +1380,10 @@ export default class Interpreter {
 				) {
 					break;
 				}
+			}
+
+			if (ur && ur instanceof Throw) {
+				return ur;
 			}
 
 			return result;
