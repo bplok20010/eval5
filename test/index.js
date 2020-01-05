@@ -770,12 +770,26 @@ console.log(typeof test())
 
 `;
 
-const result = interpreter.evaluate(code8);
+const code10 = `
+
+function f(){
+    try {
+    console.log('f call', abc)
+    } catch(err) {
+        console.log('test', 123, err);
+    }
+}
+
+f()
+
+`;
+
+const result = interpreter.evaluate(code10);
 
 console.log("exec: " + interpreter.getExecutionTime() + "ms");
 
 if (interpreter.getError()) {
-	console.log(interpreter.getError());
+	console.log(interpreter.getErrorMessage());
 }
 console.log("output:", result);
 

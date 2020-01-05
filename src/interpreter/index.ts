@@ -67,6 +67,8 @@ class Throw {
 	}
 }
 
+class InterruptThrow extends Throw {}
+
 class Interrupt {}
 
 interface Options {
@@ -198,7 +200,10 @@ export class Interpreter {
 			// start run
 			result = bodyClosure();
 		} catch (e) {
-			if (e instanceof Error) {
+			// Uncaught error
+			if (e instanceof Throw) {
+				this.error = e.value;
+			} else if (e instanceof Error || e instanceof Throw) {
 				this.error = e;
 			} else {
 				this.error = new Error(e);
@@ -206,11 +211,11 @@ export class Interpreter {
 		}
 
 		// Uncaught error
-		if (result instanceof Throw) {
-			//result.value
-			result.uncaught = true;
-			this.error = result;
-		}
+		// if (result instanceof Throw) {
+		// 	//result.value
+		// 	result.uncaught = true;
+		// 	this.error = result;
+		// }
 
 		this.execEndTime = Date.now();
 
@@ -237,7 +242,7 @@ export class Interpreter {
 	}
 
 	throwError(msg: [number, string], value: string | number, node?: Node): never {
-		throw this.createError(msg, value, node);
+		throw new InterruptThrow(this.createError(msg, value, node));
 	}
 
 	createThrowError(msg: [number, string], value: string | number, node?: Node): Throw {
@@ -252,10 +257,10 @@ export class Interpreter {
 		if (!this.error) return null;
 		let error = this.error;
 
-		let uncaught = false;
+		let uncaught = true;
 
 		if (error instanceof Throw) {
-			uncaught = error.uncaught;
+			// uncaught = error.uncaught;
 			error = error.value;
 		}
 
@@ -617,10 +622,7 @@ export class Interpreter {
 				return name;
 			}
 
-			const throwError = this.assertVariable(obj, name, node);
-			if (throwError) {
-				return throwError;
-			}
+			this.assertVariable(obj, name, node);
 
 			// assert null.ab undefiend.ac ... error
 			const throwError2 = this.safeObjectGet(obj, name, node);
@@ -737,11 +739,7 @@ export class Interpreter {
 	}
 
 	safeObjectGet(obj: any, key: any, node: Node) {
-		try {
-			return obj[key];
-		} catch (e) {
-			return new Throw(new TypeError(e.message));
-		}
+		return obj[key];
 	}
 
 	createCallFunctionGetter(node: Node & { start?: number; end?: number }) {
@@ -768,7 +766,7 @@ export class Interpreter {
 
 					if (!func || !isFunction(func)) {
 						const name = this.source.slice(node.start, node.end);
-						return this.createThrowError(
+						throw this.createThrowError(
 							Messages.FunctionUndefinedReferenceError,
 							name,
 							node
@@ -794,7 +792,7 @@ export class Interpreter {
 					}
 
 					if (!func || !isFunction(func)) {
-						return this.createThrowError(
+						throw this.createThrowError(
 							Messages.FunctionUndefinedReferenceError,
 							name,
 							node
@@ -836,7 +834,7 @@ export class Interpreter {
 			try {
 				return func(...args);
 			} catch (e) {
-				return new Throw(e);
+				throw new Throw(e);
 			}
 		};
 	}
@@ -953,7 +951,7 @@ export class Interpreter {
 			if (!isFunction(construct)) {
 				const callee = <ESTree.Expression & { start?: number; end?: number }>node.callee;
 				const name = this.source.slice(callee.start, callee.end);
-				return new Throw(new TypeError(name + " is not a constructor"));
+				throw new Throw(new TypeError(name + " is not a constructor"));
 			}
 
 			const len = args.length;
@@ -969,11 +967,7 @@ export class Interpreter {
 				params.push(result);
 			}
 
-			try {
-				return new construct(...params);
-			} catch (e) {
-				return new Throw(e);
-			}
+			return new construct(...params);
 		};
 	}
 
@@ -1051,10 +1045,7 @@ export class Interpreter {
 			const currentScope = this.getCurrentScope();
 			const data = this.getScopeDataFromName(node.name, currentScope);
 
-			const throwError = this.assertVariable(data, node.name, node);
-			if (throwError) {
-				return throwError;
-			}
+			this.assertVariable(data, node.name, node);
 
 			return data[node.name];
 		};
@@ -1104,10 +1095,7 @@ export class Interpreter {
 
 			if (node.operator !== "=") {
 				// asdsad(undefined) += 1
-				const throwError = this.assertVariable(data, name, node);
-				if (throwError) {
-					return throwError;
-				}
+				this.assertVariable(data, name, node);
 			} else {
 				// name = asdfdff(undefined);
 				// if (rightValue instanceof Throw) {
@@ -1220,12 +1208,10 @@ export class Interpreter {
 		};
 	}
 
-	assertVariable(data: ScopeData, name: string, node: Node): Throw | null {
+	assertVariable(data: ScopeData, name: string, node: Node): void | never {
 		if (data === this.rootScope.data && !(name in data)) {
-			return this.createThrowError(Messages.VariableUndefinedReferenceError, name, node);
+			throw this.createThrowError(Messages.VariableUndefinedReferenceError, name, node);
 		}
-
-		return null;
 	}
 
 	// {...}
@@ -1509,26 +1495,22 @@ export class Interpreter {
 		const argumentClosure = this.create(node.argument);
 
 		return () => {
-			const error = argumentClosure();
-
-			if (error instanceof Throw) {
-				return error;
-			}
-
-			return new Throw(error);
+			throw argumentClosure();
 		};
 	}
 
 	// try{...}catch(e){...}finally{}
 	tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
-		// const callStack = [].concat(this.callStack);
 		const blockClosure = this.create(node.block);
 		const handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
 		const finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
 
 		return () => {
+			const currentScope = this.getCurrentScope();
+			const labelStack = currentScope.labelStack.concat([]);
+			const callStack: string[] = this.callStack.concat([]);
 			let result: any = EmptyStatementReturn;
-			let ret: any;
+			let finalReturn: any;
 
 			/**
 			 * try{...}catch(e){...}finally{...} execution sequence:
@@ -1540,54 +1522,30 @@ export class Interpreter {
 			 * catch throw or catch return or try return
 			 */
 
-			// try{
-			result = this.setValue(blockClosure());
+			try {
+				result = this.setValue(blockClosure());
+			} catch (err) {
+				currentScope.labelStack = labelStack;
+				this.callStack = callStack;
 
-			if (result instanceof Interrupt) {
-				return result;
-			}
+				if (err instanceof InterruptThrow) {
+					throw err;
+				}
 
-			if (result instanceof Return) {
-				ret = result;
-			}
-			// }
-			// catch (e) {
-			if (handlerClosure) {
-				if (result instanceof Throw) {
-					result = this.setValue(handlerClosure(result.value));
-
-					if (result instanceof Interrupt) {
-						return result;
-					}
-
-					if (result instanceof Return || result instanceof Throw) {
-						ret = result;
-					}
+				if (handlerClosure) {
+					result = this.setValue(handlerClosure(err));
 				}
 			}
-			// } finally {
+			// finally {
 			if (finalizerClosure) {
-				result = this.setValue(finalizerClosure());
+				// not save finally result
+				finalReturn = finalizerClosure();
 
-				if (result instanceof Interrupt) {
-					return result;
-				}
-
-				if (result instanceof Return) {
-					return result;
-				}
-
-				if (result instanceof Throw) {
-					return result;
+				if (finalReturn instanceof Return) {
+					result = finalReturn;
 				}
 			}
 			// }
-
-			if (ret) {
-				return ret;
-			}
-
-			this.setValue(result);
 
 			return result;
 		};
