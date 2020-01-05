@@ -1,4 +1,5 @@
-import { parse, Node as AST } from "acorn";
+import { parse } from "acorn";
+import { Messages } from "./messages";
 import { Node, ESTree } from "./nodes";
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -10,11 +11,6 @@ const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
 const EmptyStatementReturn = Symbol("EmptyStatementReturn");
 
-interface Program extends AST {
-	body?: any;
-	sourceType?: any;
-}
-
 type Getter = () => any;
 type BaseClosure = (pNode?: Node) => any;
 type CaseItem = {
@@ -23,6 +19,10 @@ type CaseItem = {
 };
 type SwitchCaseClosure = () => CaseItem;
 type ReturnStringClosure = () => string;
+
+function isFunction<T>(func: T): boolean {
+	return typeof func === "function";
+}
 
 class Return {
 	value: any;
@@ -46,14 +46,16 @@ class ContinueLabel {
 }
 
 class Throw {
+	uncaught: boolean = false;
 	value: Error;
 	constructor(value: Error) {
 		this.value = value;
 	}
 }
 
+class Interrupt {}
+
 interface Options {
-	//TODO:
 	timeout?: number;
 }
 
@@ -83,24 +85,30 @@ function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope({} /* or Object.create(null)? */, parent, name);
 }
 
-function last(array: string[]) {
-	const len = array.length;
-
-	return array[len - 1];
-}
-
 export default class Interpreter {
+	static interrupt() {
+		return new Interrupt();
+	}
+
+	static throw(message: any) {
+		return new Throw(message instanceof Error ? message : new Error(message));
+	}
+
 	context: Context;
 	// last expression value
 	value: any;
 	rootContext: Context;
-	ast: Node;
+	ast: ESTree.Program;
 	source: string;
 	currentScope: Scope;
 	rootScope: Scope;
 	currentContext: Context;
 	options: Options;
 	callStack: string[];
+	protected error: Throw | Error | null = null;
+	protected isVarDeclMode: boolean = false;
+
+	protected execStartTime: number;
 
 	constructor(context: Context, options: Options = {}) {
 		this.options = {
@@ -126,15 +134,29 @@ export default class Interpreter {
 		//init global context == this
 		this.rootContext = ctx;
 		this.currentContext = ctx;
+
+		this.execStartTime = Date.now();
+		this.error = null;
 	}
 
 	evaluate(code: string = "", ctx: Context = this.context) {
-		const node = <Program>parse(code, {
-			ranges: true,
-			locations: true,
-		});
+		let node: unknown;
+		try {
+			node = parse(code, {
+				ranges: true,
+				locations: true,
+			});
+		} catch (e) {
+			if (e instanceof Error) {
+				this.error = e;
+			} else {
+				this.error = new SyntaxError(e);
+			}
 
-		return this.evaluateNode(<ESTree.Program>node, code, ctx);
+			return;
+		}
+
+		return this.evaluateNode(node as ESTree.Program, code, ctx);
 	}
 
 	evaluateNode(node: ESTree.Program, source: string = "", ctx: Context = this.context) {
@@ -142,91 +164,204 @@ export default class Interpreter {
 
 		this.source = source;
 		this.ast = node;
+		let result: any;
 
-		const result = this.create(node)();
+		// Interpreter Error
+		try {
+			result = this.create(node)();
+		} catch (e) {
+			if (e instanceof Error) {
+				this.error = e;
+			} else {
+				this.error = new Error(e);
+			}
+		}
 
 		// Uncaught error
 		if (result instanceof Throw) {
-			throw result.value;
+			//result.value
+			result.uncaught = true;
+			this.error = result;
 		}
 
 		return this.getValue();
 	}
 
+	createError(msg: [number, string], value: string | number, node?: Node): Error {
+		const code = msg[0];
+		const message = msg[1].replace("%0", String(value));
+
+		if (code > 1000 && code <= 2000) {
+			return new SyntaxError(message);
+		} else if (code > 2000 && code <= 3000) {
+			return new ReferenceError(message);
+		} else {
+			return new Error(message);
+		}
+	}
+
+	throwError(msg: [number, string], value: string | number, node?: Node): never {
+		throw this.createError(msg, value, node);
+	}
+
+	createThrowError(msg: [number, string], value: string | number, node?: Node): Throw {
+		return new Throw(this.createError(msg, value, node));
+	}
+
+	getError() {
+		return this.error ? (this.error instanceof Throw ? this.error.value : this.error) : null;
+	}
+
+	getErrorMessage() {
+		if (!this.error) return null;
+		let error = this.error;
+
+		let uncaught = false;
+
+		if (error instanceof Throw) {
+			uncaught = error.uncaught;
+			error = error.value;
+		}
+
+		const prefix = uncaught ? "Uncaught " : "";
+
+		return error ? prefix + error : null;
+	}
+
+	protected checkTimeout() {
+		const timeout = this.options.timeout || 0;
+
+		const now = Date.now();
+		if (now - this.execStartTime > timeout) {
+			return true;
+		}
+
+		return false;
+	}
+
 	create(node: Node) {
+		const timeout = this.options.timeout;
+		let closure: BaseClosure;
+
 		switch (node.type) {
 			case "BinaryExpression":
-				return this.binaryExpressionHandler(node);
+				closure = this.binaryExpressionHandler(node);
+				break;
 			case "LogicalExpression":
-				return this.logicalExpressionHandler(node);
+				closure = this.logicalExpressionHandler(node);
+				break;
 			case "UnaryExpression":
-				return this.unaryExpressionHandler(node);
+				closure = this.unaryExpressionHandler(node);
+				break;
 			case "UpdateExpression":
-				return this.updateExpressionHandler(node);
+				closure = this.updateExpressionHandler(node);
+				break;
 			case "ObjectExpression":
-				return this.objectExpressionHandler(node);
+				closure = this.objectExpressionHandler(node);
+				break;
 			case "ArrayExpression":
-				return this.arrayExpressionHandler(node);
+				closure = this.arrayExpressionHandler(node);
+				break;
 			case "CallExpression":
-				return this.callExpressionHandler(node);
+				closure = this.callExpressionHandler(node);
+				break;
 			case "NewExpression":
-				return this.newExpressionHandler(node);
+				closure = this.newExpressionHandler(node);
+				break;
 			case "MemberExpression":
-				return this.memberExpressionHandler(node);
+				closure = this.memberExpressionHandler(node);
+				break;
 			case "ThisExpression":
-				return this.thisExpressionHandler(node);
+				closure = this.thisExpressionHandler(node);
+				break;
 			case "SequenceExpression":
-				return this.sequenceExpressionHandler(node);
+				closure = this.sequenceExpressionHandler(node);
+				break;
 			case "Literal":
-				return this.literalHandler(node);
+				closure = this.literalHandler(node);
+				break;
 			case "Identifier":
-				return this.identifierHandler(node);
+				closure = this.identifierHandler(node);
+				break;
 			case "AssignmentExpression":
-				return this.assignmentExpressionHandler(node);
+				closure = this.assignmentExpressionHandler(node);
+				break;
 			case "FunctionDeclaration":
-				return this.functionDeclarationHandler(node);
+				closure = this.functionDeclarationHandler(node);
+				break;
 			case "VariableDeclaration":
-				return this.variableDeclarationHandler(node);
+				closure = this.variableDeclarationHandler(node);
+				break;
 			case "BlockStatement":
 			case "Program":
-				return this.programHandler(node);
+				closure = this.programHandler(node);
+				break;
 			case "ExpressionStatement":
-				return this.expressionStatementHandler(node);
+				closure = this.expressionStatementHandler(node);
+				break;
 			case "EmptyStatement":
-				return this.emptyStatementHandler(node);
+				closure = this.emptyStatementHandler(node);
+				break;
 			case "ReturnStatement":
-				return this.returnStatementHandler(node);
+				closure = this.returnStatementHandler(node);
+				break;
 			case "FunctionExpression":
-				return this.functionExpressionHandler(node);
+				closure = this.functionExpressionHandler(node);
+				break;
 			case "IfStatement":
-				return this.ifStatementHandler(node);
+				closure = this.ifStatementHandler(node);
+				break;
 			case "ConditionalExpression":
-				return this.conditionalExpressionHandler(node);
+				closure = this.conditionalExpressionHandler(node);
+				break;
 			case "ForStatement":
-				return this.forStatementHandler(node);
+				closure = this.forStatementHandler(node);
+				break;
 			case "WhileStatement":
-				return this.whileStatementHandler(node);
+				closure = this.whileStatementHandler(node);
+				break;
 			case "DoWhileStatement":
-				return this.doWhileStatementHandler(node);
+				closure = this.doWhileStatementHandler(node);
+				break;
 			case "ForInStatement":
-				return this.forInStatementHandler(node);
+				closure = this.forInStatementHandler(node);
+				break;
 			case "WithStatement":
-				return this.withStatementHandler(node);
+				closure = this.withStatementHandler(node);
+				break;
 			case "ThrowStatement":
-				return this.throwStatementHandler(node);
+				closure = this.throwStatementHandler(node);
+				break;
 			case "TryStatement":
-				return this.tryStatementHandler(node);
+				closure = this.tryStatementHandler(node);
+				break;
 			case "ContinueStatement":
-				return this.continueStatementHandler(node);
+				closure = this.continueStatementHandler(node);
+				break;
 			case "BreakStatement":
-				return this.breakStatementHandler(node);
+				closure = this.breakStatementHandler(node);
+				break;
 			case "SwitchStatement":
-				return this.switchStatementHandler(node);
+				closure = this.switchStatementHandler(node);
+				break;
 			case "LabeledStatement":
-				return this.labeledStatementHandler(node);
+				closure = this.labeledStatementHandler(node);
+				break;
 			default:
-				throw SyntaxError("Unknown node type: " + node.type);
+				this.throwError(Messages.NodeTypeSyntaxError, node.type, node);
 		}
+
+		if (timeout && timeout > 0) {
+			return (...args: any) => {
+				if (this.checkTimeout()) {
+					this.throwError(Messages.ExecutionTimeOutError, timeout, node);
+				}
+
+				return closure(...args);
+			};
+		}
+
+		return closure;
 	}
 
 	// a==b a/b
@@ -235,51 +370,62 @@ export default class Interpreter {
 		const rightExpression = this.create(node.right);
 
 		return () => {
+			const leftValue = leftExpression();
+			const rightValue = rightExpression();
+
+			if (leftValue instanceof Throw) {
+				return leftValue;
+			}
+
+			if (rightValue instanceof Throw) {
+				return rightValue;
+			}
+
 			switch (node.operator) {
 				case "==":
-					return leftExpression() == rightExpression();
+					return leftValue == rightValue;
 				case "!=":
-					return leftExpression() != rightExpression();
+					return leftValue != rightValue;
 				case "===":
-					return leftExpression() === rightExpression();
+					return leftValue === rightValue;
 				case "!==":
-					return leftExpression() !== rightExpression();
+					return leftValue !== rightValue;
 				case "<":
-					return leftExpression() < rightExpression();
+					return leftValue < rightValue;
 				case "<=":
-					return leftExpression() <= rightExpression();
+					return leftValue <= rightValue;
 				case ">":
-					return leftExpression() > rightExpression();
+					return leftValue > rightValue;
 				case ">=":
-					return leftExpression() >= rightExpression();
+					return leftValue >= rightValue;
 				case "<<":
-					return leftExpression() << rightExpression();
+					return leftValue << rightValue;
 				case ">>":
-					return leftExpression() >> rightExpression();
+					return leftValue >> rightValue;
 				case ">>>":
-					return leftExpression() >>> rightExpression();
+					return leftValue >>> rightValue;
 				case "+":
-					return leftExpression() + rightExpression();
+					return leftValue + rightValue;
 				case "-":
-					return leftExpression() - rightExpression();
+					return leftValue - rightValue;
 				case "*":
-					return leftExpression() * rightExpression();
+					return leftValue * rightValue;
 				case "/":
-					return leftExpression() / rightExpression();
+					return leftValue / rightValue;
 				case "%":
-					return leftExpression() % rightExpression();
+					return leftValue % rightValue;
 				case "|":
-					return leftExpression() | rightExpression();
+					return leftValue | rightValue;
 				case "^":
-					return leftExpression() ^ rightExpression();
+					return leftValue ^ rightValue;
 				case "&":
-					return leftExpression() & rightExpression();
+					return leftValue & rightValue;
 				case "in":
-					return leftExpression() in rightExpression();
+					return leftValue in rightValue;
 				case "instanceof":
-					return leftExpression() instanceof rightExpression();
+					return leftValue instanceof rightValue;
 				default:
-					throw SyntaxError("Unknown binary operator: " + node.operator);
+					this.throwError(Messages.BinaryOperatorSyntaxError, node.operator, node);
 			}
 		};
 	}
@@ -290,49 +436,176 @@ export default class Interpreter {
 		const rightExpression = this.create(node.right);
 
 		return () => {
+			let leftValue;
+			let rightValue;
+
 			switch (node.operator) {
 				case "||":
-					return leftExpression() || rightExpression();
+					leftValue = leftExpression();
+					if (leftValue instanceof Throw) {
+						return leftValue;
+					}
+
+					if (leftValue) {
+						return leftValue;
+					}
+
+					rightValue = rightExpression();
+
+					if (rightValue instanceof Throw) {
+						return rightValue;
+					}
+
+					return rightValue;
 				case "&&":
-					return leftExpression() && rightExpression();
+					leftValue = leftExpression();
+					if (leftValue instanceof Throw) {
+						return leftValue;
+					}
+
+					if (!leftValue) {
+						return leftValue;
+					}
+
+					rightValue = rightExpression();
+
+					if (rightValue instanceof Throw) {
+						return rightValue;
+					}
+
+					return rightValue;
 				default:
-					throw SyntaxError("Unknown logical operator: " + node.operator);
+					this.throwError(Messages.LogicalOperatorSyntaxError, node.operator, node);
 			}
 		};
 	}
 
 	// typeof a !a()
 	unaryExpressionHandler(node: ESTree.UnaryExpression): BaseClosure {
-		if (node.operator === "delete") {
-			const objectGetter = this.createObjectGetter(node.argument);
-			const nameGetter = this.createNameGetter(node.argument);
-
-			return () => {
-				let obj = objectGetter();
-				const name = nameGetter();
-				return delete obj[name];
-			};
-		} else {
-			const expression = this.create(node.argument);
-			return () => {
-				switch (node.operator) {
-					case "-":
-						return -expression();
-					case "+":
-						return +expression();
-					case "!":
-						return !expression();
-					case "~":
-						return ~expression();
-					case "typeof":
-						return typeof expression();
-					case "void":
-						return void expression();
-					default:
-						throw SyntaxError("Unknown unary operator: " + node.operator);
+		switch (node.operator) {
+			case "typeof":
+				if (node.argument.type === "Identifier" || node.argument.type === "Literal") {
+					const expression = this.create(node.argument);
+					return () => {
+						const ret = expression();
+						// typeof adfffd => undefined
+						if (ret instanceof Throw) {
+							return "undefined";
+						}
+						return typeof ret;
+					};
 				}
-			};
+			case "delete":
+				const objectGetter = this.createObjectGetter(node.argument);
+				const nameGetter = this.createNameGetter(node.argument);
+
+				return () => {
+					let obj = objectGetter();
+					const name = nameGetter();
+
+					if (obj instanceof Throw) {
+						return obj;
+					}
+
+					if (name instanceof Throw) {
+						return name;
+					}
+
+					// catch null.x undefined.xx ...
+					const throwError = this.safeObjectGet(obj, name, node);
+					if (throwError instanceof Throw) {
+						return throwError;
+					}
+
+					// for typeof undefined var
+					// typeof adf9ad
+					if (node.operator === "typeof") {
+						return typeof obj[name];
+					} else {
+						return delete obj[name];
+					}
+				};
+			default:
+				const expression = this.create(node.argument);
+
+				return () => {
+					const value = expression();
+					if (value instanceof Throw) {
+						return value;
+					}
+
+					switch (node.operator) {
+						case "-":
+							return -value;
+						case "+":
+							return +value;
+						case "!":
+							return !value;
+						case "~":
+							return ~value;
+						case "void":
+							return void value;
+						default:
+							this.throwError(Messages.UnaryOperatorSyntaxError, node.operator, node);
+					}
+				};
 		}
+
+		// if (node.operator === "delete" || node.operator === "typeof") {
+		// 	const objectGetter = this.createObjectGetter(node.argument);
+		// 	const nameGetter = this.createNameGetter(node.argument);
+
+		// 	return () => {
+		// 		let obj = objectGetter();
+		// 		const name = nameGetter();
+
+		// 		if (obj instanceof Throw) {
+		// 			return obj;
+		// 		}
+
+		// 		if (name instanceof Throw) {
+		// 			return name;
+		// 		}
+
+		// 		// catch null.x undefined.xx ...
+		// 		const throwError = this.safeObjectGet(obj, name, node);
+		// 		if (throwError instanceof Throw) {
+		// 			return throwError;
+		// 		}
+
+		// 		// for typeof undefined var
+		// 		// typeof adf9ad
+		// 		if (node.operator === "typeof") {
+		// 			return typeof obj[name];
+		// 		} else {
+		// 			return delete obj[name];
+		// 		}
+		// 	};
+		// } else {
+		// 	const expression = this.create(node.argument);
+
+		// 	return () => {
+		// 		const value = expression();
+		// 		if (value instanceof Throw) {
+		// 			return value;
+		// 		}
+
+		// 		switch (node.operator) {
+		// 			case "-":
+		// 				return -value;
+		// 			case "+":
+		// 				return +value;
+		// 			case "!":
+		// 				return !value;
+		// 			case "~":
+		// 				return ~value;
+		// 			case "void":
+		// 				return void value;
+		// 			default:
+		// 				this.throwError(Messages.UnaryOperatorSyntaxError, node.operator, node);
+		// 		}
+		// 	};
+		// }
 	}
 
 	// ++a --a
@@ -343,13 +616,32 @@ export default class Interpreter {
 			const obj = objectGetter();
 			const name = nameGetter();
 
+			if (obj instanceof Throw) {
+				return obj;
+			}
+
+			if (name instanceof Throw) {
+				return name;
+			}
+
+			const throwError = this.assertVariable(obj, name, node);
+			if (throwError) {
+				return throwError;
+			}
+
+			// assert null.ab undefiend.ac ... error
+			const throwError2 = this.safeObjectGet(obj, name, node);
+			if (throwError2 instanceof Throw) {
+				return throwError2;
+			}
+
 			switch (node.operator) {
 				case "++":
 					return node.prefix ? ++obj[name] : obj[name]++;
 				case "--":
 					return node.prefix ? --obj[name] : obj[name]--;
 				default:
-					throw SyntaxError("Unknown update operator: " + node.operator);
+					this.throwError(Messages.UpdateOperatorSyntaxError, node.operator, node);
 			}
 		};
 	}
@@ -362,11 +654,13 @@ export default class Interpreter {
 
 		function getKey(keyNode: ESTree.Expression): string {
 			if (keyNode.type === "Identifier") {
+				// var o = {a:1}
 				return keyNode.name;
 			} else if (keyNode.type === "Literal") {
+				// var o = {"a":1}
 				return keyNode.value as string;
 			} else {
-				throw SyntaxError("Unknown object structure: " + keyNode.type);
+				return this.throwError(Messages.ObjectStructureSyntaxError, keyNode.type, keyNode);
 			}
 		}
 		// collect value, getter, and/or setter.
@@ -395,13 +689,19 @@ export default class Interpreter {
 
 		return () => {
 			const result = {};
+			const len = items.length;
 
-			items.forEach(function(item) {
+			for (let i = 0; i < len; i++) {
+				const item = items[i];
 				const key = item.key;
 				const kinds = properties[key];
 				const value = kinds.init ? kinds.init() : undefined;
 				const getter = kinds.get ? kinds.get() : function() {};
 				const setter = kinds.set ? kinds.set() : function(a: any) {};
+
+				if (value instanceof Throw) {
+					return value;
+				}
 
 				if ("set" in kinds || "get" in kinds) {
 					const descriptor = {
@@ -414,7 +714,7 @@ export default class Interpreter {
 				} else {
 					result[key] = value;
 				}
-			});
+			}
 
 			return result;
 		};
@@ -422,14 +722,36 @@ export default class Interpreter {
 
 	// [1,2,3]
 	arrayExpressionHandler(node: ESTree.ArrayExpression) {
-		const items: Array<() => any> = node.elements.map(element => this.create(element));
+		const items: Array<BaseClosure> = node.elements.map(element => this.create(element));
 
 		return () => {
-			return items.map(item => item());
+			const result: any[] = [];
+			const len = items.length;
+
+			for (let i = 0; i < len; i++) {
+				const item = items[i];
+				const ret = item();
+
+				if (ret instanceof Throw) {
+					return ret;
+				}
+
+				result.push(ret);
+			}
+
+			return result;
 		};
 	}
 
-	createCallFunctionGetter(node: Node) {
+	safeObjectGet(obj: any, key: any, node: Node) {
+		try {
+			return obj[key];
+		} catch (e) {
+			return new Throw(new TypeError(e.message));
+		}
+	}
+
+	createCallFunctionGetter(node: Node & { start?: number; end?: number }) {
 		switch (node.type) {
 			case "MemberExpression":
 				const objectGetter = this.create(node.object);
@@ -437,22 +759,60 @@ export default class Interpreter {
 				return () => {
 					const obj = objectGetter();
 					const key = keyGetter();
+					const func = this.safeObjectGet(obj, key, node);
+
+					if (obj instanceof Throw) {
+						return obj;
+					}
+
+					if (key instanceof Throw) {
+						return key;
+					}
+
+					if (func instanceof Throw) {
+						return func;
+					}
+
+					if (!func || !isFunction(func)) {
+						const name = this.source.slice(node.start, node.end);
+						return this.createThrowError(
+							Messages.FunctionUndefinedReferenceError,
+							name,
+							node
+						);
+					}
+
 					// method call
 					// tips:
 					// test.call(ctx, ...) === test.call.bind(test)(ctx, ...)
 					// test.apply(ctx, ...) === test.apply.bind(test)(ctx, ...)
 					// test.f(...) === test.f.bind(test)(...)
 					// ...others
-					return obj[key].bind(obj);
+					return func.bind(obj);
 				};
 			default:
 				const closure = this.create(node);
 				return () => {
+					const name: string = (<ESTree.Identifier>node).name;
+					const func = closure();
+
+					if (func instanceof Throw) {
+						return func;
+					}
+
+					if (!func || !isFunction(func)) {
+						return this.createThrowError(
+							Messages.FunctionUndefinedReferenceError,
+							name,
+							node
+						);
+					}
+
 					// function call
 					// this = rootContext
 					// tips:
 					// test(...) === test.call(this.rootContext, ...)
-					return closure().bind(this.rootContext);
+					return func.bind(this.rootContext);
 				};
 		}
 	}
@@ -463,7 +823,23 @@ export default class Interpreter {
 		const argsGetter = node.arguments.map(arg => this.create(arg));
 		return () => {
 			const func = funcGetter();
-			const args = argsGetter.map(arg => arg());
+
+			if (func instanceof Throw) {
+				return func;
+			}
+
+			const len = argsGetter.length;
+			const args: any[] = [];
+			for (let i = 0; i < len; i++) {
+				const arg = argsGetter[i];
+				const result = arg();
+
+				if (result instanceof Throw) {
+					return result;
+				}
+
+				args.push(result);
+			}
 
 			return func(...args);
 		};
@@ -559,7 +935,35 @@ export default class Interpreter {
 
 		return () => {
 			const construct = expression();
-			return new construct(...args.map(arg => arg()));
+
+			if (construct instanceof Throw) {
+				return construct;
+			}
+
+			if (!isFunction(construct)) {
+				const callee = <ESTree.Expression & { start?: number; end?: number }>node.callee;
+				const name = this.source.slice(callee.start, callee.end);
+				return new Throw(new TypeError(name + " is not a constructor"));
+			}
+
+			const len = args.length;
+			const params: any[] = [];
+			for (let i = 0; i < len; i++) {
+				const arg = args[i];
+				const result = arg();
+
+				if (result instanceof Throw) {
+					return result;
+				}
+
+				params.push(result);
+			}
+
+			try {
+				return new construct(...params);
+			} catch (e) {
+				return new Throw(e);
+			}
 		};
 	}
 
@@ -571,15 +975,25 @@ export default class Interpreter {
 			const obj = objectGetter();
 			let key = keyGetter();
 
+			if (obj instanceof Throw) {
+				return obj;
+			}
+
+			if (key instanceof Throw) {
+				return key;
+			}
+
 			// get function.length
-			if (obj[isFunctionSymbol] && key === "length") {
+			if (obj && obj[isFunctionSymbol] && key === "length") {
 				key = FunctionLengthSymbol;
 			}
 			// get function.name
-			if (obj[isFunctionSymbol] && key === "name") {
+			if (obj && obj[isFunctionSymbol] && key === "name") {
 				key = FunctionNameSymbol;
 			}
-			return obj[key];
+			// return obj[key];
+
+			return this.safeObjectGet(obj, key, node);
 		};
 	}
 
@@ -593,19 +1007,30 @@ export default class Interpreter {
 		const expressions = node.expressions.map(item => this.create(item));
 
 		return () => {
-			let result;
+			let result: any;
+			const len = expressions.length;
 
-			expressions.forEach(expression => {
+			for (let i = 0; i < len; i++) {
+				const expression = expressions[i];
 				result = expression();
-			});
+				if (result instanceof Throw) {
+					return result;
+				}
+			}
 
 			return result;
 		};
 	}
 
 	// 1 'name'
-	literalHandler(node: ESTree.Literal): BaseClosure {
+	literalHandler(
+		node: ESTree.Literal & { regex?: { pattern: string; flags: string } }
+	): BaseClosure {
 		return () => {
+			if (node.regex) {
+				return new RegExp(node.regex.pattern, node.regex.flags);
+			}
+
 			return node.value;
 		};
 	}
@@ -616,6 +1041,12 @@ export default class Interpreter {
 
 		return () => {
 			const data = this.getScopeDataFromName(node.name, currentScope);
+
+			const throwError = this.assertVariable(data, node.name, node);
+			if (throwError) {
+				return throwError;
+			}
+
 			return data[node.name];
 		};
 	}
@@ -640,10 +1071,40 @@ export default class Interpreter {
 		const rightValueGetter = this.create(node.right);
 
 		return () => {
-			const context = dataGetter();
+			const data = dataGetter();
 			const name = nameGetter();
 			const rightValue = rightValueGetter();
-			let value = context[name];
+
+			if (data instanceof Throw) {
+				return data;
+			}
+
+			if (name instanceof Throw) {
+				return name;
+			}
+
+			// catch null.xx
+			let value = this.safeObjectGet(data, name, node); // data[name];
+			if (value instanceof Throw) {
+				return value;
+			}
+
+			if (rightValue instanceof Throw) {
+				return rightValue;
+			}
+
+			if (node.operator !== "=") {
+				// asdsad(undefined) += 1
+				const throwError = this.assertVariable(data, name, node);
+				if (throwError) {
+					return throwError;
+				}
+			} else {
+				// name = asdfdff(undefined);
+				// if (rightValue instanceof Throw) {
+				// 	return rightValue;
+				// }
+			}
 
 			switch (node.operator) {
 				case "=":
@@ -683,10 +1144,10 @@ export default class Interpreter {
 					value |= rightValue;
 					break;
 				default:
-					throw SyntaxError("Unknown assignment expression: " + node.operator);
+					this.throwError(Messages.AssignmentExpressionSyntaxError, node.type, node);
 			}
 
-			context[name] = value;
+			data[name] = value;
 
 			return value;
 		};
@@ -697,20 +1158,21 @@ export default class Interpreter {
 		if (node.id) {
 			this.funcDeclaration(node.id.name, this.functionExpressionHandler(node)());
 		}
-		return noop;
+		return () => EmptyStatementReturn;
 	}
 
 	getVariableName(node: ESTree.Pattern) {
 		if (node.type === "Identifier") {
 			return node.name;
 		} else {
-			throw SyntaxError("Unknown variable type: " + node.type);
+			this.throwError(Messages.VariableTypeSyntaxError, node.type, node);
 		}
 	}
 
 	// var i;
 	// var i=1;
 	variableDeclarationHandler(node: ESTree.VariableDeclaration): BaseClosure {
+		let assignmentsClosure: BaseClosure;
 		const assignments: Array<ESTree.AssignmentExpression> = [];
 		for (let i = 0; i < node.declarations.length; i++) {
 			const decl = node.declarations[i];
@@ -724,14 +1186,35 @@ export default class Interpreter {
 				});
 			}
 		}
+
+		if (assignments.length) {
+			assignmentsClosure = this.create({
+				type: "BlockStatement",
+				body: (assignments as unknown) as ESTree.Statement[],
+			});
+		}
+
 		return () => {
-			if (assignments.length) {
-				this.create({
-					type: "BlockStatement",
-					body: assignments as unknown as ESTree.Statement[],
-				})();
+			if (assignmentsClosure) {
+				this.isVarDeclMode = true;
+				const ret = assignmentsClosure();
+				this.isVarDeclMode = false;
+
+				if (ret instanceof Throw) {
+					return ret;
+				}
 			}
+
+			return EmptyStatementReturn;
 		};
+	}
+
+	assertVariable(data: ScopeData, name: string, node: Node): Throw | null {
+		if (data === this.rootScope.data && !(name in data)) {
+			return this.createThrowError(Messages.VariableUndefinedReferenceError, name, node);
+		}
+
+		return null;
 	}
 
 	// {...}
@@ -754,18 +1237,6 @@ export default class Interpreter {
 				// EmptyStatement
 				if (ret === EmptyStatementReturn) continue;
 
-				// continue label;
-				// if (
-				// 	ret instanceof ContinueLabel &&
-				// 	currentScope.labelStack.indexOf(ret.value) === -1
-				// ) {
-				// 	if (last(currentScope.labelStack) === ret.value) {
-				// 		continue;
-				// 	} else {
-				// 		break;
-				// 	}
-				// }
-
 				result = ret;
 
 				// BlockStatement: break label;  continue label; for(){ break ... }
@@ -775,6 +1246,7 @@ export default class Interpreter {
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
 					result instanceof Throw ||
+					result instanceof Interrupt ||
 					result === Break ||
 					result === Continue
 				) {
@@ -811,7 +1283,13 @@ export default class Interpreter {
 			? this.create(node.alternate)
 			: /*!important*/ () => EmptyStatementReturn;
 		return () => {
-			return testClosure() ? consequentClosure() : alternateClosure();
+			const tr = testClosure();
+
+			if (tr instanceof Throw) {
+				return tr;
+			}
+
+			return tr ? consequentClosure() : alternateClosure();
 		};
 	}
 	// test() ? true : false
@@ -841,8 +1319,23 @@ export default class Interpreter {
 				labelName = pNode.label.name;
 			}
 
-			for (initClosure(); shouldInitExec || testClosure(); updateClosure()) {
+			let ur: any;
+			let tr: any;
+			const initResult: any = initClosure();
+			if (initResult instanceof Throw) {
+				return initResult;
+			}
+
+			for (; shouldInitExec || (tr = testClosure()); ur = updateClosure()) {
 				shouldInitExec = false;
+
+				if (ur && ur instanceof Throw) {
+					return ur;
+				}
+
+				if (tr && tr instanceof Throw) {
+					return tr;
+				}
 
 				// save last value
 				const ret = this.setValue(bodyClosure());
@@ -857,7 +1350,7 @@ export default class Interpreter {
 
 				// stop continue label
 				if (result instanceof ContinueLabel && result.value === labelName) {
-					result = undefined;
+					result = EmptyStatementReturn;
 					continue;
 				}
 
@@ -865,7 +1358,8 @@ export default class Interpreter {
 					result instanceof Return ||
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
-					result instanceof Throw
+					result instanceof Throw ||
+					result instanceof Interrupt
 				) {
 					break;
 				}
@@ -905,11 +1399,17 @@ export default class Interpreter {
 				labelName = pNode.label.name;
 			}
 
-			for (x in rightClosure()) {
+			const data = rightClosure();
+
+			if (data instanceof Throw) {
+				return data;
+			}
+
+			for (x in data) {
 				// assign left to scope
 				// k = x
 				// o.k = x
-				this.assignmentExpressionHandler({
+				const ar = this.assignmentExpressionHandler({
 					type: "AssignmentExpression",
 					operator: "=",
 					left: left as ESTree.Pattern,
@@ -918,6 +1418,10 @@ export default class Interpreter {
 						value: x,
 					},
 				})();
+
+				if (ar instanceof Throw) {
+					return ar;
+				}
 
 				// save last value
 				const ret = this.setValue(bodyClosure());
@@ -932,7 +1436,7 @@ export default class Interpreter {
 
 				// stop continue label
 				if (result instanceof ContinueLabel && result.value === labelName) {
-					result = undefined;
+					result = EmptyStatementReturn;
 					continue;
 				}
 
@@ -940,7 +1444,8 @@ export default class Interpreter {
 					result instanceof Return ||
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
-					result instanceof Throw
+					result instanceof Throw ||
+					result instanceof Interrupt
 				) {
 					break;
 				}
@@ -961,6 +1466,10 @@ export default class Interpreter {
 
 		return () => {
 			const data = objectClosure();
+
+			if (data instanceof Throw) {
+				return data;
+			}
 			// newScope.data = data;
 			// copy all property
 			for (var k in data) {
@@ -974,7 +1483,16 @@ export default class Interpreter {
 
 	throwStatementHandler(node: ESTree.ThrowStatement): BaseClosure {
 		const argumentClosure = this.create(node.argument);
-		return () => new Throw(argumentClosure());
+
+		return () => {
+			const error = argumentClosure();
+
+			if (error instanceof Throw) {
+				return error;
+			}
+
+			return new Throw(error);
+		};
 	}
 
 	// try{...}catch(e){...}finally{}
@@ -1000,6 +1518,11 @@ export default class Interpreter {
 
 			// try{
 			result = this.setValue(blockClosure());
+
+			if (result instanceof Interrupt) {
+				return result;
+			}
+
 			if (result instanceof Return) {
 				ret = result;
 			}
@@ -1008,6 +1531,11 @@ export default class Interpreter {
 			if (handlerClosure) {
 				if (result instanceof Throw) {
 					result = this.setValue(handlerClosure(result.value));
+
+					if (result instanceof Interrupt) {
+						return result;
+					}
+
 					if (result instanceof Return || result instanceof Throw) {
 						ret = result;
 					}
@@ -1016,6 +1544,10 @@ export default class Interpreter {
 			// } finally {
 			if (finalizerClosure) {
 				result = this.setValue(finalizerClosure());
+
+				if (result instanceof Interrupt) {
+					return result;
+				}
 
 				if (result instanceof Return) {
 					return result;
@@ -1077,6 +1609,11 @@ export default class Interpreter {
 		const caseClosures = node.cases.map(item => this.switchCaseHandler(item));
 		return () => {
 			const value = discriminantClosure();
+
+			if (value instanceof Throw) {
+				return value;
+			}
+
 			let match = false;
 			let result: any;
 			let ret: any, defaultCase: CaseItem | undefined;
@@ -1084,6 +1621,10 @@ export default class Interpreter {
 			for (let i = 0; i < caseClosures.length; i++) {
 				const item = caseClosures[i]();
 				const test = item.testClosure();
+
+				if (test instanceof Throw) {
+					return test;
+				}
 
 				if (test === DefaultCase) {
 					defaultCase = item;
@@ -1106,7 +1647,8 @@ export default class Interpreter {
 						result instanceof Return ||
 						result instanceof BreakLabel ||
 						result instanceof ContinueLabel ||
-						result instanceof Throw
+						result instanceof Throw ||
+						value instanceof Interrupt
 					) {
 						break;
 					}
@@ -1157,7 +1699,7 @@ export default class Interpreter {
 
 			// stop break label
 			if (result instanceof BreakLabel && result.value === labelName) {
-				result = undefined;
+				result = EmptyStatementReturn;
 			}
 
 			currentScope.labelStack.pop();
@@ -1171,7 +1713,7 @@ export default class Interpreter {
 		if (node.type === "Identifier") {
 			return () => node.name;
 		} else {
-			throw SyntaxError("Unknown param type: " + node.type);
+			this.throwError(Messages.ParamTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1209,7 +1751,7 @@ export default class Interpreter {
 			case "MemberExpression":
 				return this.create(node.object);
 			default:
-				throw SyntaxError("Unknown assignment type: " + node.type);
+				this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1221,7 +1763,7 @@ export default class Interpreter {
 			case "MemberExpression":
 				return this.createMemberKeyGetter(node);
 			default:
-				throw SyntaxError("Unknown assignment type: " + node.type);
+				this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1273,13 +1815,15 @@ export default class Interpreter {
 		const isFunctionCall = this.callStack.length;
 
 		if (
+			this.isVarDeclMode ||
 			isFunctionCall ||
 			value === EmptyStatementReturn ||
 			value === Break ||
 			value === Continue ||
 			value instanceof BreakLabel ||
 			value instanceof ContinueLabel ||
-			value instanceof Throw
+			value instanceof Throw ||
+			value instanceof Interrupt
 		) {
 			return value;
 		}
