@@ -1,40 +1,41 @@
 {
-    "name": "evaljs2",
-    "version": "0.0.1",
-    "description": "A JavaScript interpreter written in JavaScript",
-    "main": "lib/index.js",
-    "module": "esm/index.js",
-    "scripts": {
-        "start": "transform-es src -d lib -c -w",
-        "test": "node test/index.js"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/bplok20010/evaljs2.git"
-    },
-    "keywords": [],
-    "author": "nobo.zhou@foxmail.com",
-    "license": "ISC",
-    "bugs": {
-        "url": "https://github.com/bplok20010/evaljs2/issues"
-    },
-    "homepage": "https://github.com/bplok20010/evaljs2#readme",
-    "devDependencies": {
-        "packez": "^3.1.0",
-        "transform-es": "^4.6.5"
-    },
-    "dependencies": {
-        "@types/acorn": "^4.0.5",
-        "@types/estree": "0.0.41",
-        "acorn": "^7.1.0"
-    },
-    "browserslist": [
-        ">=0.2%",
-        "not dead",
-        "not op_mini all",
-        "not Android 4.4.3-4.4.4",
-        "not ios_saf < 10",
-        "not Chrome < 50",
-        "firefox ESR"
-    ]
+	"name": "evaljs2",
+	"version": "0.0.1",
+	"description": "A JavaScript interpreter written in JavaScript",
+	"main": "lib/index.js",
+	"module": "esm/index.js",
+	"scripts": {
+		"start": "transform-es src -d lib -c -w",
+		"bundle": "packez bundle ./src/index.ts -d dist",
+		"test": "node test/index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bplok20010/evaljs2.git"
+	},
+	"keywords": [],
+	"author": "nobo.zhou@foxmail.com",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/bplok20010/evaljs2/issues"
+	},
+	"homepage": "https://github.com/bplok20010/evaljs2#readme",
+	"devDependencies": {
+		"packez": "^3.1.0",
+		"transform-es": "^4.6.5"
+	},
+	"dependencies": {
+		"@types/acorn": "^4.0.5",
+		"@types/estree": "0.0.41",
+		"acorn": "^7.1.0"
+	},
+	"browserslist": [
+		">=0.2%",
+		"not dead",
+		"not op_mini all",
+		"not Android 4.4.3-4.4.4",
+		"not ios_saf < 10",
+		"not Chrome < 50",
+		"firefox ESR"
+	]
 }
