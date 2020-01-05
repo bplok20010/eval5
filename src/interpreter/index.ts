@@ -11,6 +11,20 @@ const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
 const EmptyStatementReturn = Symbol("EmptyStatementReturn");
 
+// interface Position {
+// 	line: number;
+// 	column: number;
+// }
+
+// interface SourcePosition {
+// 	start?: number;
+// 	end?: number;
+// 	loc?: {
+// 		start: Position;
+// 		end: Position;
+// 	};
+// }
+
 type Getter = () => any;
 type BaseClosure = (pNode?: Node) => any;
 type CaseItem = {
@@ -59,6 +73,10 @@ interface Options {
 	timeout?: number;
 }
 
+interface CollectDeclarations {
+	[key: string]: undefined | BaseClosure;
+}
+
 type ScopeData = {};
 type Labels = {};
 
@@ -66,13 +84,11 @@ class Scope {
 	name: string | undefined;
 	parent: Scope | null;
 	data: ScopeData;
-	labels: Labels;
 	labelStack: string[];
 	constructor(data: ScopeData, parent: Scope | null = null, name?: string) {
 		this.name = name;
 		this.parent = parent;
 		this.data = data;
-		this.labels = Object.create(null);
 		this.labelStack = [];
 	}
 }
@@ -105,10 +121,12 @@ export default class Interpreter {
 	currentContext: Context;
 	options: Options;
 	callStack: string[];
+	collectDeclarations: CollectDeclarations = {};
 	protected error: Throw | Error | null = null;
 	protected isVarDeclMode: boolean = false;
 
 	protected execStartTime: number;
+	protected execEndTime: number;
 
 	constructor(context: Context, options: Options = {}) {
 		this.options = {
@@ -134,8 +152,11 @@ export default class Interpreter {
 		//init global context == this
 		this.rootContext = ctx;
 		this.currentContext = ctx;
+		// collect var/function declare
+		this.collectDeclarations = {};
 
 		this.execStartTime = Date.now();
+		this.execEndTime = this.execStartTime;
 		this.error = null;
 	}
 
@@ -168,7 +189,15 @@ export default class Interpreter {
 
 		// Interpreter Error
 		try {
-			result = this.create(node)();
+			const bodyClosure = this.create(node);
+
+			// add declares to data
+			this.addDeclarationsToScope(this.collectDeclarations, this.getCurrentScope());
+
+			// reset
+			this.collectDeclarations = {};
+			// start run
+			result = bodyClosure();
 		} catch (e) {
 			if (e instanceof Error) {
 				this.error = e;
@@ -184,12 +213,20 @@ export default class Interpreter {
 			this.error = result;
 		}
 
+		this.execEndTime = Date.now();
+
 		return this.getValue();
+	}
+
+	getExecutionTime(): number {
+		return this.execEndTime - this.execStartTime;
 	}
 
 	createError(msg: [number, string], value: string | number, node?: Node): Error {
 		const code = msg[0];
-		const message = msg[1].replace("%0", String(value));
+		let message = msg[1].replace("%0", String(value));
+
+		message += " " + this.getNodePosition(node);
 
 		if (code > 1000 && code <= 2000) {
 			return new SyntaxError(message);
@@ -237,6 +274,13 @@ export default class Interpreter {
 		}
 
 		return false;
+	}
+
+	getNodePosition(node?: Node) {
+		if (node) {
+			return node.loc ? `(${node.loc.start.line}, ${node.loc.start.column})` : "";
+		}
+		return "";
 	}
 
 	create(node: Node) {
@@ -550,62 +594,6 @@ export default class Interpreter {
 					}
 				};
 		}
-
-		// if (node.operator === "delete" || node.operator === "typeof") {
-		// 	const objectGetter = this.createObjectGetter(node.argument);
-		// 	const nameGetter = this.createNameGetter(node.argument);
-
-		// 	return () => {
-		// 		let obj = objectGetter();
-		// 		const name = nameGetter();
-
-		// 		if (obj instanceof Throw) {
-		// 			return obj;
-		// 		}
-
-		// 		if (name instanceof Throw) {
-		// 			return name;
-		// 		}
-
-		// 		// catch null.x undefined.xx ...
-		// 		const throwError = this.safeObjectGet(obj, name, node);
-		// 		if (throwError instanceof Throw) {
-		// 			return throwError;
-		// 		}
-
-		// 		// for typeof undefined var
-		// 		// typeof adf9ad
-		// 		if (node.operator === "typeof") {
-		// 			return typeof obj[name];
-		// 		} else {
-		// 			return delete obj[name];
-		// 		}
-		// 	};
-		// } else {
-		// 	const expression = this.create(node.argument);
-
-		// 	return () => {
-		// 		const value = expression();
-		// 		if (value instanceof Throw) {
-		// 			return value;
-		// 		}
-
-		// 		switch (node.operator) {
-		// 			case "-":
-		// 				return -value;
-		// 			case "+":
-		// 				return +value;
-		// 			case "!":
-		// 				return !value;
-		// 			case "~":
-		// 				return ~value;
-		// 			case "void":
-		// 				return void value;
-		// 			default:
-		// 				this.throwError(Messages.UnaryOperatorSyntaxError, node.operator, node);
-		// 		}
-		// 	};
-		// }
 	}
 
 	// ++a --a
@@ -852,33 +840,47 @@ export default class Interpreter {
 			| (ESTree.FunctionDeclaration & { start?: number; end?: number })
 	) {
 		const self = this;
-		const currentScope = this.getCurrentScope();
+		const oldDecls = this.collectDeclarations;
+		this.collectDeclarations = {};
 		const name = node.id ? node.id.name : "";
 		const paramLength = node.params.length;
+
 		const paramsGetter = node.params.map(param => this.createParamNameGetter(param));
-
-		const newScope = createScope(currentScope, name);
-
 		// set scope
-		this.setCurrentScope(newScope);
 		const bodyGetter = this.create(node.body);
-		// restore scope
-		this.setCurrentScope(currentScope);
-		return () => {
-			function func(...args: any[]) {
-				self.callStack.push(`${name}(${node.start},${node.end})`);
 
+		const declarations = this.collectDeclarations;
+
+		this.collectDeclarations = oldDecls;
+
+		return () => {
+			// bind current scope
+			const runtimeScope = self.getCurrentScope();
+
+			function func(...args: any[]) {
+				self.callStack.push(`${name}${self.getNodePosition(node)}`);
+
+				const prevScope = self.getCurrentScope();
+				const currentScope = createScope(runtimeScope, name);
+				self.setCurrentScope(currentScope);
+
+				self.addDeclarationsToScope(declarations, currentScope);
 				// init arguments var
-				newScope.data["arguments"] = arguments;
+				currentScope.data["arguments"] = arguments;
 				paramsGetter.forEach((getter, i) => {
-					newScope.data[getter()] = args[i];
+					currentScope.data[getter()] = args[i];
 				});
+
 				// init this
 				const prevContext = self.getCurrentContext();
 				//for ThisExpression
 				self.setCurrentContext(this);
+
 				const result = bodyGetter();
+
+				//reset
 				self.setCurrentContext(prevContext);
+				self.setCurrentScope(prevScope);
 
 				self.callStack.pop();
 
@@ -1037,9 +1039,8 @@ export default class Interpreter {
 
 	// var1 ...
 	identifierHandler(node: ESTree.Identifier): BaseClosure {
-		const currentScope = this.getCurrentScope();
-
 		return () => {
+			const currentScope = this.getCurrentScope();
 			const data = this.getScopeDataFromName(node.name, currentScope);
 
 			const throwError = this.assertVariable(data, node.name, node);
@@ -1156,9 +1157,11 @@ export default class Interpreter {
 	// function test(){}
 	functionDeclarationHandler(node: ESTree.FunctionDeclaration): BaseClosure {
 		if (node.id) {
-			this.funcDeclaration(node.id.name, this.functionExpressionHandler(node)());
+			this.funcDeclaration(node.id.name, this.functionExpressionHandler(node));
 		}
-		return () => EmptyStatementReturn;
+		return () => {
+			return EmptyStatementReturn;
+		};
 	}
 
 	getVariableName(node: ESTree.Pattern) {
@@ -1455,16 +1458,13 @@ export default class Interpreter {
 		};
 	}
 	withStatementHandler(node: ESTree.WithStatement): BaseClosure {
-		const currentScope = this.getCurrentScope();
 		const objectClosure = this.create(node.object);
-
-		const newScope = createScope(currentScope, "with");
-
-		this.setCurrentScope(newScope);
 		const bodyClosure = this.create(node.body);
-		this.setCurrentScope(currentScope);
 
 		return () => {
+			const currentScope = this.getCurrentScope();
+			const newScope = createScope(currentScope, "with");
+
 			const data = objectClosure();
 
 			if (data instanceof Throw) {
@@ -1476,8 +1476,14 @@ export default class Interpreter {
 				newScope.data[k] = data[k];
 			}
 
+			this.setCurrentScope(newScope);
+
 			// save last value
-			return this.setValue(bodyClosure());
+			const result = this.setValue(bodyClosure());
+
+			this.setCurrentScope(currentScope);
+
+			return result;
 		};
 	}
 
@@ -1570,12 +1576,12 @@ export default class Interpreter {
 	}
 	// ... catch(e){...}
 	catchClauseHandler(node: ESTree.CatchClause): (e: Error) => any {
-		const currentScope = this.getCurrentScope();
 		const paramNameGetter = this.createParamNameGetter(node.param);
 		const bodyClosure = this.create(node.body);
 
 		return (e: Error) => {
 			let result: any;
+			const currentScope = this.getCurrentScope();
 			const scopeData = currentScope.data;
 			// get param name "e"
 			const paramName = paramNameGetter();
@@ -1685,14 +1691,12 @@ export default class Interpreter {
 
 	// label: xxx
 	labeledStatementHandler(node: ESTree.LabeledStatement): BaseClosure {
-		const currentScope = this.getCurrentScope();
 		const labelName = node.label.name;
 		const bodyClosure = this.create(node.body);
 
-		currentScope.labels[labelName] = bodyClosure;
-
 		return () => {
 			let result: any;
+			const currentScope = this.getCurrentScope();
 			currentScope.labelStack.push(labelName);
 
 			result = bodyClosure(node);
@@ -1743,11 +1747,9 @@ export default class Interpreter {
 
 	// for UnaryExpression UpdateExpression AssignmentExpression
 	createObjectGetter(node: ESTree.Expression | ESTree.Pattern): Getter {
-		const currentScope = this.getCurrentScope();
-
 		switch (node.type) {
 			case "Identifier":
-				return () => this.getScopeDataFromName(node.name, currentScope);
+				return () => this.getScopeDataFromName(node.name, this.getCurrentScope());
 			case "MemberExpression":
 				return this.create(node.object);
 			default:
@@ -1768,16 +1770,30 @@ export default class Interpreter {
 	}
 
 	varDeclaration(name: string): void {
-		const context = this.getCurrentContext();
+		const context = this.collectDeclarations;
 		if (!hasOwnProperty.call(context, name)) {
 			context[name] = undefined;
 		}
 	}
 
 	funcDeclaration(name: string, func: () => any): void {
-		const context = this.getCurrentContext();
+		const context = this.collectDeclarations;
 		if (!hasOwnProperty.call(context, name) || context[name] === undefined) {
 			context[name] = func;
+		}
+	}
+
+	addDeclarationsToScope(declarations: CollectDeclarations, scope: Scope) {
+		const scopeData = scope.data;
+		const isRootScope = this.rootScope === scope;
+		for (var key in declarations) {
+			if (
+				hasOwnProperty.call(declarations, key) &&
+				(isRootScope ? !(key in scopeData) : !hasOwnProperty.call(scopeData, key))
+			) {
+				const value = declarations[key];
+				scopeData[key] = value ? value() : value;
+			}
 		}
 	}
 
@@ -1792,10 +1808,9 @@ export default class Interpreter {
 
 	getScopeFromName(name: string, startScope: Scope) {
 		let scope: Scope | null = startScope;
-		const data: ScopeData = scope.data;
 
 		do {
-			if (hasOwnProperty.call(data, name)) {
+			if (hasOwnProperty.call(scope.data, name)) {
 				return scope;
 			}
 		} while ((scope = scope.parent));
