@@ -1,5 +1,11 @@
 import { parse } from "acorn";
-import { Messages } from "./messages";
+import {
+	Messages,
+	MessageItem,
+	InterruptThrowError,
+	InterruptThrowReferenceError,
+	InterruptThrowSyntaxError,
+} from "./messages";
 import { Node, ESTree } from "./nodes";
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -59,16 +65,6 @@ class ContinueLabel {
 	}
 }
 
-class ThrowError extends Error {}
-class ThrowSyntaxError extends SyntaxError {}
-class ThrowReferenceError extends ReferenceError {}
-
-class InterruptThrowError extends ThrowError {}
-class InterruptThrowSyntaxError extends ThrowSyntaxError {}
-class InterruptThrowReferenceError extends ThrowReferenceError {}
-
-class Interrupt {}
-
 interface Options {
 	timeout?: number;
 }
@@ -101,10 +97,6 @@ function createScope(parent: Scope | null = null, name?: string): Scope {
 }
 
 export class Interpreter {
-	static interrupt() {
-		return new Interrupt();
-	}
-
 	context: Context;
 	// last expression value
 	value: any;
@@ -117,7 +109,7 @@ export class Interpreter {
 	options: Options;
 	callStack: string[];
 	collectDeclarations: CollectDeclarations = {};
-	protected error: ThrowError | Error | null = null;
+	protected error: Error | null = null;
 	protected isVarDeclMode: boolean = false;
 
 	protected execStartTime: number;
@@ -130,6 +122,14 @@ export class Interpreter {
 
 		this.context = context;
 		this.callStack = [];
+	}
+
+	isInterruptThrow<T>(err: T): boolean {
+		return (
+			err instanceof InterruptThrowError ||
+			err instanceof InterruptThrowReferenceError ||
+			err instanceof InterruptThrowSyntaxError
+		);
 	}
 
 	setCurrentContext(ctx: Context) {
@@ -210,31 +210,24 @@ export class Interpreter {
 		return this.execEndTime - this.execStartTime;
 	}
 
-	createError(msg: [number, string], value: string | number, node?: Node): string {
-		const code = msg[0];
+	createErrorMessage<T>(msg: MessageItem, value: string | number, node?: Node): string {
 		let message = msg[1].replace("%0", String(value));
 
 		message += " " + this.getNodePosition(node);
 
-		if (code > 1000 && code <= 2000) {
-			return "SyntaxError: " + message;
-		} else if (code > 2000 && code <= 3000) {
-			return "ReferenceError: " + message;
-		} else {
-			return "Error: " + message;
-		}
+		return message;
 	}
 
-	createError2(message, error: new (s: string) => Error): Error {
+	createError<T>(message: string, error: { new (msg: string): T }): T {
 		return new error(message);
 	}
 
-	throwError(msg: [number, string], value: string | number, node?: Node): never {
-		throw new InterruptThrowError(this.createError(msg, value, node));
+	createThrowError<T>(message: string, error: { new (msg: string): T }): T {
+		return this.createError(message, error);
 	}
 
-	createThrowError(msg: [number, string], value: string | number, node?: Node): ThrowError {
-		return new ThrowError(this.createError(msg, value, node));
+	createInternalThrowError<T extends MessageItem>(msg: T, value: string | number, node?: Node) {
+		return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
 	}
 
 	getError() {
@@ -380,13 +373,17 @@ export class Interpreter {
 				closure = this.labeledStatementHandler(node);
 				break;
 			default:
-				this.throwError(Messages.NodeTypeSyntaxError, node.type, node);
+				throw this.createInternalThrowError(Messages.NodeTypeSyntaxError, node.type, node);
 		}
 
 		if (timeout && timeout > 0) {
 			return (...args: any[]) => {
 				if (this.checkTimeout()) {
-					this.throwError(Messages.ExecutionTimeOutError, timeout, node);
+					throw this.createInternalThrowError(
+						Messages.ExecutionTimeOutError,
+						timeout,
+						node
+					);
 				}
 
 				return closure(...args);
@@ -449,7 +446,11 @@ export class Interpreter {
 				case "instanceof":
 					return leftValue instanceof rightValue;
 				default:
-					this.throwError(Messages.BinaryOperatorSyntaxError, node.operator, node);
+					throw this.createInternalThrowError(
+						Messages.BinaryOperatorSyntaxError,
+						node.operator,
+						node
+					);
 			}
 		};
 	}
@@ -466,7 +467,11 @@ export class Interpreter {
 				case "&&":
 					return leftExpression() && rightExpression();
 				default:
-					this.throwError(Messages.LogicalOperatorSyntaxError, node.operator, node);
+					throw this.createInternalThrowError(
+						Messages.LogicalOperatorSyntaxError,
+						node.operator,
+						node
+					);
 			}
 		};
 	}
@@ -514,7 +519,11 @@ export class Interpreter {
 						case "typeof":
 							return typeof value;
 						default:
-							this.throwError(Messages.UnaryOperatorSyntaxError, node.operator, node);
+							throw this.createInternalThrowError(
+								Messages.UnaryOperatorSyntaxError,
+								node.operator,
+								node
+							);
 					}
 				};
 		}
@@ -536,7 +545,11 @@ export class Interpreter {
 				case "--":
 					return node.prefix ? --obj[name] : obj[name]--;
 				default:
-					this.throwError(Messages.UpdateOperatorSyntaxError, node.operator, node);
+					throw this.createInternalThrowError(
+						Messages.UpdateOperatorSyntaxError,
+						node.operator,
+						node
+					);
 			}
 		};
 	}
@@ -634,7 +647,7 @@ export class Interpreter {
 
 					if (!func || !isFunction(func)) {
 						const name = this.source.slice(node.start, node.end);
-						throw this.createThrowError(
+						throw this.createInternalThrowError(
 							Messages.FunctionUndefinedReferenceError,
 							name,
 							node
@@ -656,7 +669,7 @@ export class Interpreter {
 					const func = closure();
 
 					if (!func || !isFunction(func)) {
-						throw this.createThrowError(
+						throw this.createInternalThrowError(
 							Messages.FunctionUndefinedReferenceError,
 							name,
 							node
@@ -786,9 +799,7 @@ export class Interpreter {
 				const callee = <ESTree.Expression & { start?: number; end?: number }>node.callee;
 				const name = this.source.slice(callee.start, callee.end);
 
-				throw new ThrowError(name + " is not a constructor");
-
-				// throw new ThrowError(new TypeError(name + " is not a constructor"));
+				throw this.createInternalThrowError(Messages.IsNotConstructor, name, node);
 			}
 
 			return new construct(...args.map(arg => arg()));
@@ -932,7 +943,11 @@ export class Interpreter {
 					value |= rightValue;
 					break;
 				default:
-					this.throwError(Messages.AssignmentExpressionSyntaxError, node.type, node);
+					throw this.createInternalThrowError(
+						Messages.AssignmentExpressionSyntaxError,
+						node.type,
+						node
+					);
 			}
 
 			data[name] = value;
@@ -955,7 +970,7 @@ export class Interpreter {
 		if (node.type === "Identifier") {
 			return node.name;
 		} else {
-			return this.throwError(Messages.VariableTypeSyntaxError, node.type, node);
+			throw this.createInternalThrowError(Messages.VariableTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -997,7 +1012,11 @@ export class Interpreter {
 
 	assertVariable(data: ScopeData, name: string, node: Node): void | never {
 		if (data === this.rootScope.data && !(name in data)) {
-			throw this.createThrowError(Messages.VariableUndefinedReferenceError, name, node);
+			throw this.createInternalThrowError(
+				Messages.VariableUndefinedReferenceError,
+				name,
+				node
+			);
 		}
 	}
 
@@ -1029,8 +1048,6 @@ export class Interpreter {
 					result instanceof Return ||
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
-					result instanceof ThrowError ||
-					result instanceof Interrupt ||
 					result === Break ||
 					result === Continue
 				) {
@@ -1118,9 +1135,7 @@ export class Interpreter {
 				if (
 					result instanceof Return ||
 					result instanceof BreakLabel ||
-					result instanceof ContinueLabel ||
-					result instanceof ThrowError ||
-					result instanceof Interrupt
+					result instanceof ContinueLabel
 				) {
 					break;
 				}
@@ -1196,9 +1211,7 @@ export class Interpreter {
 				if (
 					result instanceof Return ||
 					result instanceof BreakLabel ||
-					result instanceof ContinueLabel ||
-					result instanceof ThrowError ||
-					result instanceof Interrupt
+					result instanceof ContinueLabel
 				) {
 					break;
 				}
@@ -1271,7 +1284,7 @@ export class Interpreter {
 				currentScope.labelStack = labelStack;
 				this.callStack = callStack;
 
-				if (err instanceof InterruptThrowError) {
+				if (this.isInterruptThrow(err)) {
 					throw err;
 				}
 
@@ -1363,9 +1376,7 @@ export class Interpreter {
 					if (
 						result instanceof Return ||
 						result instanceof BreakLabel ||
-						result instanceof ContinueLabel ||
-						result instanceof ThrowError ||
-						value instanceof Interrupt
+						result instanceof ContinueLabel
 					) {
 						break;
 					}
@@ -1427,7 +1438,7 @@ export class Interpreter {
 		if (node.type === "Identifier") {
 			return () => node.name;
 		} else {
-			return this.throwError(Messages.ParamTypeSyntaxError, node.type, node);
+			throw this.createInternalThrowError(Messages.ParamTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1463,7 +1474,11 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.create(node.object);
 			default:
-				return this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
+				throw this.createInternalThrowError(
+					Messages.AssignmentTypeSyntaxError,
+					node.type,
+					node
+				);
 		}
 	}
 
@@ -1475,7 +1490,11 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.createMemberKeyGetter(node);
 			default:
-				return this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
+				throw this.createInternalThrowError(
+					Messages.AssignmentTypeSyntaxError,
+					node.type,
+					node
+				);
 		}
 	}
 
@@ -1546,9 +1565,7 @@ export class Interpreter {
 			value === Break ||
 			value === Continue ||
 			value instanceof BreakLabel ||
-			value instanceof ContinueLabel ||
-			value instanceof ThrowError ||
-			value instanceof Interrupt
+			value instanceof ContinueLabel
 		) {
 			return value;
 		}

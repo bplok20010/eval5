@@ -754,13 +754,11 @@ console.log(typeof test())
 `;
 
 const code10 = `
-
-try{
+var now = Date.now();
 var i = 0;
-for(;;) i++
-} catch(e) {
-    console.log('????')
-}
+for(; i < 1000000;) i++
+
+console.log(Date.now() - now, 'ms')
 
 // function f(){
 //     try {
@@ -776,7 +774,7 @@ for(;;) i++
 `;
 
 var interpreter = new Interpreter(global, {
-	timeout: 1000,
+	timeout: 10000,
 });
 
 const result = interpreter.evaluate(code10);
