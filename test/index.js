@@ -682,23 +682,6 @@ Array(5)
 
 `;
 
-var interpreter = new Interpreter(
-	global,
-	// {
-	// 	Math,
-	// 	Array,
-	// 	Date,
-	// 	test: function() {
-	// 		return Interpreter.throw("test out error");
-	// 	},
-	// 	console,
-	// 	Error,
-	// },
-	{
-		// timeout: 1000,
-	}
-);
-
 var code6 = `
 var restArguments = function restArguments(func, startIndex) {
     startIndex = startIndex == null ? func.length - 1 : +startIndex;
@@ -772,17 +755,29 @@ console.log(typeof test())
 
 const code10 = `
 
-function f(){
-    try {
-    console.log('f call', abc)
-    } catch(err) {
-        console.log('test', 123, err);
-    }
+try{
+var i = 0;
+for(;;) i++
+} catch(e) {
+    console.log('????')
 }
 
-f()
+// function f(){
+//     try {
+//         typeof a.b
+//     console.log('f call', abc)
+//     } catch(err) {
+//         console.log('test', 123, err + "");
+//     }
+// }
+
+// f()
 
 `;
+
+var interpreter = new Interpreter(global, {
+	timeout: 1000,
+});
 
 const result = interpreter.evaluate(code10);
 

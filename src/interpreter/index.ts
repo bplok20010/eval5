@@ -59,15 +59,13 @@ class ContinueLabel {
 	}
 }
 
-class Throw {
-	uncaught: boolean = false;
-	value: Error;
-	constructor(value: Error) {
-		this.value = value;
-	}
-}
+class ThrowError extends Error {}
+class ThrowSyntaxError extends SyntaxError {}
+class ThrowReferenceError extends ReferenceError {}
 
-class InterruptThrow extends Throw {}
+class InterruptThrowError extends ThrowError {}
+class InterruptThrowSyntaxError extends ThrowSyntaxError {}
+class InterruptThrowReferenceError extends ThrowReferenceError {}
 
 class Interrupt {}
 
@@ -107,10 +105,6 @@ export class Interpreter {
 		return new Interrupt();
 	}
 
-	static throw(message: any) {
-		return new Throw(message instanceof Error ? message : new Error(message));
-	}
-
 	context: Context;
 	// last expression value
 	value: any;
@@ -123,7 +117,7 @@ export class Interpreter {
 	options: Options;
 	callStack: string[];
 	collectDeclarations: CollectDeclarations = {};
-	protected error: Throw | Error | null = null;
+	protected error: ThrowError | Error | null = null;
 	protected isVarDeclMode: boolean = false;
 
 	protected execStartTime: number;
@@ -186,7 +180,6 @@ export class Interpreter {
 
 		this.source = source;
 		this.ast = node;
-		let result: any;
 
 		// Interpreter Error
 		try {
@@ -198,24 +191,15 @@ export class Interpreter {
 			// reset
 			this.collectDeclarations = {};
 			// start run
-			result = bodyClosure();
+			bodyClosure();
 		} catch (e) {
 			// Uncaught error
-			if (e instanceof Throw) {
-				this.error = e.value;
-			} else if (e instanceof Error || e instanceof Throw) {
+			if (e instanceof Error) {
 				this.error = e;
 			} else {
 				this.error = new Error(e);
 			}
 		}
-
-		// Uncaught error
-		// if (result instanceof Throw) {
-		// 	//result.value
-		// 	result.uncaught = true;
-		// 	this.error = result;
-		// }
 
 		this.execEndTime = Date.now();
 
@@ -226,31 +210,35 @@ export class Interpreter {
 		return this.execEndTime - this.execStartTime;
 	}
 
-	createError(msg: [number, string], value: string | number, node?: Node): Error {
+	createError(msg: [number, string], value: string | number, node?: Node): string {
 		const code = msg[0];
 		let message = msg[1].replace("%0", String(value));
 
 		message += " " + this.getNodePosition(node);
 
 		if (code > 1000 && code <= 2000) {
-			return new SyntaxError(message);
+			return "SyntaxError: " + message;
 		} else if (code > 2000 && code <= 3000) {
-			return new ReferenceError(message);
+			return "ReferenceError: " + message;
 		} else {
-			return new Error(message);
+			return "Error: " + message;
 		}
 	}
 
-	throwError(msg: [number, string], value: string | number, node?: Node): never {
-		throw new InterruptThrow(this.createError(msg, value, node));
+	createError2(message, error: new (s: string) => Error): Error {
+		return new error(message);
 	}
 
-	createThrowError(msg: [number, string], value: string | number, node?: Node): Throw {
-		return new Throw(this.createError(msg, value, node));
+	throwError(msg: [number, string], value: string | number, node?: Node): never {
+		throw new InterruptThrowError(this.createError(msg, value, node));
+	}
+
+	createThrowError(msg: [number, string], value: string | number, node?: Node): ThrowError {
+		return new ThrowError(this.createError(msg, value, node));
 	}
 
 	getError() {
-		return this.error ? (this.error instanceof Throw ? this.error.value : this.error) : null;
+		return this.error ? this.error : null;
 	}
 
 	getErrorMessage() {
@@ -259,14 +247,9 @@ export class Interpreter {
 
 		let uncaught = true;
 
-		if (error instanceof Throw) {
-			// uncaught = error.uncaught;
-			error = error.value;
-		}
-
 		const prefix = uncaught ? "Uncaught " : "";
 
-		return error ? prefix + error : null;
+		return error ? prefix + String(error) : null;
 	}
 
 	protected checkTimeout() {
@@ -284,12 +267,13 @@ export class Interpreter {
 		if (node) {
 			return node.loc ? `(${node.loc.start.line}, ${node.loc.start.column})` : "";
 		}
+
 		return "";
 	}
 
-	create(node: Node) {
+	create(node: Node): BaseClosure {
 		const timeout = this.options.timeout;
-		let closure: BaseClosure;
+		let closure;
 
 		switch (node.type) {
 			case "BinaryExpression":
@@ -400,7 +384,7 @@ export class Interpreter {
 		}
 
 		if (timeout && timeout > 0) {
-			return (...args: any) => {
+			return (...args: any[]) => {
 				if (this.checkTimeout()) {
 					this.throwError(Messages.ExecutionTimeOutError, timeout, node);
 				}
@@ -420,14 +404,6 @@ export class Interpreter {
 		return () => {
 			const leftValue = leftExpression();
 			const rightValue = rightExpression();
-
-			if (leftValue instanceof Throw) {
-				return leftValue;
-			}
-
-			if (rightValue instanceof Throw) {
-				return rightValue;
-			}
 
 			switch (node.operator) {
 				case "==":
@@ -484,44 +460,11 @@ export class Interpreter {
 		const rightExpression = this.create(node.right);
 
 		return () => {
-			let leftValue;
-			let rightValue;
-
 			switch (node.operator) {
 				case "||":
-					leftValue = leftExpression();
-					if (leftValue instanceof Throw) {
-						return leftValue;
-					}
-
-					if (leftValue) {
-						return leftValue;
-					}
-
-					rightValue = rightExpression();
-
-					if (rightValue instanceof Throw) {
-						return rightValue;
-					}
-
-					return rightValue;
+					return leftExpression() || rightExpression();
 				case "&&":
-					leftValue = leftExpression();
-					if (leftValue instanceof Throw) {
-						return leftValue;
-					}
-
-					if (!leftValue) {
-						return leftValue;
-					}
-
-					rightValue = rightExpression();
-
-					if (rightValue instanceof Throw) {
-						return rightValue;
-					}
-
-					return rightValue;
+					return leftExpression() && rightExpression();
 				default:
 					this.throwError(Messages.LogicalOperatorSyntaxError, node.operator, node);
 			}
@@ -531,18 +474,6 @@ export class Interpreter {
 	// typeof a !a()
 	unaryExpressionHandler(node: ESTree.UnaryExpression): BaseClosure {
 		switch (node.operator) {
-			// case "typeof":
-			// 	if (node.argument.type === "Identifier" || node.argument.type === "Literal") {
-			// 		const expression = this.create(node.argument);
-			// 		return () => {
-			// 			const ret = expression();
-			// 			// typeof adfffd => undefined
-			// 			if (ret instanceof Throw) {
-			// 				return "undefined";
-			// 			}
-			// 			return typeof ret;
-			// 		};
-			// 	}
 			case "delete":
 				const objectGetter = this.createObjectGetter(node.argument);
 				const nameGetter = this.createNameGetter(node.argument);
@@ -550,20 +481,6 @@ export class Interpreter {
 				return () => {
 					let obj = objectGetter();
 					const name = nameGetter();
-
-					if (obj instanceof Throw) {
-						return obj;
-					}
-
-					if (name instanceof Throw) {
-						return name;
-					}
-
-					// catch null.x undefined.xx ...
-					const throwError = this.safeObjectGet(obj, name, node);
-					if (throwError instanceof Throw) {
-						return throwError;
-					}
 
 					return delete obj[name];
 				};
@@ -582,9 +499,6 @@ export class Interpreter {
 
 				return () => {
 					const value = expression();
-					if (value instanceof Throw) {
-						return value;
-					}
 
 					switch (node.operator) {
 						case "-":
@@ -614,21 +528,7 @@ export class Interpreter {
 			const obj = objectGetter();
 			const name = nameGetter();
 
-			if (obj instanceof Throw) {
-				return obj;
-			}
-
-			if (name instanceof Throw) {
-				return name;
-			}
-
 			this.assertVariable(obj, name, node);
-
-			// assert null.ab undefiend.ac ... error
-			const throwError2 = this.safeObjectGet(obj, name, node);
-			if (throwError2 instanceof Throw) {
-				return throwError2;
-			}
 
 			switch (node.operator) {
 				case "++":
@@ -694,10 +594,6 @@ export class Interpreter {
 				const getter = kinds.get ? kinds.get() : function() {};
 				const setter = kinds.set ? kinds.set() : function(a: any) {};
 
-				if (value instanceof Throw) {
-					return value;
-				}
-
 				if ("set" in kinds || "get" in kinds) {
 					const descriptor = {
 						configurable: true,
@@ -719,23 +615,7 @@ export class Interpreter {
 	arrayExpressionHandler(node: ESTree.ArrayExpression) {
 		const items: Array<BaseClosure> = node.elements.map(element => this.create(element));
 
-		return () => {
-			const result: any[] = [];
-			const len = items.length;
-
-			for (let i = 0; i < len; i++) {
-				const item = items[i];
-				const ret = item();
-
-				if (ret instanceof Throw) {
-					return ret;
-				}
-
-				result.push(ret);
-			}
-
-			return result;
-		};
+		return () => items.map(item => item());
 	}
 
 	safeObjectGet(obj: any, key: any, node: Node) {
@@ -751,18 +631,6 @@ export class Interpreter {
 					const obj = objectGetter();
 					const key = keyGetter();
 					const func = this.safeObjectGet(obj, key, node);
-
-					if (obj instanceof Throw) {
-						return obj;
-					}
-
-					if (key instanceof Throw) {
-						return key;
-					}
-
-					if (func instanceof Throw) {
-						return func;
-					}
 
 					if (!func || !isFunction(func)) {
 						const name = this.source.slice(node.start, node.end);
@@ -787,10 +655,6 @@ export class Interpreter {
 					const name: string = (<ESTree.Identifier>node).name;
 					const func = closure();
 
-					if (func instanceof Throw) {
-						return func;
-					}
-
 					if (!func || !isFunction(func)) {
 						throw this.createThrowError(
 							Messages.FunctionUndefinedReferenceError,
@@ -813,29 +677,7 @@ export class Interpreter {
 		const funcGetter = this.createCallFunctionGetter(node.callee);
 		const argsGetter = node.arguments.map(arg => this.create(arg));
 		return () => {
-			const func = funcGetter();
-
-			if (func instanceof Throw) {
-				return func;
-			}
-
-			const len = argsGetter.length;
-			const args: any[] = [];
-			for (let i = 0; i < len; i++) {
-				const arg = argsGetter[i];
-				const result = arg();
-
-				if (result instanceof Throw) {
-					return result;
-				}
-
-				args.push(result);
-			}
-			try {
-				return func(...args);
-			} catch (e) {
-				throw new Throw(e);
-			}
+			return funcGetter()(...argsGetter.map(arg => arg()));
 		};
 	}
 
@@ -890,10 +732,6 @@ export class Interpreter {
 
 				self.callStack.pop();
 
-				if (result instanceof Throw) {
-					return result;
-				}
-
 				if (result instanceof Return) {
 					return result.value;
 				}
@@ -944,30 +782,16 @@ export class Interpreter {
 		return () => {
 			const construct = expression();
 
-			if (construct instanceof Throw) {
-				return construct;
-			}
-
 			if (!isFunction(construct)) {
 				const callee = <ESTree.Expression & { start?: number; end?: number }>node.callee;
 				const name = this.source.slice(callee.start, callee.end);
-				throw new Throw(new TypeError(name + " is not a constructor"));
+
+				throw new ThrowError(name + " is not a constructor");
+
+				// throw new ThrowError(new TypeError(name + " is not a constructor"));
 			}
 
-			const len = args.length;
-			const params: any[] = [];
-			for (let i = 0; i < len; i++) {
-				const arg = args[i];
-				const result = arg();
-
-				if (result instanceof Throw) {
-					return result;
-				}
-
-				params.push(result);
-			}
-
-			return new construct(...params);
+			return new construct(...args.map(arg => arg()));
 		};
 	}
 
@@ -979,14 +803,6 @@ export class Interpreter {
 			const obj = objectGetter();
 			let key = keyGetter();
 
-			if (obj instanceof Throw) {
-				return obj;
-			}
-
-			if (key instanceof Throw) {
-				return key;
-			}
-
 			// get function.length
 			if (obj && obj[isFunctionSymbol] && key === "length") {
 				key = FunctionLengthSymbol;
@@ -995,9 +811,8 @@ export class Interpreter {
 			if (obj && obj[isFunctionSymbol] && key === "name") {
 				key = FunctionNameSymbol;
 			}
-			// return obj[key];
 
-			return this.safeObjectGet(obj, key, node);
+			return obj[key];
 		};
 	}
 
@@ -1017,9 +832,6 @@ export class Interpreter {
 			for (let i = 0; i < len; i++) {
 				const expression = expressions[i];
 				result = expression();
-				if (result instanceof Throw) {
-					return result;
-				}
 			}
 
 			return result;
@@ -1075,33 +887,12 @@ export class Interpreter {
 			const name = nameGetter();
 			const rightValue = rightValueGetter();
 
-			if (data instanceof Throw) {
-				return data;
-			}
-
-			if (name instanceof Throw) {
-				return name;
-			}
-
-			// catch null.xx
-			let value = this.safeObjectGet(data, name, node); // data[name];
-			if (value instanceof Throw) {
-				return value;
-			}
-
-			if (rightValue instanceof Throw) {
-				return rightValue;
-			}
-
 			if (node.operator !== "=") {
 				// asdsad(undefined) += 1
 				this.assertVariable(data, name, node);
-			} else {
-				// name = asdfdff(undefined);
-				// if (rightValue instanceof Throw) {
-				// 	return rightValue;
-				// }
 			}
+
+			let value = data[name];
 
 			switch (node.operator) {
 				case "=":
@@ -1160,11 +951,11 @@ export class Interpreter {
 		};
 	}
 
-	getVariableName(node: ESTree.Pattern) {
+	getVariableName(node: ESTree.Pattern): never | string {
 		if (node.type === "Identifier") {
 			return node.name;
 		} else {
-			this.throwError(Messages.VariableTypeSyntaxError, node.type, node);
+			return this.throwError(Messages.VariableTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1196,12 +987,8 @@ export class Interpreter {
 		return () => {
 			if (assignmentsClosure) {
 				this.isVarDeclMode = true;
-				const ret = assignmentsClosure();
+				assignmentsClosure();
 				this.isVarDeclMode = false;
-
-				if (ret instanceof Throw) {
-					return ret;
-				}
 			}
 
 			return EmptyStatementReturn;
@@ -1242,7 +1029,7 @@ export class Interpreter {
 					result instanceof Return ||
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
-					result instanceof Throw ||
+					result instanceof ThrowError ||
 					result instanceof Interrupt ||
 					result === Break ||
 					result === Continue
@@ -1267,15 +1054,7 @@ export class Interpreter {
 	returnStatementHandler(node: ESTree.ReturnStatement): BaseClosure {
 		const argumentClosure = node.argument ? this.create(node.argument) : noop;
 
-		return () => {
-			const result = argumentClosure();
-
-			if (result instanceof Throw) {
-				return result;
-			}
-
-			return new Return(result);
-		};
+		return () => new Return(argumentClosure());
 	}
 
 	// if else
@@ -1286,13 +1065,7 @@ export class Interpreter {
 			? this.create(node.alternate)
 			: /*!important*/ () => EmptyStatementReturn;
 		return () => {
-			const tr = testClosure();
-
-			if (tr instanceof Throw) {
-				return tr;
-			}
-
-			return tr ? consequentClosure() : alternateClosure();
+			return testClosure() ? consequentClosure() : alternateClosure();
 		};
 	}
 	// test() ? true : false
@@ -1322,28 +1095,13 @@ export class Interpreter {
 				labelName = pNode.label.name;
 			}
 
-			let ur: any;
-			let tr: any;
-			const initResult: any = initClosure();
-			if (initResult instanceof Throw) {
-				return initResult;
-			}
-
-			for (; shouldInitExec || (tr = testClosure()); ur = updateClosure()) {
+			for (initClosure(); shouldInitExec || testClosure(); updateClosure()) {
 				shouldInitExec = false;
-
-				if (ur && ur instanceof Throw) {
-					return ur;
-				}
-
-				if (tr && tr instanceof Throw) {
-					return tr;
-				}
 
 				// save last value
 				const ret = this.setValue(bodyClosure());
 
-				// Important: never return Break or Continue!
+				// notice: never return Break or Continue!
 				if (ret === EmptyStatementReturn || ret === Continue) continue;
 				if (ret === Break) {
 					break;
@@ -1361,15 +1119,11 @@ export class Interpreter {
 					result instanceof Return ||
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
-					result instanceof Throw ||
+					result instanceof ThrowError ||
 					result instanceof Interrupt
 				) {
 					break;
 				}
-			}
-
-			if (ur && ur instanceof Throw) {
-				return ur;
 			}
 
 			return result;
@@ -1408,15 +1162,11 @@ export class Interpreter {
 
 			const data = rightClosure();
 
-			if (data instanceof Throw) {
-				return data;
-			}
-
 			for (x in data) {
 				// assign left to scope
 				// k = x
 				// o.k = x
-				const ar = this.assignmentExpressionHandler({
+				this.assignmentExpressionHandler({
 					type: "AssignmentExpression",
 					operator: "=",
 					left: left as ESTree.Pattern,
@@ -1425,10 +1175,6 @@ export class Interpreter {
 						value: x,
 					},
 				})();
-
-				if (ar instanceof Throw) {
-					return ar;
-				}
 
 				// save last value
 				const ret = this.setValue(bodyClosure());
@@ -1451,7 +1197,7 @@ export class Interpreter {
 					result instanceof Return ||
 					result instanceof BreakLabel ||
 					result instanceof ContinueLabel ||
-					result instanceof Throw ||
+					result instanceof ThrowError ||
 					result instanceof Interrupt
 				) {
 					break;
@@ -1471,9 +1217,6 @@ export class Interpreter {
 
 			const data = objectClosure();
 
-			if (data instanceof Throw) {
-				return data;
-			}
 			// newScope.data = data;
 			// copy all property
 			for (var k in data) {
@@ -1528,7 +1271,7 @@ export class Interpreter {
 				currentScope.labelStack = labelStack;
 				this.callStack = callStack;
 
-				if (err instanceof InterruptThrow) {
+				if (err instanceof InterruptThrowError) {
 					throw err;
 				}
 
@@ -1592,10 +1335,6 @@ export class Interpreter {
 		return () => {
 			const value = discriminantClosure();
 
-			if (value instanceof Throw) {
-				return value;
-			}
-
 			let match = false;
 			let result: any;
 			let ret: any, defaultCase: CaseItem | undefined;
@@ -1603,10 +1342,6 @@ export class Interpreter {
 			for (let i = 0; i < caseClosures.length; i++) {
 				const item = caseClosures[i]();
 				const test = item.testClosure();
-
-				if (test instanceof Throw) {
-					return test;
-				}
 
 				if (test === DefaultCase) {
 					defaultCase = item;
@@ -1617,7 +1352,7 @@ export class Interpreter {
 					match = true;
 					ret = this.setValue(item.bodyClosure());
 
-					// Important: never return Break or Continue!
+					// notice: never return Break or Continue!
 					if (ret === EmptyStatementReturn) continue;
 					if (ret === Break || ret === Continue) {
 						break;
@@ -1629,7 +1364,7 @@ export class Interpreter {
 						result instanceof Return ||
 						result instanceof BreakLabel ||
 						result instanceof ContinueLabel ||
-						result instanceof Throw ||
+						result instanceof ThrowError ||
 						value instanceof Interrupt
 					) {
 						break;
@@ -1640,10 +1375,9 @@ export class Interpreter {
 			if (!match && defaultCase) {
 				ret = this.setValue(defaultCase.bodyClosure());
 
-				// Important: never return Break or Continue!
-				if (ret === EmptyStatementReturn || ret === Break || ret === Continue) {
-					//...
-				} else {
+				const isEBC = ret === EmptyStatementReturn || ret === Break || ret === Continue;
+				// notice: never return Break or Continue!
+				if (!isEBC) {
 					result = ret;
 				}
 			}
@@ -1693,7 +1427,7 @@ export class Interpreter {
 		if (node.type === "Identifier") {
 			return () => node.name;
 		} else {
-			this.throwError(Messages.ParamTypeSyntaxError, node.type, node);
+			return this.throwError(Messages.ParamTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1729,7 +1463,7 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.create(node.object);
 			default:
-				this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
+				return this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1741,7 +1475,7 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.createMemberKeyGetter(node);
 			default:
-				this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
+				return this.throwError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -1813,7 +1547,7 @@ export class Interpreter {
 			value === Continue ||
 			value instanceof BreakLabel ||
 			value instanceof ContinueLabel ||
-			value instanceof Throw ||
+			value instanceof ThrowError ||
 			value instanceof Interrupt
 		) {
 			return value;
