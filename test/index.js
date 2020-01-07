@@ -754,22 +754,18 @@ console.log(typeof test())
 `;
 
 const code10 = `
-var now = Date.now();
-var i = 0;
-for(; i < 1000000;) i++
 
-console.log(Date.now() - now, 'ms')
 
-// function f(){
-//     try {
-//         typeof a.b
-//     console.log('f call', abc)
-//     } catch(err) {
-//         console.log('test', 123, err + "");
-//     }
-// }
+function f(){
+    try {
+        null.ax
+        throw 'test'
+    } catch(err) {
+        console.log('test', 123, err + "");
+    }
+}
 
-// f()
+f()
 
 `;
 
@@ -777,13 +773,16 @@ var interpreter = new Interpreter(global, {
 	timeout: 10000,
 });
 
-const result = interpreter.evaluate(code10);
+var result;
+
+try {
+	result = interpreter.evaluate(code);
+} catch (e) {
+	console.log(e);
+}
 
 console.log("exec: " + interpreter.getExecutionTime() + "ms");
 
-if (interpreter.getError()) {
-	console.log(interpreter.getErrorMessage());
-}
 console.log("output:", result);
 
 // const vm = require("vm");

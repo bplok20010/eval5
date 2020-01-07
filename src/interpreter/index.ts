@@ -112,6 +112,8 @@ export class Interpreter {
 	protected error: Error | null = null;
 	protected isVarDeclMode: boolean = false;
 
+	protected lastExecNode: Node | null = null;
+
 	protected execStartTime: number;
 	protected execEndTime: number;
 
@@ -157,20 +159,11 @@ export class Interpreter {
 
 	evaluate(code: string = "", ctx: Context = this.context) {
 		let node: unknown;
-		try {
-			node = parse(code, {
-				ranges: true,
-				locations: true,
-			});
-		} catch (e) {
-			if (e instanceof Error) {
-				this.error = e;
-			} else {
-				this.error = new SyntaxError(e);
-			}
 
-			return;
-		}
+		node = parse(code, {
+			ranges: true,
+			locations: true,
+		});
 
 		return this.evaluateNode(node as ESTree.Program, code, ctx);
 	}
@@ -181,25 +174,15 @@ export class Interpreter {
 		this.source = source;
 		this.ast = node;
 
-		// Interpreter Error
-		try {
-			const bodyClosure = this.create(node);
+		const bodyClosure = this.createClosure(node);
 
-			// add declares to data
-			this.addDeclarationsToScope(this.collectDeclarations, this.getCurrentScope());
+		// add declares to data
+		this.addDeclarationsToScope(this.collectDeclarations, this.getCurrentScope());
 
-			// reset
-			this.collectDeclarations = {};
-			// start run
-			bodyClosure();
-		} catch (e) {
-			// Uncaught error
-			if (e instanceof Error) {
-				this.error = e;
-			} else {
-				this.error = new Error(e);
-			}
-		}
+		// reset
+		this.collectDeclarations = {};
+		// start run
+		bodyClosure();
 
 		this.execEndTime = Date.now();
 
@@ -210,10 +193,10 @@ export class Interpreter {
 		return this.execEndTime - this.execStartTime;
 	}
 
-	createErrorMessage<T>(msg: MessageItem, value: string | number, node?: Node): string {
+	createErrorMessage(msg: MessageItem, value: string | number, node?: Node): string {
 		let message = msg[1].replace("%0", String(value));
 
-		message += " " + this.getNodePosition(node);
+		message += this.getNodePosition(node || this.lastExecNode);
 
 		return message;
 	}
@@ -230,21 +213,6 @@ export class Interpreter {
 		return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
 	}
 
-	getError() {
-		return this.error ? this.error : null;
-	}
-
-	getErrorMessage() {
-		if (!this.error) return null;
-		let error = this.error;
-
-		let uncaught = true;
-
-		const prefix = uncaught ? "Uncaught " : "";
-
-		return error ? prefix + String(error) : null;
-	}
-
 	protected checkTimeout() {
 		const timeout = this.options.timeout || 0;
 
@@ -256,15 +224,16 @@ export class Interpreter {
 		return false;
 	}
 
-	getNodePosition(node?: Node) {
+	getNodePosition(node: Node & { start?: number; end?: number } | null) {
 		if (node) {
-			return node.loc ? `(${node.loc.start.line}, ${node.loc.start.column})` : "";
+			const errorCode = this.source.slice(node.start, node.end);
+			return node.loc ? ` [${node.loc.start.line}:${node.loc.start.column}]${errorCode}` : "";
 		}
 
 		return "";
 	}
 
-	create(node: Node): BaseClosure {
+	createClosure(node: Node): BaseClosure {
 		const timeout = this.options.timeout;
 		let closure;
 
@@ -386,17 +355,22 @@ export class Interpreter {
 					);
 				}
 
+				this.lastExecNode = node;
+
 				return closure(...args);
 			};
 		}
 
-		return closure;
+		return (...args: any[]) => {
+			this.lastExecNode = node;
+			return closure(...args);
+		};
 	}
 
 	// a==b a/b
 	binaryExpressionHandler(node: ESTree.BinaryExpression): BaseClosure {
-		const leftExpression = this.create(node.left);
-		const rightExpression = this.create(node.right);
+		const leftExpression = this.createClosure(node.left);
+		const rightExpression = this.createClosure(node.right);
 
 		return () => {
 			const leftValue = leftExpression();
@@ -457,8 +431,8 @@ export class Interpreter {
 
 	// a && b
 	logicalExpressionHandler(node: ESTree.LogicalExpression): BaseClosure {
-		const leftExpression = this.create(node.left);
-		const rightExpression = this.create(node.right);
+		const leftExpression = this.createClosure(node.left);
+		const rightExpression = this.createClosure(node.right);
 
 		return () => {
 			switch (node.operator) {
@@ -499,7 +473,7 @@ export class Interpreter {
 
 					expression = () => objectGetter()[nameGetter()];
 				} else {
-					expression = this.create(node.argument);
+					expression = this.createClosure(node.argument);
 				}
 
 				return () => {
@@ -588,7 +562,7 @@ export class Interpreter {
 				properties[key] = {};
 			}
 
-			properties[key][kind] = this.create(property.value);
+			properties[key][kind] = this.createClosure(property.value);
 
 			items.push({
 				key,
@@ -626,7 +600,7 @@ export class Interpreter {
 
 	// [1,2,3]
 	arrayExpressionHandler(node: ESTree.ArrayExpression) {
-		const items: Array<BaseClosure> = node.elements.map(element => this.create(element));
+		const items: Array<BaseClosure> = node.elements.map(element => this.createClosure(element));
 
 		return () => items.map(item => item());
 	}
@@ -638,7 +612,7 @@ export class Interpreter {
 	createCallFunctionGetter(node: Node & { start?: number; end?: number }) {
 		switch (node.type) {
 			case "MemberExpression":
-				const objectGetter = this.create(node.object);
+				const objectGetter = this.createClosure(node.object);
 				const keyGetter = this.createMemberKeyGetter(node);
 				return () => {
 					const obj = objectGetter();
@@ -663,7 +637,7 @@ export class Interpreter {
 					return func.bind(obj);
 				};
 			default:
-				const closure = this.create(node);
+				const closure = this.createClosure(node);
 				return () => {
 					const name: string = (<ESTree.Identifier>node).name;
 					const func = closure();
@@ -688,7 +662,7 @@ export class Interpreter {
 	// func()
 	callExpressionHandler(node: ESTree.CallExpression): BaseClosure {
 		const funcGetter = this.createCallFunctionGetter(node.callee);
-		const argsGetter = node.arguments.map(arg => this.create(arg));
+		const argsGetter = node.arguments.map(arg => this.createClosure(arg));
 		return () => {
 			return funcGetter()(...argsGetter.map(arg => arg()));
 		};
@@ -708,7 +682,7 @@ export class Interpreter {
 
 		const paramsGetter = node.params.map(param => this.createParamNameGetter(param));
 		// set scope
-		const bodyGetter = this.create(node.body);
+		const bodyClosure = this.createClosure(node.body);
 
 		const declarations = this.collectDeclarations;
 
@@ -719,7 +693,7 @@ export class Interpreter {
 			const runtimeScope = self.getCurrentScope();
 
 			function func(...args: any[]) {
-				self.callStack.push(`${name}${self.getNodePosition(node)}`);
+				self.callStack.push(`${name}`);
 
 				const prevScope = self.getCurrentScope();
 				const currentScope = createScope(runtimeScope, name);
@@ -737,7 +711,7 @@ export class Interpreter {
 				//for ThisExpression
 				self.setCurrentContext(this);
 
-				const result = bodyGetter();
+				const result = bodyClosure();
 
 				//reset
 				self.setCurrentContext(prevContext);
@@ -789,8 +763,8 @@ export class Interpreter {
 
 	// new Ctrl()
 	newExpressionHandler(node: ESTree.NewExpression): BaseClosure {
-		const expression = this.create(node.callee);
-		const args = node.arguments.map(arg => this.create(arg));
+		const expression = this.createClosure(node.callee);
+		const args = node.arguments.map(arg => this.createClosure(arg));
 
 		return () => {
 			const construct = expression();
@@ -808,7 +782,7 @@ export class Interpreter {
 
 	// a.b a['b']
 	memberExpressionHandler(node: ESTree.MemberExpression): BaseClosure {
-		var objectGetter = this.create(node.object);
+		var objectGetter = this.createClosure(node.object);
 		var keyGetter = this.createMemberKeyGetter(node);
 		return () => {
 			const obj = objectGetter();
@@ -834,7 +808,7 @@ export class Interpreter {
 
 	// var1,var2,...
 	sequenceExpressionHandler(node: ESTree.SequenceExpression): BaseClosure {
-		const expressions = node.expressions.map(item => this.create(item));
+		const expressions = node.expressions.map(item => this.createClosure(item));
 
 		return () => {
 			let result: any;
@@ -891,7 +865,7 @@ export class Interpreter {
 
 		const dataGetter = this.createObjectGetter(node.left);
 		const nameGetter = this.createNameGetter(node.left);
-		const rightValueGetter = this.create(node.right);
+		const rightValueGetter = this.createClosure(node.right);
 
 		return () => {
 			const data = dataGetter();
@@ -993,7 +967,7 @@ export class Interpreter {
 		}
 
 		if (assignments.length) {
-			assignmentsClosure = this.create({
+			assignmentsClosure = this.createClosure({
 				type: "BlockStatement",
 				body: (assignments as unknown) as ESTree.Statement[],
 			});
@@ -1025,7 +999,7 @@ export class Interpreter {
 		// const currentScope = this.getCurrentScope();
 		const stmtClosures: Array<BaseClosure> = (node.body as Node[]).map((stmt: Node) => {
 			// if (stmt.type === "EmptyStatement") return null;
-			return this.create(stmt);
+			return this.createClosure(stmt);
 		});
 
 		return () => {
@@ -1061,7 +1035,7 @@ export class Interpreter {
 	}
 	// all expression: a+1 a&&b a() a.b ...
 	expressionStatementHandler(node: ESTree.ExpressionStatement): BaseClosure {
-		return this.create(node.expression);
+		return this.createClosure(node.expression);
 	}
 	emptyStatementHandler(node: Node): BaseClosure {
 		return () => EmptyStatementReturn;
@@ -1069,17 +1043,17 @@ export class Interpreter {
 
 	// return xx;
 	returnStatementHandler(node: ESTree.ReturnStatement): BaseClosure {
-		const argumentClosure = node.argument ? this.create(node.argument) : noop;
+		const argumentClosure = node.argument ? this.createClosure(node.argument) : noop;
 
 		return () => new Return(argumentClosure());
 	}
 
 	// if else
 	ifStatementHandler(node: ESTree.IfStatement | ESTree.ConditionalExpression): BaseClosure {
-		const testClosure = this.create(node.test);
-		const consequentClosure = this.create(node.consequent);
+		const testClosure = this.createClosure(node.test);
+		const consequentClosure = this.createClosure(node.consequent);
 		const alternateClosure = node.alternate
-			? this.create(node.alternate)
+			? this.createClosure(node.alternate)
 			: /*!important*/ () => EmptyStatementReturn;
 		return () => {
 			return testClosure() ? consequentClosure() : alternateClosure();
@@ -1094,13 +1068,13 @@ export class Interpreter {
 		node: ESTree.ForStatement | ESTree.WhileStatement | ESTree.DoWhileStatement
 	): BaseClosure {
 		let initClosure = noop;
-		let testClosure = node.test ? this.create(node.test) : () => true;
+		let testClosure = node.test ? this.createClosure(node.test) : () => true;
 		let updateClosure = noop;
-		const bodyClosure = this.create(node.body);
+		const bodyClosure = this.createClosure(node.body);
 
 		if (node.type === "ForStatement") {
-			initClosure = node.init ? this.create(node.init) : initClosure;
-			updateClosure = node.update ? this.create(node.update) : initClosure;
+			initClosure = node.init ? this.createClosure(node.init) : initClosure;
+			updateClosure = node.update ? this.createClosure(node.update) : initClosure;
 		}
 
 		return pNode => {
@@ -1155,12 +1129,12 @@ export class Interpreter {
 	forInStatementHandler(node: ESTree.ForInStatement): BaseClosure {
 		// for( k in obj) or for(o.k in obj) ...
 		let left = node.left;
-		const rightClosure = this.create(node.right);
-		const bodyClosure = this.create(node.body);
+		const rightClosure = this.createClosure(node.right);
+		const bodyClosure = this.createClosure(node.body);
 		// for(var k in obj) {...}
 		if (node.left.type === "VariableDeclaration") {
 			// init var k
-			this.create(node.left)();
+			this.createClosure(node.left)();
 			// reset left
 			// for( k in obj)
 			left = node.left.declarations[0].id;
@@ -1221,8 +1195,8 @@ export class Interpreter {
 		};
 	}
 	withStatementHandler(node: ESTree.WithStatement): BaseClosure {
-		const objectClosure = this.create(node.object);
-		const bodyClosure = this.create(node.body);
+		const objectClosure = this.createClosure(node.object);
+		const bodyClosure = this.createClosure(node.body);
 
 		return () => {
 			const currentScope = this.getCurrentScope();
@@ -1248,7 +1222,7 @@ export class Interpreter {
 	}
 
 	throwStatementHandler(node: ESTree.ThrowStatement): BaseClosure {
-		const argumentClosure = this.create(node.argument);
+		const argumentClosure = this.createClosure(node.argument);
 
 		return () => {
 			throw argumentClosure();
@@ -1257,9 +1231,9 @@ export class Interpreter {
 
 	// try{...}catch(e){...}finally{}
 	tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
-		const blockClosure = this.create(node.block);
+		const blockClosure = this.createClosure(node.block);
 		const handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
-		const finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
+		const finalizerClosure = node.finalizer ? this.createClosure(node.finalizer) : null;
 
 		return () => {
 			const currentScope = this.getCurrentScope();
@@ -1309,7 +1283,7 @@ export class Interpreter {
 	// ... catch(e){...}
 	catchClauseHandler(node: ESTree.CatchClause): (e: Error) => any {
 		const paramNameGetter = this.createParamNameGetter(node.param);
-		const bodyClosure = this.create(node.body);
+		const bodyClosure = this.createClosure(node.body);
 
 		return (e: Error) => {
 			let result: any;
@@ -1343,7 +1317,7 @@ export class Interpreter {
 		return () => (node.label ? new BreakLabel(node.label.name) : Break);
 	}
 	switchStatementHandler(node: ESTree.SwitchStatement): BaseClosure {
-		const discriminantClosure = this.create(node.discriminant);
+		const discriminantClosure = this.createClosure(node.discriminant);
 		const caseClosures = node.cases.map(item => this.switchCaseHandler(item));
 		return () => {
 			const value = discriminantClosure();
@@ -1398,8 +1372,8 @@ export class Interpreter {
 	}
 
 	switchCaseHandler(node: ESTree.SwitchCase): SwitchCaseClosure {
-		const testClosure = node.test ? this.create(node.test) : () => DefaultCase;
-		const bodyClosure = this.create({
+		const testClosure = node.test ? this.createClosure(node.test) : () => DefaultCase;
+		const bodyClosure = this.createClosure({
 			type: "BlockStatement",
 			body: node.consequent,
 		});
@@ -1413,7 +1387,7 @@ export class Interpreter {
 	// label: xxx
 	labeledStatementHandler(node: ESTree.LabeledStatement): BaseClosure {
 		const labelName = node.label.name;
-		const bodyClosure = this.create(node.body);
+		const bodyClosure = this.createClosure(node.body);
 
 		return () => {
 			let result: any;
@@ -1450,7 +1424,7 @@ export class Interpreter {
 		} else {
 			// Literal or ...
 			// var obj = { "title": "" } or others...
-			getter = this.create(node);
+			getter = this.createClosure(node);
 		}
 
 		return function() {
@@ -1462,7 +1436,7 @@ export class Interpreter {
 		// s['a'];  node.computed = true
 		// s.foo;  node.computed = false
 		return node.computed
-			? this.create(node.property)
+			? this.createClosure(node.property)
 			: this.createObjectKeyGetter(node.property);
 	}
 
@@ -1472,7 +1446,7 @@ export class Interpreter {
 			case "Identifier":
 				return () => this.getScopeDataFromName(node.name, this.getCurrentScope());
 			case "MemberExpression":
-				return this.create(node.object);
+				return this.createClosure(node.object);
 			default:
 				throw this.createInternalThrowError(
 					Messages.AssignmentTypeSyntaxError,
