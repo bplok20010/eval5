@@ -17,8 +17,8 @@ export type MessageItem = [
 ];
 
 export const Messages: Messages = {
-	UnknownError: [3001, "%0", ThrowError],
-	ExecutionTimeOutError: [3002, "Script execution timed out after %0ms", ThrowError],
+	UnknownError: [3001, "%0", InterruptThrowError],
+	ExecutionTimeOutError: [3002, "Script execution timed out after %0ms", InterruptThrowError],
 	NodeTypeSyntaxError: [1001, "Unknown node type: %0", InterruptThrowReferenceError],
 	BinaryOperatorSyntaxError: [1002, "Unknown binary operator: %0", InterruptThrowReferenceError],
 	LogicalOperatorSyntaxError: [

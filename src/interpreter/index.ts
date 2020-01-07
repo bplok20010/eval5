@@ -182,9 +182,13 @@ export class Interpreter {
 		// reset
 		this.collectDeclarations = {};
 		// start run
-		bodyClosure();
-
-		this.execEndTime = Date.now();
+		try {
+			bodyClosure();
+		} catch (e) {
+			throw e;
+		} finally {
+			this.execEndTime = Date.now();
+		}
 
 		return this.getValue();
 	}
@@ -1240,16 +1244,18 @@ export class Interpreter {
 			const labelStack = currentScope.labelStack.concat([]);
 			const callStack: string[] = this.callStack.concat([]);
 			let result: any = EmptyStatementReturn;
-			let finalReturn: any;
+			// let finalReturn: any;
+			let throwError;
 
 			/**
 			 * try{...}catch(e){...}finally{...} execution sequence:
 			 * try stmt
 			 * try throw
-			 * catch stmt
+			 * catch stmt (if)
 			 * finally stmt
 			 * finally throw or finally return
-			 * catch throw or catch return or try return
+			 * catch throw or catch return
+			 * try return
 			 */
 
 			try {
@@ -1263,19 +1269,32 @@ export class Interpreter {
 				}
 
 				if (handlerClosure) {
-					result = this.setValue(handlerClosure(err));
+					try {
+						result = this.setValue(handlerClosure(err));
+					} catch (e) {
+						// save catch throw error
+						throwError = e;
+					}
 				}
 			}
 			// finally {
 			if (finalizerClosure) {
-				// not save finally result
-				finalReturn = finalizerClosure();
-
-				if (finalReturn instanceof Return) {
-					result = finalReturn;
+				try {
+					//do not save finally result
+					result = finalizerClosure();
+					// finalReturn = finalizerClosure();
+				} catch (e) {
+					// save finally throw error
+					throwError = e;
 				}
+
+				// if (finalReturn instanceof Return) {
+				// 	result = finalReturn;
+				// }
 			}
 			// }
+
+			if (throwError) throw throwError;
 
 			return result;
 		};

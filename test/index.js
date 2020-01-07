@@ -754,36 +754,34 @@ console.log(typeof test())
 `;
 
 const code10 = `
+try { throw 'a' } catch(e) { throw e } finally { console.log('b'); throw 'c' }
 
+// function f(){
+//     try {
+//         null.ax
+//         throw 'test'
+//     } catch(err) {
+//         console.log('test', 123, err + "");
+//     }
+// }
 
-function f(){
-    try {
-        null.ax
-        throw 'test'
-    } catch(err) {
-        console.log('test', 123, err + "");
-    }
-}
-
-f()
+// f()
 
 `;
 
 var interpreter = new Interpreter(global, {
-	timeout: 10000,
+	timeout: 1000,
 });
 
-var result;
-
 try {
-	result = interpreter.evaluate(code);
+	interpreter.evaluate(code10);
 } catch (e) {
-	console.log(e);
+	console.log("uncatch: ", e);
 }
 
 console.log("exec: " + interpreter.getExecutionTime() + "ms");
 
-console.log("output:", result);
+console.log("output:", interpreter.getValue());
 
 // const vm = require("vm");
 
