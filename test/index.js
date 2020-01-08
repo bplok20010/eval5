@@ -774,7 +774,7 @@ var interpreter = new Interpreter(global, {
 });
 
 try {
-	interpreter.evaluate(code10);
+	interpreter.evaluate(code8);
 } catch (e) {
 	console.log("uncatch: ", e);
 }

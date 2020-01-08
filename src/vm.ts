@@ -1,5 +1,5 @@
 import { Interpreter } from "./interpreter/index";
-import { VMContext, CompileOptions } from "./types";
+import { VMContext, CompileOptions, ScriptOptions } from "./types";
 
 // class Context {}
 
@@ -12,20 +12,26 @@ export function compileFunction(
 	params: string[] = [],
 	options: CompileOptions = {}
 ): (...args: any[]) => any {
-	var ctx: any =
-		options.parsingContext === undefined ? Object.create(null) : options.parsingContext;
+	const ctx: any = options.parsingContext;
+	const timeout = options.timeout === undefined ? 0 : options.timeout;
 
-	var wrapCode = "function f(" + params.join(",") + ") {" + code + "} f";
+	const wrapCode = `
+    (function anonymous(${params.join(",")}){
+         ${code}
+    });
+    `;
 
-	const interpreter = new Interpreter(ctx);
+	const interpreter = new Interpreter(ctx, {
+		timeout,
+	});
 
 	interpreter.evaluate(wrapCode);
 
 	return interpreter.getValue();
 }
 
-export function runInContext(code: string, ctx?: VMContext): any {
-	const interpreter = new Interpreter(ctx);
+export function runInContext(code: string, ctx?: VMContext, options?: ScriptOptions): any {
+	const interpreter = new Interpreter(ctx, options);
 
 	interpreter.evaluate(code);
 

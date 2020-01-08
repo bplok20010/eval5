@@ -111,11 +111,9 @@ function getGlobal() {
 
 	return {};
 }
-
 function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope({} /* or Object.create(null)? */, parent, name);
 }
-
 export class Interpreter {
 	context: Context;
 	// last expression value
@@ -137,7 +135,9 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
-	constructor(context: Context = getGlobal(), options: Options = {}) {
+	static global = getGlobal();
+
+	constructor(context: Context = Interpreter.global, options: Options = {}) {
 		this.options = {
 			timeout: options.timeout || 0,
 		};
@@ -248,7 +248,7 @@ export class Interpreter {
 		return false;
 	}
 
-	getNodePosition(node: Node & { start?: number; end?: number } | null) {
+	getNodePosition(node: (Node & { start?: number; end?: number }) | null) {
 		if (node) {
 			const errorCode = this.source.slice(node.start, node.end);
 			return node.loc ? ` [${node.loc.start.line}:${node.loc.start.column}]${errorCode}` : "";
@@ -806,8 +806,8 @@ export class Interpreter {
 
 	// a.b a['b']
 	memberExpressionHandler(node: ESTree.MemberExpression): BaseClosure {
-		var objectGetter = this.createClosure(node.object);
-		var keyGetter = this.createMemberKeyGetter(node);
+		const objectGetter = this.createClosure(node.object);
+		const keyGetter = this.createMemberKeyGetter(node);
 		return () => {
 			const obj = objectGetter();
 			let key = keyGetter();
@@ -1230,7 +1230,7 @@ export class Interpreter {
 
 			// newScope.data = data;
 			// copy all property
-			for (var k in data) {
+			for (let k in data) {
 				newScope.data[k] = data[k];
 			}
 
@@ -1528,7 +1528,7 @@ export class Interpreter {
 	addDeclarationsToScope(declarations: CollectDeclarations, scope: Scope) {
 		const scopeData = scope.data;
 		const isRootScope = this.rootScope === scope;
-		for (var key in declarations) {
+		for (let key in declarations) {
 			if (
 				hasOwnProperty.call(declarations, key) &&
 				(isRootScope ? !(key in scopeData) : !hasOwnProperty.call(scopeData, key))

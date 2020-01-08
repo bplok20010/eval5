@@ -4,9 +4,9 @@
 	else if(typeof define === 'function' && define.amd)
 		define([], factory);
 	else if(typeof exports === 'object')
-		exports["evaljs2"] = factory();
+		exports["eval5"] = factory();
 	else
-		root["evaljs2"] = factory();
+		root["eval5"] = factory();
 })(this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
@@ -139,6 +139,41 @@ module.exports = _construct;
 
 /***/ }),
 
+/***/ "./node_modules/@babel/runtime/helpers/getPrototypeOf.js":
+/*!***************************************************************!*\
+  !*** ./node_modules/@babel/runtime/helpers/getPrototypeOf.js ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+function _getPrototypeOf(o) {
+  module.exports = _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
+    return o.__proto__ || Object.getPrototypeOf(o);
+  };
+  return _getPrototypeOf(o);
+}
+
+module.exports = _getPrototypeOf;
+
+/***/ }),
+
+/***/ "./node_modules/@babel/runtime/helpers/inheritsLoose.js":
+/*!**************************************************************!*\
+  !*** ./node_modules/@babel/runtime/helpers/inheritsLoose.js ***!
+  \**************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+function _inheritsLoose(subClass, superClass) {
+  subClass.prototype = Object.create(superClass.prototype);
+  subClass.prototype.constructor = subClass;
+  subClass.__proto__ = superClass;
+}
+
+module.exports = _inheritsLoose;
+
+/***/ }),
+
 /***/ "./node_modules/@babel/runtime/helpers/interopRequireDefault.js":
 /*!**********************************************************************!*\
   !*** ./node_modules/@babel/runtime/helpers/interopRequireDefault.js ***!
@@ -153,6 +188,86 @@ function _interopRequireDefault(obj) {
 }
 
 module.exports = _interopRequireDefault;
+
+/***/ }),
+
+/***/ "./node_modules/@babel/runtime/helpers/interopRequireWildcard.js":
+/*!***********************************************************************!*\
+  !*** ./node_modules/@babel/runtime/helpers/interopRequireWildcard.js ***!
+  \***********************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var _typeof = __webpack_require__(/*! ../helpers/typeof */ "./node_modules/@babel/runtime/helpers/typeof.js");
+
+function _getRequireWildcardCache() {
+  if (typeof WeakMap !== "function") return null;
+  var cache = new WeakMap();
+
+  _getRequireWildcardCache = function _getRequireWildcardCache() {
+    return cache;
+  };
+
+  return cache;
+}
+
+function _interopRequireWildcard(obj) {
+  if (obj && obj.__esModule) {
+    return obj;
+  }
+
+  if (obj === null || _typeof(obj) !== "object" && typeof obj !== "function") {
+    return {
+      "default": obj
+    };
+  }
+
+  var cache = _getRequireWildcardCache();
+
+  if (cache && cache.has(obj)) {
+    return cache.get(obj);
+  }
+
+  var newObj = {};
+  var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor;
+
+  for (var key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null;
+
+      if (desc && (desc.get || desc.set)) {
+        Object.defineProperty(newObj, key, desc);
+      } else {
+        newObj[key] = obj[key];
+      }
+    }
+  }
+
+  newObj["default"] = obj;
+
+  if (cache) {
+    cache.set(obj, newObj);
+  }
+
+  return newObj;
+}
+
+module.exports = _interopRequireWildcard;
+
+/***/ }),
+
+/***/ "./node_modules/@babel/runtime/helpers/isNativeFunction.js":
+/*!*****************************************************************!*\
+  !*** ./node_modules/@babel/runtime/helpers/isNativeFunction.js ***!
+  \*****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+function _isNativeFunction(fn) {
+  return Function.toString.call(fn).indexOf("[native code]") !== -1;
+}
+
+module.exports = _isNativeFunction;
 
 /***/ }),
 
@@ -173,6 +288,84 @@ function _setPrototypeOf(o, p) {
 }
 
 module.exports = _setPrototypeOf;
+
+/***/ }),
+
+/***/ "./node_modules/@babel/runtime/helpers/typeof.js":
+/*!*******************************************************!*\
+  !*** ./node_modules/@babel/runtime/helpers/typeof.js ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+function _typeof(obj) {
+  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
+    module.exports = _typeof = function _typeof(obj) {
+      return typeof obj;
+    };
+  } else {
+    module.exports = _typeof = function _typeof(obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    };
+  }
+
+  return _typeof(obj);
+}
+
+module.exports = _typeof;
+
+/***/ }),
+
+/***/ "./node_modules/@babel/runtime/helpers/wrapNativeSuper.js":
+/*!****************************************************************!*\
+  !*** ./node_modules/@babel/runtime/helpers/wrapNativeSuper.js ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var getPrototypeOf = __webpack_require__(/*! ./getPrototypeOf */ "./node_modules/@babel/runtime/helpers/getPrototypeOf.js");
+
+var setPrototypeOf = __webpack_require__(/*! ./setPrototypeOf */ "./node_modules/@babel/runtime/helpers/setPrototypeOf.js");
+
+var isNativeFunction = __webpack_require__(/*! ./isNativeFunction */ "./node_modules/@babel/runtime/helpers/isNativeFunction.js");
+
+var construct = __webpack_require__(/*! ./construct */ "./node_modules/@babel/runtime/helpers/construct.js");
+
+function _wrapNativeSuper(Class) {
+  var _cache = typeof Map === "function" ? new Map() : undefined;
+
+  module.exports = _wrapNativeSuper = function _wrapNativeSuper(Class) {
+    if (Class === null || !isNativeFunction(Class)) return Class;
+
+    if (typeof Class !== "function") {
+      throw new TypeError("Super expression must either be null or a function");
+    }
+
+    if (typeof _cache !== "undefined") {
+      if (_cache.has(Class)) return _cache.get(Class);
+
+      _cache.set(Class, Wrapper);
+    }
+
+    function Wrapper() {
+      return construct(Class, arguments, getPrototypeOf(this).constructor);
+    }
+
+    Wrapper.prototype = Object.create(Class.prototype, {
+      constructor: {
+        value: Wrapper,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    return setPrototypeOf(Wrapper, Class);
+  };
+
+  return _wrapNativeSuper(Class);
+}
+
+module.exports = _wrapNativeSuper;
 
 /***/ }),
 
@@ -5181,6 +5374,90 @@ function tokenizer(input, options) {
 
 /***/ }),
 
+/***/ "./node_modules/webpack/buildin/global.js":
+/*!***********************************!*\
+  !*** (webpack)/buildin/global.js ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || new Function("return this")();
+} catch (e) {
+	// This works if the window reference is available
+	if (typeof window === "object") g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+
+/***/ "./src/Function.ts":
+/*!*************************!*\
+  !*** ./src/Function.ts ***!
+  \*************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = _default;
+
+var _vm = __webpack_require__(/*! ./vm */ "./src/vm.ts");
+
+function _default() {
+  for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
+
+  var code = args.pop();
+  return (0, _vm.compileFunction)(code || "", args);
+}
+
+/***/ }),
+
+/***/ "./src/evaluate.ts":
+/*!*************************!*\
+  !*** ./src/evaluate.ts ***!
+  \*************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _vm = __webpack_require__(/*! ./vm */ "./src/vm.ts");
+
+var _default = function _default(code, ctx) {
+  return (0, _vm.runInContext)(code, ctx);
+};
+
+exports.default = _default;
+
+/***/ }),
+
 /***/ "./src/index.ts":
 /*!**********************!*\
   !*** ./src/index.ts ***!
@@ -5191,21 +5468,42 @@ function tokenizer(input, options) {
 "use strict";
 
 
+var _interopRequireDefault = __webpack_require__(/*! @babel/runtime/helpers/interopRequireDefault */ "./node_modules/@babel/runtime/helpers/interopRequireDefault.js");
+
+var _interopRequireWildcard = __webpack_require__(/*! @babel/runtime/helpers/interopRequireWildcard */ "./node_modules/@babel/runtime/helpers/interopRequireWildcard.js");
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+Object.defineProperty(exports, "Interpreter", {
+  enumerable: true,
+  get: function get() {
+    return _index.Interpreter;
+  }
+});
+Object.defineProperty(exports, "evaluate", {
+  enumerable: true,
+  get: function get() {
+    return _evaluate.default;
+  }
+});
+Object.defineProperty(exports, "Function", {
+  enumerable: true,
+  get: function get() {
+    return _Function.default;
+  }
+});
+exports.vm = void 0;
 
 var _index = __webpack_require__(/*! ./interpreter/index */ "./src/interpreter/index.ts");
 
-Object.keys(_index).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _index[key];
-    }
-  });
-});
+var vm = _interopRequireWildcard(__webpack_require__(/*! ./vm */ "./src/vm.ts"));
+
+exports.vm = vm;
+
+var _evaluate = _interopRequireDefault(__webpack_require__(/*! ./evaluate */ "./src/evaluate.ts"));
+
+var _Function = _interopRequireDefault(__webpack_require__(/*! ./Function */ "./src/Function.ts"));
 
 /***/ }),
 
@@ -5217,7 +5515,7 @@ Object.keys(_index).forEach(function (key) {
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(global) {
 
 var _interopRequireDefault = __webpack_require__(/*! @babel/runtime/helpers/interopRequireDefault */ "./node_modules/@babel/runtime/helpers/interopRequireDefault.js");
 
@@ -5257,13 +5555,6 @@ var ContinueLabel = function ContinueLabel(value) {
   this.value = value;
 };
 
-var Throw = function Throw(value) {
-  this.uncaught = false;
-  this.value = value;
-};
-
-var Interrupt = function Interrupt() {};
-
 var Scope = function Scope(data, parent, name) {
   if (parent === void 0) {
     parent = null;
@@ -5276,6 +5567,26 @@ var Scope = function Scope(data, parent, name) {
 };
 
 function noop() {}
+
+function getGlobal() {
+  if (typeof self !== "undefined") {
+    return self;
+  }
+
+  if (typeof window !== "undefined") {
+    return window;
+  }
+
+  if (typeof global !== "undefined") {
+    return global;
+  }
+
+  if (typeof this !== "undefined") {
+    return this;
+  }
+
+  return {};
+}
 
 function createScope(parent, name) {
   if (parent === void 0) {
@@ -5291,6 +5602,10 @@ var Interpreter =
 /*#__PURE__*/
 function () {
   function Interpreter(context, options) {
+    if (context === void 0) {
+      context = Interpreter.global;
+    }
+
     if (options === void 0) {
       options = {};
     }
@@ -5298,6 +5613,7 @@ function () {
     this.collectDeclarations = {};
     this.error = null;
     this.isVarDeclMode = false;
+    this.lastExecNode = null;
     this.options = {
       timeout: options.timeout || 0
     };
@@ -5305,15 +5621,11 @@ function () {
     this.callStack = [];
   }
 
-  Interpreter.interrupt = function interrupt() {
-    return new Interrupt();
-  };
-
-  Interpreter.throw = function _throw(message) {
-    return new Throw(message instanceof Error ? message : new Error(message));
-  };
-
   var _proto = Interpreter.prototype;
+
+  _proto.isInterruptThrow = function isInterruptThrow(err) {
+    return err instanceof _messages.InterruptThrowError || err instanceof _messages.InterruptThrowReferenceError || err instanceof _messages.InterruptThrowSyntaxError;
+  };
 
   _proto.setCurrentContext = function setCurrentContext(ctx) {
     this.currentContext = ctx;
@@ -5347,22 +5659,10 @@ function () {
     }
 
     var node;
-
-    try {
-      node = (0, _acorn.parse)(code, {
-        ranges: true,
-        locations: true
-      });
-    } catch (e) {
-      if (e instanceof Error) {
-        this.error = e;
-      } else {
-        this.error = new SyntaxError(e);
-      }
-
-      return;
-    }
-
+    node = (0, _acorn.parse)(code, {
+      ranges: true,
+      locations: true
+    });
     return this.evaluateNode(node, code, ctx);
   };
 
@@ -5378,32 +5678,20 @@ function () {
     this.initEnvironment(ctx);
     this.source = source;
     this.ast = node;
-    var result; // Interpreter Error
+    var bodyClosure = this.createClosure(node); // add declares to data
+
+    this.addDeclarationsToScope(this.collectDeclarations, this.getCurrentScope()); // reset
+
+    this.collectDeclarations = {}; // start run
 
     try {
-      var bodyClosure = this.create(node); // add declares to data
-
-      this.addDeclarationsToScope(this.collectDeclarations, this.getCurrentScope()); // reset
-
-      this.collectDeclarations = {}; // start run
-
-      result = bodyClosure();
+      bodyClosure();
     } catch (e) {
-      if (e instanceof Error) {
-        this.error = e;
-      } else {
-        this.error = new Error(e);
-      }
-    } // Uncaught error
-
-
-    if (result instanceof Throw) {
-      //result.value
-      result.uncaught = true;
-      this.error = result;
+      throw e;
+    } finally {
+      this.execEndTime = Date.now();
     }
 
-    this.execEndTime = Date.now();
     return this.getValue();
   };
 
@@ -5411,44 +5699,22 @@ function () {
     return this.execEndTime - this.execStartTime;
   };
 
-  _proto.createError = function createError(msg, value, node) {
-    var code = msg[0];
+  _proto.createErrorMessage = function createErrorMessage(msg, value, node) {
     var message = msg[1].replace("%0", String(value));
-    message += " " + this.getNodePosition(node);
-
-    if (code > 1000 && code <= 2000) {
-      return new SyntaxError(message);
-    } else if (code > 2000 && code <= 3000) {
-      return new ReferenceError(message);
-    } else {
-      return new Error(message);
-    }
+    message += this.getNodePosition(node || this.lastExecNode);
+    return message;
   };
 
-  _proto.throwError = function throwError(msg, value, node) {
-    throw this.createError(msg, value, node);
+  _proto.createError = function createError(message, error) {
+    return new error(message);
   };
 
-  _proto.createThrowError = function createThrowError(msg, value, node) {
-    return new Throw(this.createError(msg, value, node));
+  _proto.createThrowError = function createThrowError(message, error) {
+    return this.createError(message, error);
   };
 
-  _proto.getError = function getError() {
-    return this.error ? this.error instanceof Throw ? this.error.value : this.error : null;
-  };
-
-  _proto.getErrorMessage = function getErrorMessage() {
-    if (!this.error) return null;
-    var error = this.error;
-    var uncaught = false;
-
-    if (error instanceof Throw) {
-      uncaught = error.uncaught;
-      error = error.value;
-    }
-
-    var prefix = uncaught ? "Uncaught " : "";
-    return error ? prefix + error : null;
+  _proto.createInternalThrowError = function createInternalThrowError(msg, value, node) {
+    return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
   };
 
   _proto.checkTimeout = function checkTimeout() {
@@ -5464,13 +5730,14 @@ function () {
 
   _proto.getNodePosition = function getNodePosition(node) {
     if (node) {
-      return node.loc ? "(" + node.loc.start.line + ", " + node.loc.start.column + ")" : "";
+      var errorCode = this.source.slice(node.start, node.end);
+      return node.loc ? " [" + node.loc.start.line + ":" + node.loc.start.column + "]" + errorCode : "";
     }
 
     return "";
   };
 
-  _proto.create = function create(node) {
+  _proto.createClosure = function createClosure(node) {
     var _this = this;
 
     var timeout = this.options.timeout;
@@ -5615,39 +5882,35 @@ function () {
         break;
 
       default:
-        this.throwError(_messages.Messages.NodeTypeSyntaxError, node.type, node);
+        throw this.createInternalThrowError(_messages.Messages.NodeTypeSyntaxError, node.type, node);
     }
 
     if (timeout && timeout > 0) {
       return function () {
         if (_this.checkTimeout()) {
-          _this.throwError(_messages.Messages.ExecutionTimeOutError, timeout, node);
+          throw _this.createInternalThrowError(_messages.Messages.ExecutionTimeOutError, timeout, node);
         }
 
+        _this.lastExecNode = node;
         return closure.apply(void 0, arguments);
       };
     }
 
-    return closure;
+    return function () {
+      _this.lastExecNode = node;
+      return closure.apply(void 0, arguments);
+    };
   } // a==b a/b
   ;
 
   _proto.binaryExpressionHandler = function binaryExpressionHandler(node) {
     var _this2 = this;
 
-    var leftExpression = this.create(node.left);
-    var rightExpression = this.create(node.right);
+    var leftExpression = this.createClosure(node.left);
+    var rightExpression = this.createClosure(node.right);
     return function () {
       var leftValue = leftExpression();
       var rightValue = rightExpression();
-
-      if (leftValue instanceof Throw) {
-        return leftValue;
-      }
-
-      if (rightValue instanceof Throw) {
-        return rightValue;
-      }
 
       switch (node.operator) {
         case "==":
@@ -5714,8 +5977,7 @@ function () {
           return leftValue instanceof rightValue;
 
         default:
-          _this2.throwError(_messages.Messages.BinaryOperatorSyntaxError, node.operator, node);
-
+          throw _this2.createInternalThrowError(_messages.Messages.BinaryOperatorSyntaxError, node.operator, node);
       }
     };
   } // a && b
@@ -5724,54 +5986,18 @@ function () {
   _proto.logicalExpressionHandler = function logicalExpressionHandler(node) {
     var _this3 = this;
 
-    var leftExpression = this.create(node.left);
-    var rightExpression = this.create(node.right);
+    var leftExpression = this.createClosure(node.left);
+    var rightExpression = this.createClosure(node.right);
     return function () {
-      var leftValue;
-      var rightValue;
-
       switch (node.operator) {
         case "||":
-          leftValue = leftExpression();
-
-          if (leftValue instanceof Throw) {
-            return leftValue;
-          }
-
-          if (leftValue) {
-            return leftValue;
-          }
-
-          rightValue = rightExpression();
-
-          if (rightValue instanceof Throw) {
-            return rightValue;
-          }
-
-          return rightValue;
+          return leftExpression() || rightExpression();
 
         case "&&":
-          leftValue = leftExpression();
-
-          if (leftValue instanceof Throw) {
-            return leftValue;
-          }
-
-          if (!leftValue) {
-            return leftValue;
-          }
-
-          rightValue = rightExpression();
-
-          if (rightValue instanceof Throw) {
-            return rightValue;
-          }
-
-          return rightValue;
+          return leftExpression() && rightExpression();
 
         default:
-          _this3.throwError(_messages.Messages.LogicalOperatorSyntaxError, node.operator, node);
-
+          throw _this3.createInternalThrowError(_messages.Messages.LogicalOperatorSyntaxError, node.operator, node);
       }
     };
   } // typeof a !a()
@@ -5781,40 +6007,12 @@ function () {
     var _this4 = this;
 
     switch (node.operator) {
-      // case "typeof":
-      // 	if (node.argument.type === "Identifier" || node.argument.type === "Literal") {
-      // 		const expression = this.create(node.argument);
-      // 		return () => {
-      // 			const ret = expression();
-      // 			// typeof adfffd => undefined
-      // 			if (ret instanceof Throw) {
-      // 				return "undefined";
-      // 			}
-      // 			return typeof ret;
-      // 		};
-      // 	}
       case "delete":
         var objectGetter = this.createObjectGetter(node.argument);
         var nameGetter = this.createNameGetter(node.argument);
         return function () {
           var obj = objectGetter();
           var name = nameGetter();
-
-          if (obj instanceof Throw) {
-            return obj;
-          }
-
-          if (name instanceof Throw) {
-            return name;
-          } // catch null.x undefined.xx ...
-
-
-          var throwError = _this4.safeObjectGet(obj, name, node);
-
-          if (throwError instanceof Throw) {
-            return throwError;
-          }
-
           return delete obj[name];
         };
 
@@ -5831,15 +6029,11 @@ function () {
             return _objectGetter()[_nameGetter()];
           };
         } else {
-          expression = this.create(node.argument);
+          expression = this.createClosure(node.argument);
         }
 
         return function () {
           var value = expression();
-
-          if (value instanceof Throw) {
-            return value;
-          }
 
           switch (node.operator) {
             case "-":
@@ -5861,8 +6055,7 @@ function () {
               return typeof value;
 
             default:
-              _this4.throwError(_messages.Messages.UnaryOperatorSyntaxError, node.operator, node);
-
+              throw _this4.createInternalThrowError(_messages.Messages.UnaryOperatorSyntaxError, node.operator, node);
           }
         };
     }
@@ -5878,26 +6071,7 @@ function () {
       var obj = objectGetter();
       var name = nameGetter();
 
-      if (obj instanceof Throw) {
-        return obj;
-      }
-
-      if (name instanceof Throw) {
-        return name;
-      }
-
-      var throwError = _this5.assertVariable(obj, name, node);
-
-      if (throwError) {
-        return throwError;
-      } // assert null.ab undefiend.ac ... error
-
-
-      var throwError2 = _this5.safeObjectGet(obj, name, node);
-
-      if (throwError2 instanceof Throw) {
-        return throwError2;
-      }
+      _this5.assertVariable(obj, name, node);
 
       switch (node.operator) {
         case "++":
@@ -5907,8 +6081,7 @@ function () {
           return node.prefix ? --obj[name] : obj[name]--;
 
         default:
-          _this5.throwError(_messages.Messages.UpdateOperatorSyntaxError, node.operator, node);
-
+          throw _this5.createInternalThrowError(_messages.Messages.UpdateOperatorSyntaxError, node.operator, node);
       }
     };
   } // var o = {a: 1, b: 's', get name(){}, ...}
@@ -5941,7 +6114,7 @@ function () {
         properties[key] = {};
       }
 
-      properties[key][kind] = _this6.create(property.value);
+      properties[key][kind] = _this6.createClosure(property.value);
       items.push({
         key: key
       });
@@ -5957,10 +6130,6 @@ function () {
         var value = kinds.init ? kinds.init() : undefined;
         var getter = kinds.get ? kinds.get() : function () {};
         var setter = kinds.set ? kinds.set() : function (a) {};
-
-        if (value instanceof Throw) {
-          return value;
-        }
 
         if ("set" in kinds || "get" in kinds) {
           var descriptor = {
@@ -5984,33 +6153,17 @@ function () {
     var _this7 = this;
 
     var items = node.elements.map(function (element) {
-      return _this7.create(element);
+      return _this7.createClosure(element);
     });
     return function () {
-      var result = [];
-      var len = items.length;
-
-      for (var i = 0; i < len; i++) {
-        var item = items[i];
-        var ret = item();
-
-        if (ret instanceof Throw) {
-          return ret;
-        }
-
-        result.push(ret);
-      }
-
-      return result;
+      return items.map(function (item) {
+        return item();
+      });
     };
   };
 
   _proto.safeObjectGet = function safeObjectGet(obj, key, node) {
-    try {
-      return obj[key];
-    } catch (e) {
-      return new Throw(new TypeError(e.message));
-    }
+    return obj[key];
   };
 
   _proto.createCallFunctionGetter = function createCallFunctionGetter(node) {
@@ -6018,7 +6171,7 @@ function () {
 
     switch (node.type) {
       case "MemberExpression":
-        var objectGetter = this.create(node.object);
+        var objectGetter = this.createClosure(node.object);
         var keyGetter = this.createMemberKeyGetter(node);
         return function () {
           var obj = objectGetter();
@@ -6026,22 +6179,10 @@ function () {
 
           var func = _this8.safeObjectGet(obj, key, node);
 
-          if (obj instanceof Throw) {
-            return obj;
-          }
-
-          if (key instanceof Throw) {
-            return key;
-          }
-
-          if (func instanceof Throw) {
-            return func;
-          }
-
           if (!func || !isFunction(func)) {
             var name = _this8.source.slice(node.start, node.end);
 
-            return _this8.createThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
+            throw _this8.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
           } // method call
           // tips:
           // test.call(ctx, ...) === test.call.bind(test)(ctx, ...)
@@ -6054,17 +6195,13 @@ function () {
         };
 
       default:
-        var closure = this.create(node);
+        var closure = this.createClosure(node);
         return function () {
           var name = node.name;
           var func = closure();
 
-          if (func instanceof Throw) {
-            return func;
-          }
-
           if (!func || !isFunction(func)) {
-            return _this8.createThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
+            throw _this8.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
           } // function call
           // this = rootContext
           // tips:
@@ -6082,34 +6219,12 @@ function () {
 
     var funcGetter = this.createCallFunctionGetter(node.callee);
     var argsGetter = node.arguments.map(function (arg) {
-      return _this9.create(arg);
+      return _this9.createClosure(arg);
     });
     return function () {
-      var func = funcGetter();
-
-      if (func instanceof Throw) {
-        return func;
-      }
-
-      var len = argsGetter.length;
-      var args = [];
-
-      for (var i = 0; i < len; i++) {
-        var arg = argsGetter[i];
-        var result = arg();
-
-        if (result instanceof Throw) {
-          return result;
-        }
-
-        args.push(result);
-      }
-
-      try {
-        return func.apply(void 0, args);
-      } catch (e) {
-        return new Throw(e);
-      }
+      return funcGetter().apply(void 0, argsGetter.map(function (arg) {
+        return arg();
+      }));
     };
   } // var f = function() {...}
   ;
@@ -6126,7 +6241,7 @@ function () {
       return _this10.createParamNameGetter(param);
     }); // set scope
 
-    var bodyGetter = this.create(node.body);
+    var bodyClosure = this.createClosure(node.body);
     var declarations = this.collectDeclarations;
     this.collectDeclarations = oldDecls;
     return function () {
@@ -6138,7 +6253,7 @@ function () {
           args[_key] = arguments[_key];
         }
 
-        self.callStack.push("" + name + self.getNodePosition(node));
+        self.callStack.push("" + name);
         var prevScope = self.getCurrentScope();
         var currentScope = createScope(runtimeScope, name);
         self.setCurrentScope(currentScope);
@@ -6152,15 +6267,11 @@ function () {
         var prevContext = self.getCurrentContext(); //for ThisExpression
 
         self.setCurrentContext(this);
-        var result = bodyGetter(); //reset
+        var result = bodyClosure(); //reset
 
         self.setCurrentContext(prevContext);
         self.setCurrentScope(prevScope);
         self.callStack.pop();
-
-        if (result instanceof Throw) {
-          return result;
-        }
 
         if (result instanceof Return) {
           return result.value;
@@ -6207,65 +6318,34 @@ function () {
   _proto.newExpressionHandler = function newExpressionHandler(node) {
     var _this11 = this;
 
-    var expression = this.create(node.callee);
+    var expression = this.createClosure(node.callee);
     var args = node.arguments.map(function (arg) {
-      return _this11.create(arg);
+      return _this11.createClosure(arg);
     });
     return function () {
       var construct = expression();
-
-      if (construct instanceof Throw) {
-        return construct;
-      }
 
       if (!isFunction(construct)) {
         var callee = node.callee;
 
         var name = _this11.source.slice(callee.start, callee.end);
 
-        return new Throw(new TypeError(name + " is not a constructor"));
+        throw _this11.createInternalThrowError(_messages.Messages.IsNotConstructor, name, node);
       }
 
-      var len = args.length;
-      var params = [];
-
-      for (var i = 0; i < len; i++) {
-        var arg = args[i];
-        var result = arg();
-
-        if (result instanceof Throw) {
-          return result;
-        }
-
-        params.push(result);
-      }
-
-      try {
-        return (0, _construct2.default)(construct, params);
-      } catch (e) {
-        return new Throw(e);
-      }
+      return (0, _construct2.default)(construct, args.map(function (arg) {
+        return arg();
+      }));
     };
   } // a.b a['b']
   ;
 
   _proto.memberExpressionHandler = function memberExpressionHandler(node) {
-    var _this12 = this;
-
-    var objectGetter = this.create(node.object);
+    var objectGetter = this.createClosure(node.object);
     var keyGetter = this.createMemberKeyGetter(node);
     return function () {
       var obj = objectGetter();
-      var key = keyGetter();
-
-      if (obj instanceof Throw) {
-        return obj;
-      }
-
-      if (key instanceof Throw) {
-        return key;
-      } // get function.length
-
+      var key = keyGetter(); // get function.length
 
       if (obj && obj[isFunctionSymbol] && key === "length") {
         key = FunctionLengthSymbol;
@@ -6274,28 +6354,27 @@ function () {
 
       if (obj && obj[isFunctionSymbol] && key === "name") {
         key = FunctionNameSymbol;
-      } // return obj[key];
+      }
 
-
-      return _this12.safeObjectGet(obj, key, node);
+      return obj[key];
     };
   } //this
   ;
 
   _proto.thisExpressionHandler = function thisExpressionHandler(node) {
-    var _this13 = this;
+    var _this12 = this;
 
     return function () {
-      return _this13.getCurrentContext();
+      return _this12.getCurrentContext();
     };
   } // var1,var2,...
   ;
 
   _proto.sequenceExpressionHandler = function sequenceExpressionHandler(node) {
-    var _this14 = this;
+    var _this13 = this;
 
     var expressions = node.expressions.map(function (item) {
-      return _this14.create(item);
+      return _this13.createClosure(item);
     });
     return function () {
       var result;
@@ -6304,10 +6383,6 @@ function () {
       for (var i = 0; i < len; i++) {
         var expression = expressions[i];
         result = expression();
-
-        if (result instanceof Throw) {
-          return result;
-        }
       }
 
       return result;
@@ -6327,18 +6402,14 @@ function () {
   ;
 
   _proto.identifierHandler = function identifierHandler(node) {
-    var _this15 = this;
+    var _this14 = this;
 
     return function () {
-      var currentScope = _this15.getCurrentScope();
+      var currentScope = _this14.getCurrentScope();
 
-      var data = _this15.getScopeDataFromName(node.name, currentScope);
+      var data = _this14.getScopeDataFromName(node.name, currentScope);
 
-      var throwError = _this15.assertVariable(data, node.name, node);
-
-      if (throwError) {
-        return throwError;
-      }
+      _this14.assertVariable(data, node.name, node);
 
       return data[node.name];
     };
@@ -6346,7 +6417,7 @@ function () {
   ;
 
   _proto.assignmentExpressionHandler = function assignmentExpressionHandler(node) {
-    var _this16 = this;
+    var _this15 = this;
 
     // var s = function(){}
     // s.name === s
@@ -6359,44 +6430,18 @@ function () {
 
     var dataGetter = this.createObjectGetter(node.left);
     var nameGetter = this.createNameGetter(node.left);
-    var rightValueGetter = this.create(node.right);
+    var rightValueGetter = this.createClosure(node.right);
     return function () {
       var data = dataGetter();
       var name = nameGetter();
       var rightValue = rightValueGetter();
 
-      if (data instanceof Throw) {
-        return data;
-      }
-
-      if (name instanceof Throw) {
-        return name;
-      } // catch null.xx
-
-
-      var value = _this16.safeObjectGet(data, name, node); // data[name];
-
-
-      if (value instanceof Throw) {
-        return value;
-      }
-
-      if (rightValue instanceof Throw) {
-        return rightValue;
-      }
-
       if (node.operator !== "=") {
         // asdsad(undefined) += 1
-        var throwError = _this16.assertVariable(data, name, node);
-
-        if (throwError) {
-          return throwError;
-        }
-      } else {// name = asdfdff(undefined);
-        // if (rightValue instanceof Throw) {
-        // 	return rightValue;
-        // }
+        _this15.assertVariable(data, name, node);
       }
+
+      var value = data[name];
 
       switch (node.operator) {
         case "=":
@@ -6448,8 +6493,7 @@ function () {
           break;
 
         default:
-          _this16.throwError(_messages.Messages.AssignmentExpressionSyntaxError, node.type, node);
-
+          throw _this15.createInternalThrowError(_messages.Messages.AssignmentExpressionSyntaxError, node.type, node);
       }
 
       data[name] = value;
@@ -6472,14 +6516,14 @@ function () {
     if (node.type === "Identifier") {
       return node.name;
     } else {
-      this.throwError(_messages.Messages.VariableTypeSyntaxError, node.type, node);
+      throw this.createInternalThrowError(_messages.Messages.VariableTypeSyntaxError, node.type, node);
     }
   } // var i;
   // var i=1;
   ;
 
   _proto.variableDeclarationHandler = function variableDeclarationHandler(node) {
-    var _this17 = this;
+    var _this16 = this;
 
     var assignmentsClosure;
     var assignments = [];
@@ -6499,7 +6543,7 @@ function () {
     }
 
     if (assignments.length) {
-      assignmentsClosure = this.create({
+      assignmentsClosure = this.createClosure({
         type: "BlockStatement",
         body: assignments
       });
@@ -6507,13 +6551,9 @@ function () {
 
     return function () {
       if (assignmentsClosure) {
-        _this17.isVarDeclMode = true;
-        var ret = assignmentsClosure();
-        _this17.isVarDeclMode = false;
-
-        if (ret instanceof Throw) {
-          return ret;
-        }
+        _this16.isVarDeclMode = true;
+        assignmentsClosure();
+        _this16.isVarDeclMode = false;
       }
 
       return EmptyStatementReturn;
@@ -6522,20 +6562,18 @@ function () {
 
   _proto.assertVariable = function assertVariable(data, name, node) {
     if (data === this.rootScope.data && !(name in data)) {
-      return this.createThrowError(_messages.Messages.VariableUndefinedReferenceError, name, node);
+      throw this.createInternalThrowError(_messages.Messages.VariableUndefinedReferenceError, name, node);
     }
-
-    return null;
   } // {...}
   ;
 
   _proto.programHandler = function programHandler(node) {
-    var _this18 = this;
+    var _this17 = this;
 
     // const currentScope = this.getCurrentScope();
     var stmtClosures = node.body.map(function (stmt) {
       // if (stmt.type === "EmptyStatement") return null;
-      return _this18.create(stmt);
+      return _this17.createClosure(stmt);
     });
     return function () {
       var result = EmptyStatementReturn;
@@ -6543,7 +6581,7 @@ function () {
       for (var i = 0; i < stmtClosures.length; i++) {
         var stmtClosure = stmtClosures[i]; // save last value
 
-        var ret = _this18.setValue(stmtClosure()); // if (!stmtClosure) continue;
+        var ret = _this17.setValue(stmtClosure()); // if (!stmtClosure) continue;
         // EmptyStatement
 
 
@@ -6551,7 +6589,7 @@ function () {
         result = ret; // BlockStatement: break label;  continue label; for(){ break ... }
         // ReturnStatement: return xx;
 
-        if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel || result instanceof Throw || result instanceof Interrupt || result === Break || result === Continue) {
+        if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel || result === Break || result === Continue) {
           break;
         }
       } // save last value
@@ -6563,7 +6601,7 @@ function () {
   ;
 
   _proto.expressionStatementHandler = function expressionStatementHandler(node) {
-    return this.create(node.expression);
+    return this.createClosure(node.expression);
   };
 
   _proto.emptyStatementHandler = function emptyStatementHandler(node) {
@@ -6574,35 +6612,23 @@ function () {
   ;
 
   _proto.returnStatementHandler = function returnStatementHandler(node) {
-    var argumentClosure = node.argument ? this.create(node.argument) : noop;
+    var argumentClosure = node.argument ? this.createClosure(node.argument) : noop;
     return function () {
-      var result = argumentClosure();
-
-      if (result instanceof Throw) {
-        return result;
-      }
-
-      return new Return(result);
+      return new Return(argumentClosure());
     };
   } // if else
   ;
 
   _proto.ifStatementHandler = function ifStatementHandler(node) {
-    var testClosure = this.create(node.test);
-    var consequentClosure = this.create(node.consequent);
-    var alternateClosure = node.alternate ? this.create(node.alternate) :
+    var testClosure = this.createClosure(node.test);
+    var consequentClosure = this.createClosure(node.consequent);
+    var alternateClosure = node.alternate ? this.createClosure(node.alternate) :
     /*!important*/
     function () {
       return EmptyStatementReturn;
     };
     return function () {
-      var tr = testClosure();
-
-      if (tr instanceof Throw) {
-        return tr;
-      }
-
-      return tr ? consequentClosure() : alternateClosure();
+      return testClosure() ? consequentClosure() : alternateClosure();
     };
   } // test() ? true : false
   ;
@@ -6613,18 +6639,18 @@ function () {
   ;
 
   _proto.forStatementHandler = function forStatementHandler(node) {
-    var _this19 = this;
+    var _this18 = this;
 
     var initClosure = noop;
-    var testClosure = node.test ? this.create(node.test) : function () {
+    var testClosure = node.test ? this.createClosure(node.test) : function () {
       return true;
     };
     var updateClosure = noop;
-    var bodyClosure = this.create(node.body);
+    var bodyClosure = this.createClosure(node.body);
 
     if (node.type === "ForStatement") {
-      initClosure = node.init ? this.create(node.init) : initClosure;
-      updateClosure = node.update ? this.create(node.update) : initClosure;
+      initClosure = node.init ? this.createClosure(node.init) : initClosure;
+      updateClosure = node.update ? this.createClosure(node.update) : initClosure;
     }
 
     return function (pNode) {
@@ -6636,24 +6662,83 @@ function () {
         labelName = pNode.label.name;
       }
 
-      var ur;
-      var tr;
-      var initResult = initClosure();
+      for (initClosure(); shouldInitExec || testClosure(); updateClosure()) {
+        shouldInitExec = false; // save last value
 
-      if (initResult instanceof Throw) {
-        return initResult;
-      }
+        var ret = _this18.setValue(bodyClosure()); // notice: never return Break or Continue!
 
-      for (; shouldInitExec || (tr = testClosure()); ur = updateClosure()) {
-        shouldInitExec = false;
 
-        if (ur && ur instanceof Throw) {
-          return ur;
+        if (ret === EmptyStatementReturn || ret === Continue) continue;
+
+        if (ret === Break) {
+          break;
         }
 
-        if (tr && tr instanceof Throw) {
-          return tr;
-        } // save last value
+        result = ret; // stop continue label
+
+        if (result instanceof ContinueLabel && result.value === labelName) {
+          result = EmptyStatementReturn;
+          continue;
+        }
+
+        if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel) {
+          break;
+        }
+      }
+
+      return result;
+    };
+  } // while(1) {...}
+  ;
+
+  _proto.whileStatementHandler = function whileStatementHandler(node) {
+    return this.forStatementHandler(node);
+  };
+
+  _proto.doWhileStatementHandler = function doWhileStatementHandler(node) {
+    return this.forStatementHandler(node);
+  };
+
+  _proto.forInStatementHandler = function forInStatementHandler(node) {
+    var _this19 = this;
+
+    // for( k in obj) or for(o.k in obj) ...
+    var left = node.left;
+    var rightClosure = this.createClosure(node.right);
+    var bodyClosure = this.createClosure(node.body); // for(var k in obj) {...}
+
+    if (node.left.type === "VariableDeclaration") {
+      // init var k
+      this.createClosure(node.left)(); // reset left
+      // for( k in obj)
+
+      left = node.left.declarations[0].id;
+    }
+
+    return function (pNode) {
+      var labelName;
+      var result = EmptyStatementReturn;
+      var x;
+
+      if (pNode && pNode.type === "LabeledStatement") {
+        labelName = pNode.label.name;
+      }
+
+      var data = rightClosure();
+
+      for (x in data) {
+        // assign left to scope
+        // k = x
+        // o.k = x
+        _this19.assignmentExpressionHandler({
+          type: "AssignmentExpression",
+          operator: "=",
+          left: left,
+          right: {
+            type: "Literal",
+            value: x
+          }
+        })(); // save last value
 
 
         var ret = _this19.setValue(bodyClosure()); // Important: never return Break or Continue!
@@ -6672,95 +6757,7 @@ function () {
           continue;
         }
 
-        if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel || result instanceof Throw || result instanceof Interrupt) {
-          break;
-        }
-      }
-
-      if (ur && ur instanceof Throw) {
-        return ur;
-      }
-
-      return result;
-    };
-  } // while(1) {...}
-  ;
-
-  _proto.whileStatementHandler = function whileStatementHandler(node) {
-    return this.forStatementHandler(node);
-  };
-
-  _proto.doWhileStatementHandler = function doWhileStatementHandler(node) {
-    return this.forStatementHandler(node);
-  };
-
-  _proto.forInStatementHandler = function forInStatementHandler(node) {
-    var _this20 = this;
-
-    // for( k in obj) or for(o.k in obj) ...
-    var left = node.left;
-    var rightClosure = this.create(node.right);
-    var bodyClosure = this.create(node.body); // for(var k in obj) {...}
-
-    if (node.left.type === "VariableDeclaration") {
-      // init var k
-      this.create(node.left)(); // reset left
-      // for( k in obj)
-
-      left = node.left.declarations[0].id;
-    }
-
-    return function (pNode) {
-      var labelName;
-      var result = EmptyStatementReturn;
-      var x;
-
-      if (pNode && pNode.type === "LabeledStatement") {
-        labelName = pNode.label.name;
-      }
-
-      var data = rightClosure();
-
-      if (data instanceof Throw) {
-        return data;
-      }
-
-      for (x in data) {
-        // assign left to scope
-        // k = x
-        // o.k = x
-        var ar = _this20.assignmentExpressionHandler({
-          type: "AssignmentExpression",
-          operator: "=",
-          left: left,
-          right: {
-            type: "Literal",
-            value: x
-          }
-        })();
-
-        if (ar instanceof Throw) {
-          return ar;
-        } // save last value
-
-
-        var ret = _this20.setValue(bodyClosure()); // Important: never return Break or Continue!
-
-
-        if (ret === EmptyStatementReturn || ret === Continue) continue;
-
-        if (ret === Break) {
-          break;
-        }
-
-        result = ret; // stop continue label
-
-        if (result instanceof ContinueLabel && result.value === labelName) {
-          result = EmptyStatementReturn;
-          continue;
-        }
-
-        if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel || result instanceof Throw || result instanceof Interrupt) {
+        if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel) {
           break;
         }
       }
@@ -6770,136 +6767,117 @@ function () {
   };
 
   _proto.withStatementHandler = function withStatementHandler(node) {
-    var _this21 = this;
+    var _this20 = this;
 
-    var objectClosure = this.create(node.object);
-    var bodyClosure = this.create(node.body);
+    var objectClosure = this.createClosure(node.object);
+    var bodyClosure = this.createClosure(node.body);
     return function () {
-      var currentScope = _this21.getCurrentScope();
+      var currentScope = _this20.getCurrentScope();
 
       var newScope = createScope(currentScope, "with");
-      var data = objectClosure();
-
-      if (data instanceof Throw) {
-        return data;
-      } // newScope.data = data;
+      var data = objectClosure(); // newScope.data = data;
       // copy all property
-
 
       for (var k in data) {
         newScope.data[k] = data[k];
       }
 
-      _this21.setCurrentScope(newScope); // save last value
+      _this20.setCurrentScope(newScope); // save last value
 
 
-      var result = _this21.setValue(bodyClosure());
+      var result = _this20.setValue(bodyClosure());
 
-      _this21.setCurrentScope(currentScope);
+      _this20.setCurrentScope(currentScope);
 
       return result;
     };
   };
 
   _proto.throwStatementHandler = function throwStatementHandler(node) {
-    var argumentClosure = this.create(node.argument);
+    var argumentClosure = this.createClosure(node.argument);
     return function () {
-      var error = argumentClosure();
-
-      if (error instanceof Throw) {
-        return error;
-      }
-
-      return new Throw(error);
+      throw argumentClosure();
     };
   } // try{...}catch(e){...}finally{}
   ;
 
   _proto.tryStatementHandler = function tryStatementHandler(node) {
-    var _this22 = this;
+    var _this21 = this;
 
-    // const callStack = [].concat(this.callStack);
-    var blockClosure = this.create(node.block);
+    var blockClosure = this.createClosure(node.block);
     var handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
-    var finalizerClosure = node.finalizer ? this.create(node.finalizer) : null;
+    var finalizerClosure = node.finalizer ? this.createClosure(node.finalizer) : null;
     return function () {
-      var result = EmptyStatementReturn;
-      var ret;
+      var currentScope = _this21.getCurrentScope();
+
+      var labelStack = currentScope.labelStack.concat([]);
+
+      var callStack = _this21.callStack.concat([]);
+
+      var result = EmptyStatementReturn; // let finalReturn: any;
+
+      var throwError;
       /**
        * try{...}catch(e){...}finally{...} execution sequence:
        * try stmt
        * try throw
-       * catch stmt
+       * catch stmt (if)
        * finally stmt
        * finally throw or finally return
-       * catch throw or catch return or try return
+       * catch throw or catch return
+       * try return
        */
-      // try{
 
-      result = _this22.setValue(blockClosure());
+      try {
+        result = _this21.setValue(blockClosure());
+      } catch (err) {
+        currentScope.labelStack = labelStack;
+        _this21.callStack = callStack;
 
-      if (result instanceof Interrupt) {
-        return result;
-      }
+        if (_this21.isInterruptThrow(err)) {
+          throw err;
+        }
 
-      if (result instanceof Return) {
-        ret = result;
-      } // }
-      // catch (e) {
-
-
-      if (handlerClosure) {
-        if (result instanceof Throw) {
-          result = _this22.setValue(handlerClosure(result.value));
-
-          if (result instanceof Interrupt) {
-            return result;
-          }
-
-          if (result instanceof Return || result instanceof Throw) {
-            ret = result;
+        if (handlerClosure) {
+          try {
+            result = _this21.setValue(handlerClosure(err));
+          } catch (e) {
+            // save catch throw error
+            throwError = e;
           }
         }
-      } // } finally {
+      } // finally {
 
 
       if (finalizerClosure) {
-        result = _this22.setValue(finalizerClosure());
+        try {
+          //do not save finally result
+          result = finalizerClosure(); // finalReturn = finalizerClosure();
+        } catch (e) {
+          // save finally throw error
+          throwError = e;
+        } // if (finalReturn instanceof Return) {
+        // 	result = finalReturn;
+        // }
 
-        if (result instanceof Interrupt) {
-          return result;
-        }
-
-        if (result instanceof Return) {
-          return result;
-        }
-
-        if (result instanceof Throw) {
-          return result;
-        }
       } // }
 
 
-      if (ret) {
-        return ret;
-      }
-
-      _this22.setValue(result);
-
+      if (throwError) throw throwError;
       return result;
     };
   } // ... catch(e){...}
   ;
 
   _proto.catchClauseHandler = function catchClauseHandler(node) {
-    var _this23 = this;
+    var _this22 = this;
 
     var paramNameGetter = this.createParamNameGetter(node.param);
-    var bodyClosure = this.create(node.body);
+    var bodyClosure = this.createClosure(node.body);
     return function (e) {
       var result;
 
-      var currentScope = _this23.getCurrentScope();
+      var currentScope = _this22.getCurrentScope();
 
       var scopeData = currentScope.data; // get param name "e"
 
@@ -6937,19 +6915,14 @@ function () {
   };
 
   _proto.switchStatementHandler = function switchStatementHandler(node) {
-    var _this24 = this;
+    var _this23 = this;
 
-    var discriminantClosure = this.create(node.discriminant);
+    var discriminantClosure = this.createClosure(node.discriminant);
     var caseClosures = node.cases.map(function (item) {
-      return _this24.switchCaseHandler(item);
+      return _this23.switchCaseHandler(item);
     });
     return function () {
       var value = discriminantClosure();
-
-      if (value instanceof Throw) {
-        return value;
-      }
-
       var match = false;
       var result;
       var ret, defaultCase;
@@ -6958,10 +6931,6 @@ function () {
         var item = caseClosures[i]();
         var test = item.testClosure();
 
-        if (test instanceof Throw) {
-          return test;
-        }
-
         if (test === DefaultCase) {
           defaultCase = item;
           continue;
@@ -6969,7 +6938,7 @@ function () {
 
         if (match || test === value) {
           match = true;
-          ret = _this24.setValue(item.bodyClosure()); // Important: never return Break or Continue!
+          ret = _this23.setValue(item.bodyClosure()); // notice: never return Break or Continue!
 
           if (ret === EmptyStatementReturn) continue;
 
@@ -6979,17 +6948,17 @@ function () {
 
           result = ret;
 
-          if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel || result instanceof Throw || value instanceof Interrupt) {
+          if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel) {
             break;
           }
         }
       }
 
       if (!match && defaultCase) {
-        ret = _this24.setValue(defaultCase.bodyClosure()); // Important: never return Break or Continue!
+        ret = _this23.setValue(defaultCase.bodyClosure());
+        var isEBC = ret === EmptyStatementReturn || ret === Break || ret === Continue; // notice: never return Break or Continue!
 
-        if (ret === EmptyStatementReturn || ret === Break || ret === Continue) {//...
-        } else {
+        if (!isEBC) {
           result = ret;
         }
       }
@@ -6999,10 +6968,10 @@ function () {
   };
 
   _proto.switchCaseHandler = function switchCaseHandler(node) {
-    var testClosure = node.test ? this.create(node.test) : function () {
+    var testClosure = node.test ? this.createClosure(node.test) : function () {
       return DefaultCase;
     };
-    var bodyClosure = this.create({
+    var bodyClosure = this.createClosure({
       type: "BlockStatement",
       body: node.consequent
     });
@@ -7016,14 +6985,14 @@ function () {
   ;
 
   _proto.labeledStatementHandler = function labeledStatementHandler(node) {
-    var _this25 = this;
+    var _this24 = this;
 
     var labelName = node.label.name;
-    var bodyClosure = this.create(node.body);
+    var bodyClosure = this.createClosure(node.body);
     return function () {
       var result;
 
-      var currentScope = _this25.getCurrentScope();
+      var currentScope = _this24.getCurrentScope();
 
       currentScope.labelStack.push(labelName);
       result = bodyClosure(node); // stop break label
@@ -7044,7 +7013,7 @@ function () {
         return node.name;
       };
     } else {
-      this.throwError(_messages.Messages.ParamTypeSyntaxError, node.type, node);
+      throw this.createInternalThrowError(_messages.Messages.ParamTypeSyntaxError, node.type, node);
     }
   };
 
@@ -7058,7 +7027,7 @@ function () {
     } else {
       // Literal or ...
       // var obj = { "title": "" } or others...
-      getter = this.create(node);
+      getter = this.createClosure(node);
     }
 
     return function () {
@@ -7069,24 +7038,24 @@ function () {
   _proto.createMemberKeyGetter = function createMemberKeyGetter(node) {
     // s['a'];  node.computed = true
     // s.foo;  node.computed = false
-    return node.computed ? this.create(node.property) : this.createObjectKeyGetter(node.property);
+    return node.computed ? this.createClosure(node.property) : this.createObjectKeyGetter(node.property);
   } // for UnaryExpression UpdateExpression AssignmentExpression
   ;
 
   _proto.createObjectGetter = function createObjectGetter(node) {
-    var _this26 = this;
+    var _this25 = this;
 
     switch (node.type) {
       case "Identifier":
         return function () {
-          return _this26.getScopeDataFromName(node.name, _this26.getCurrentScope());
+          return _this25.getScopeDataFromName(node.name, _this25.getCurrentScope());
         };
 
       case "MemberExpression":
-        return this.create(node.object);
+        return this.createClosure(node.object);
 
       default:
-        this.throwError(_messages.Messages.AssignmentTypeSyntaxError, node.type, node);
+        throw this.createInternalThrowError(_messages.Messages.AssignmentTypeSyntaxError, node.type, node);
     }
   } // for UnaryExpression UpdateExpression AssignmentExpression
   ;
@@ -7102,7 +7071,7 @@ function () {
         return this.createMemberKeyGetter(node);
 
       default:
-        this.throwError(_messages.Messages.AssignmentTypeSyntaxError, node.type, node);
+        throw this.createInternalThrowError(_messages.Messages.AssignmentTypeSyntaxError, node.type, node);
     }
   };
 
@@ -7166,7 +7135,7 @@ function () {
   _proto.setValue = function setValue(value) {
     var isFunctionCall = this.callStack.length;
 
-    if (this.isVarDeclMode || isFunctionCall || value === EmptyStatementReturn || value === Break || value === Continue || value instanceof BreakLabel || value instanceof ContinueLabel || value instanceof Throw || value instanceof Interrupt) {
+    if (this.isVarDeclMode || isFunctionCall || value === EmptyStatementReturn || value === Break || value === Continue || value instanceof BreakLabel || value instanceof ContinueLabel) {
       return value;
     }
 
@@ -7182,6 +7151,8 @@ function () {
 }();
 
 exports.Interpreter = Interpreter;
+Interpreter.global = getGlobal();
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -7195,27 +7166,213 @@ exports.Interpreter = Interpreter;
 "use strict";
 
 
+var _interopRequireDefault = __webpack_require__(/*! @babel/runtime/helpers/interopRequireDefault */ "./node_modules/@babel/runtime/helpers/interopRequireDefault.js");
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Messages = void 0;
+exports.Messages = exports.InterruptThrowReferenceError = exports.InterruptThrowSyntaxError = exports.InterruptThrowError = exports.ThrowTypeError = exports.ThrowReferenceError = exports.ThrowSyntaxError = exports.ThrowError = void 0;
+
+var _inheritsLoose2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/inheritsLoose */ "./node_modules/@babel/runtime/helpers/inheritsLoose.js"));
+
+var _wrapNativeSuper2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/wrapNativeSuper */ "./node_modules/@babel/runtime/helpers/wrapNativeSuper.js"));
+
+var ThrowError =
+/*#__PURE__*/
+function (_Error) {
+  (0, _inheritsLoose2.default)(ThrowError, _Error);
+
+  function ThrowError() {
+    return _Error.apply(this, arguments) || this;
+  }
+
+  return ThrowError;
+}((0, _wrapNativeSuper2.default)(Error));
+
+exports.ThrowError = ThrowError;
+
+var ThrowSyntaxError =
+/*#__PURE__*/
+function (_SyntaxError) {
+  (0, _inheritsLoose2.default)(ThrowSyntaxError, _SyntaxError);
+
+  function ThrowSyntaxError() {
+    return _SyntaxError.apply(this, arguments) || this;
+  }
+
+  return ThrowSyntaxError;
+}((0, _wrapNativeSuper2.default)(SyntaxError));
+
+exports.ThrowSyntaxError = ThrowSyntaxError;
+
+var ThrowReferenceError =
+/*#__PURE__*/
+function (_ReferenceError) {
+  (0, _inheritsLoose2.default)(ThrowReferenceError, _ReferenceError);
+
+  function ThrowReferenceError() {
+    return _ReferenceError.apply(this, arguments) || this;
+  }
+
+  return ThrowReferenceError;
+}((0, _wrapNativeSuper2.default)(ReferenceError));
+
+exports.ThrowReferenceError = ThrowReferenceError;
+
+var ThrowTypeError =
+/*#__PURE__*/
+function (_TypeError) {
+  (0, _inheritsLoose2.default)(ThrowTypeError, _TypeError);
+
+  function ThrowTypeError() {
+    return _TypeError.apply(this, arguments) || this;
+  }
+
+  return ThrowTypeError;
+}((0, _wrapNativeSuper2.default)(TypeError));
+
+exports.ThrowTypeError = ThrowTypeError;
+
+var InterruptThrowError =
+/*#__PURE__*/
+function (_ThrowError) {
+  (0, _inheritsLoose2.default)(InterruptThrowError, _ThrowError);
+
+  function InterruptThrowError() {
+    return _ThrowError.apply(this, arguments) || this;
+  }
+
+  return InterruptThrowError;
+}(ThrowError);
+
+exports.InterruptThrowError = InterruptThrowError;
+
+var InterruptThrowSyntaxError =
+/*#__PURE__*/
+function (_ThrowSyntaxError) {
+  (0, _inheritsLoose2.default)(InterruptThrowSyntaxError, _ThrowSyntaxError);
+
+  function InterruptThrowSyntaxError() {
+    return _ThrowSyntaxError.apply(this, arguments) || this;
+  }
+
+  return InterruptThrowSyntaxError;
+}(ThrowSyntaxError);
+
+exports.InterruptThrowSyntaxError = InterruptThrowSyntaxError;
+
+var InterruptThrowReferenceError =
+/*#__PURE__*/
+function (_ThrowReferenceError) {
+  (0, _inheritsLoose2.default)(InterruptThrowReferenceError, _ThrowReferenceError);
+
+  function InterruptThrowReferenceError() {
+    return _ThrowReferenceError.apply(this, arguments) || this;
+  }
+
+  return InterruptThrowReferenceError;
+}(ThrowReferenceError);
+
+exports.InterruptThrowReferenceError = InterruptThrowReferenceError;
 var Messages = {
-  UnknownError: [3001, "%0"],
-  ExecutionTimeOutError: [3002, "Script execution timed out after %0ms"],
-  NodeTypeSyntaxError: [1001, "Unknown node type: %0"],
-  BinaryOperatorSyntaxError: [1002, "Unknown binary operator: %0"],
-  LogicalOperatorSyntaxError: [1003, "Unknown logical operator: %0"],
-  UnaryOperatorSyntaxError: [1004, "Unknown unary operator: %0"],
-  UpdateOperatorSyntaxError: [1005, "Unknown update operator: %0"],
-  ObjectStructureSyntaxError: [1006, "Unknown object structure: %0"],
-  AssignmentExpressionSyntaxError: [1007, "Unknown assignment expression: %0"],
-  VariableTypeSyntaxError: [1008, "Unknown variable type: %0"],
-  ParamTypeSyntaxError: [1009, "Unknown param type: %0"],
-  AssignmentTypeSyntaxError: [1010, "Unknown assignment type: %0"],
-  FunctionUndefinedReferenceError: [2001, "%0 is not a function"],
-  VariableUndefinedReferenceError: [2002, "%0 is not defined"]
+  UnknownError: [3001, "%0", InterruptThrowError],
+  ExecutionTimeOutError: [3002, "Script execution timed out after %0ms", InterruptThrowError],
+  NodeTypeSyntaxError: [1001, "Unknown node type: %0", InterruptThrowReferenceError],
+  BinaryOperatorSyntaxError: [1002, "Unknown binary operator: %0", InterruptThrowReferenceError],
+  LogicalOperatorSyntaxError: [1003, "Unknown logical operator: %0", InterruptThrowReferenceError],
+  UnaryOperatorSyntaxError: [1004, "Unknown unary operator: %0", InterruptThrowReferenceError],
+  UpdateOperatorSyntaxError: [1005, "Unknown update operator: %0", InterruptThrowReferenceError],
+  ObjectStructureSyntaxError: [1006, "Unknown object structure: %0", InterruptThrowReferenceError],
+  AssignmentExpressionSyntaxError: [1007, "Unknown assignment expression: %0", InterruptThrowReferenceError],
+  VariableTypeSyntaxError: [1008, "Unknown variable type: %0", InterruptThrowReferenceError],
+  ParamTypeSyntaxError: [1009, "Unknown param type: %0", InterruptThrowReferenceError],
+  AssignmentTypeSyntaxError: [1010, "Unknown assignment type: %0", InterruptThrowReferenceError],
+  FunctionUndefinedReferenceError: [2001, "%0 is not a function", ThrowReferenceError],
+  VariableUndefinedReferenceError: [2002, "%0 is not defined", ThrowReferenceError],
+  IsNotConstructor: [2003, "%0 is not a constructor", ThrowTypeError]
 };
 exports.Messages = Messages;
+
+/***/ }),
+
+/***/ "./src/vm.ts":
+/*!*******************!*\
+  !*** ./src/vm.ts ***!
+  \*******************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createContext = createContext;
+exports.compileFunction = compileFunction;
+exports.runInContext = _runInContext;
+exports.Script = exports.runInNewContext = void 0;
+
+var _index = __webpack_require__(/*! ./interpreter/index */ "./src/interpreter/index.ts");
+
+// class Context {}
+function createContext(ctx) {
+  if (ctx === void 0) {
+    ctx = Object.create(null);
+  }
+
+  return ctx;
+}
+
+function compileFunction(code, params, options) {
+  if (params === void 0) {
+    params = [];
+  }
+
+  if (options === void 0) {
+    options = {};
+  }
+
+  var ctx = options.parsingContext;
+  var timeout = options.timeout === undefined ? 0 : options.timeout;
+  var wrapCode = "\n    (function anonymous(" + params.join(",") + "){\n         " + code + "\n    });\n    ";
+  var interpreter = new _index.Interpreter(ctx, {
+    timeout: timeout
+  });
+  interpreter.evaluate(wrapCode);
+  return interpreter.getValue();
+}
+
+function _runInContext(code, ctx, options) {
+  var interpreter = new _index.Interpreter(ctx, options);
+  interpreter.evaluate(code);
+  return interpreter.getValue();
+}
+
+var runInNewContext = _runInContext;
+exports.runInNewContext = runInNewContext;
+
+var Script =
+/*#__PURE__*/
+function () {
+  function Script(code) {
+    this._code = code;
+  }
+
+  var _proto = Script.prototype;
+
+  _proto.runInContext = function runInContext(ctx) {
+    return _runInContext(this._code, ctx);
+  };
+
+  _proto.runInNewContext = function runInNewContext(ctx) {
+    return _runInContext(this._code, ctx);
+  };
+
+  return Script;
+}();
+
+exports.Script = Script;
 
 /***/ }),
 

@@ -1,4 +1,4 @@
-// var vm = require("../lib/vm");
+var { Function, vm, Interpreter } = require("../lib");
 
 const code = `
 var result = [];
@@ -30,24 +30,18 @@ fibonacci(16, result);
 result
 `;
 
-// const func = vm.compileFunction(code, ["num", "b"], {
-// 	parsingContext: global,
-// });
+const func = vm.compileFunction(code, ["num", "b"], {
+	parsingContext: global,
+});
 
-// const result = func(16);
+const result = func(16);
 
-// console.log(result);
+console.log(result);
 
-// console.log(vm.runInContext(code2));
-const util = require("util");
-const vm = require("vm");
+console.log(vm.runInContext(code2));
 
-global.globalVar = 1;
+vm.runInContext("var a=1;console.log(1+1+a)");
 
-const sandbox = {};
-vm.createContext(sandbox);
+const f1 = new Function("a", "b", "console.log(this);return a+b;");
 
-for (let i = 0; i < 10; ++i) {
-	vm.runInContext("globalVar = 2;");
-}
-console.log(sandbox.globalVar);
+console.log(f1.call("call this", 2, 2));

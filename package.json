@@ -1,25 +1,40 @@
 {
-	"name": "evaljs2",
-	"version": "0.0.1",
+	"name": "eval5",
+	"version": "1.0.0",
 	"description": "A JavaScript interpreter written in JavaScript",
 	"main": "lib/index.js",
 	"module": "esm/index.js",
 	"scripts": {
 		"start": "transform-es src -d lib -c -w",
+		"cjs": "transform-es src -d lib -c",
+		"esm": "transform-es src -t esm -d esm -c",
 		"bundle": "packez bundle ./src/index.ts -d dist",
 		"test": "node test/index.js"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bplok20010/evaljs2.git"
+		"url": "git+https://github.com/bplok20010/eval5.git"
 	},
-	"keywords": [],
+	"keywords": [
+		"interpreter",
+		"js-interpreter",
+		"eval",
+		"Function",
+		"vm",
+		"eval5"
+	],
+	"files": [
+		"dist",
+		"lib",
+		"esm",
+		"*.md"
+	],
 	"author": "nobo.zhou@foxmail.com",
 	"license": "ISC",
 	"bugs": {
-		"url": "https://github.com/bplok20010/evaljs2/issues"
+		"url": "https://github.com/bplok20010/eval5/issues"
 	},
-	"homepage": "https://github.com/bplok20010/evaljs2#readme",
+	"homepage": "https://github.com/bplok20010/eval5#readme",
 	"devDependencies": {
 		"packez": "^3.1.0",
 		"transform-es": "^4.6.5"
