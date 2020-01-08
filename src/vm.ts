@@ -1,7 +1,7 @@
 import { Interpreter } from "./interpreter/index";
 import { VMContext, CompileOptions } from "./types";
 
-class Context {}
+// class Context {}
 
 export function createContext(ctx: VMContext = Object.create(null)): VMContext {
 	return ctx;
@@ -24,7 +24,7 @@ export function compileFunction(
 	return interpreter.getValue();
 }
 
-export function runInContext(code: string, ctx?: VMContext = Object.create(null)): any {
+export function runInContext(code: string, ctx?: VMContext): any {
 	const interpreter = new Interpreter(ctx);
 
 	interpreter.evaluate(code);
@@ -32,15 +32,17 @@ export function runInContext(code: string, ctx?: VMContext = Object.create(null)
 	return interpreter.getValue();
 }
 
+export const runInNewContext = runInContext;
+
 export class Script {
 	_code: string;
 	constructor(code: string) {
 		this._code = code;
 	}
-	runInContext(ctx: VMContext = createContext()): any {
+	runInContext(ctx: VMContext): any {
 		return runInContext(this._code, ctx);
 	}
-	runInNewContext(ctx: VMContext = createContext()): any {
+	runInNewContext(ctx?: VMContext): any {
 		return runInContext(this._code, ctx);
 	}
 }

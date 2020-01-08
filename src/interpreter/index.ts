@@ -92,6 +92,26 @@ type Context = {};
 
 function noop() {}
 
+function getGlobal() {
+	if (typeof self !== "undefined") {
+		return self;
+	}
+
+	if (typeof window !== "undefined") {
+		return window;
+	}
+
+	if (typeof global !== "undefined") {
+		return global;
+	}
+
+	if (typeof this !== "undefined") {
+		return this;
+	}
+
+	return {};
+}
+
 function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope({} /* or Object.create(null)? */, parent, name);
 }
@@ -117,7 +137,7 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
-	constructor(context: Context, options: Options = {}) {
+	constructor(context: Context = getGlobal(), options: Options = {}) {
 		this.options = {
 			timeout: options.timeout || 0,
 		};
