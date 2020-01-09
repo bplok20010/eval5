@@ -1264,7 +1264,7 @@ export class Interpreter {
 			const labelStack = currentScope.labelStack.concat([]);
 			const callStack: string[] = this.callStack.concat([]);
 			let result: any = EmptyStatementReturn;
-			// let finalReturn: any;
+			let finalReturn: any;
 			let throwError;
 
 			/**
@@ -1280,6 +1280,9 @@ export class Interpreter {
 
 			try {
 				result = this.setValue(blockClosure());
+				if (result instanceof Return) {
+					finalReturn = result;
+				}
 			} catch (err) {
 				currentScope.labelStack = labelStack;
 				this.callStack = callStack;
@@ -1291,6 +1294,9 @@ export class Interpreter {
 				if (handlerClosure) {
 					try {
 						result = this.setValue(handlerClosure(err));
+						if (result instanceof Return) {
+							finalReturn = result;
+						}
 					} catch (e) {
 						// save catch throw error
 						throwError = e;
@@ -1302,6 +1308,9 @@ export class Interpreter {
 				try {
 					//do not save finally result
 					result = finalizerClosure();
+					if (result instanceof Return) {
+						finalReturn = result;
+					}
 					// finalReturn = finalizerClosure();
 				} catch (e) {
 					// save finally throw error
@@ -1315,6 +1324,10 @@ export class Interpreter {
 			// }
 
 			if (throwError) throw throwError;
+
+			if (finalReturn) {
+				return finalReturn;
+			}
 
 			return result;
 		};
