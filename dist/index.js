@@ -6300,14 +6300,16 @@ function () {
         value: function value() {
           return _this10.source.slice(node.start, node.end);
         },
-        configurable: false,
+        writable: true,
+        configurable: true,
         enumerable: false
       });
       Object.defineProperty(func, "valueOf", {
         value: function value() {
           return _this10.source.slice(node.start, node.end);
         },
-        configurable: false,
+        writable: true,
+        configurable: true,
         enumerable: false
       });
       return func;

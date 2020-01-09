@@ -770,14 +770,16 @@ export class Interpreter {
 				value: () => {
 					return this.source.slice(node.start, node.end);
 				},
-				configurable: false,
+				writable: true,
+				configurable: true,
 				enumerable: false,
 			});
 			Object.defineProperty(func, "valueOf", {
 				value: () => {
 					return this.source.slice(node.start, node.end);
 				},
-				configurable: false,
+				writable: true,
+				configurable: true,
 				enumerable: false,
 			});
 
