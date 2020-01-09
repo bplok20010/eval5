@@ -624,9 +624,23 @@ export class Interpreter {
 
 	// [1,2,3]
 	arrayExpressionHandler(node: ESTree.ArrayExpression) {
-		const items: Array<BaseClosure> = node.elements.map(element => this.createClosure(element));
+		//fix: [,,,1,2]
+		const items: Array<BaseClosure> = node.elements.map(element =>
+			element ? this.createClosure(element) : element
+		);
 
-		return () => items.map(item => item());
+		return () => {
+			const len = items.length;
+			const result = Array(len);
+			for (let i = 0; i < len; i++) {
+				const item = items[i];
+				if (item) {
+					result[i] = item();
+				}
+			}
+
+			return result;
+		};
 	}
 
 	safeObjectGet(obj: any, key: any, node: Node) {

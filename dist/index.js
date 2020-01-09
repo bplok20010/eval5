@@ -6152,13 +6152,23 @@ function () {
   _proto.arrayExpressionHandler = function arrayExpressionHandler(node) {
     var _this7 = this;
 
+    //fix: [,,,1,2]
     var items = node.elements.map(function (element) {
-      return _this7.createClosure(element);
+      return element ? _this7.createClosure(element) : element;
     });
     return function () {
-      return items.map(function (item) {
-        return item();
-      });
+      var len = items.length;
+      var result = Array(len);
+
+      for (var i = 0; i < len; i++) {
+        var item = items[i];
+
+        if (item) {
+          result[i] = item();
+        }
+      }
+
+      return result;
     };
   };
 
