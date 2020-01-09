@@ -6814,8 +6814,8 @@ function () {
 
       var callStack = _this21.callStack.concat([]);
 
-      var result = EmptyStatementReturn; // let finalReturn: any;
-
+      var result = EmptyStatementReturn;
+      var finalReturn;
       var throwError;
       /**
        * try{...}catch(e){...}finally{...} execution sequence:
@@ -6830,6 +6830,10 @@ function () {
 
       try {
         result = _this21.setValue(blockClosure());
+
+        if (result instanceof Return) {
+          finalReturn = result;
+        }
       } catch (err) {
         currentScope.labelStack = labelStack;
         _this21.callStack = callStack;
@@ -6841,6 +6845,10 @@ function () {
         if (handlerClosure) {
           try {
             result = _this21.setValue(handlerClosure(err));
+
+            if (result instanceof Return) {
+              finalReturn = result;
+            }
           } catch (e) {
             // save catch throw error
             throwError = e;
@@ -6852,7 +6860,12 @@ function () {
       if (finalizerClosure) {
         try {
           //do not save finally result
-          result = finalizerClosure(); // finalReturn = finalizerClosure();
+          result = finalizerClosure();
+
+          if (result instanceof Return) {
+            finalReturn = result;
+          } // finalReturn = finalizerClosure();
+
         } catch (e) {
           // save finally throw error
           throwError = e;
@@ -6864,6 +6877,11 @@ function () {
 
 
       if (throwError) throw throwError;
+
+      if (finalReturn) {
+        return finalReturn;
+      }
+
       return result;
     };
   } // ... catch(e){...}

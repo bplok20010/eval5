@@ -19,9 +19,10 @@
 			var interpreter = new eval5.Interpreter(window);
 			function run() {
 				var source = code.value;
-				interpreter.evaluate(source);
-				if (interpreter.getError()) {
-					console.log(interpreter.getError());
+				try {
+					interpreter.evaluate(source);
+				} catch (e) {
+					console.log(e);
 				}
 			}
 		</script>
