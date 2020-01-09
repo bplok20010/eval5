@@ -9,7 +9,7 @@ module.exports = function() {
 		},
 		assest: {
 			js: {
-				name: "index.js",
+				name: "eval5.js",
 				output: "",
 			},
 		},
