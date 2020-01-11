@@ -5,9 +5,15 @@
 	"main": "lib/index.js",
 	"module": "esm/index.js",
 	"scripts": {
-		"start": "transform-es src -d lib -c -w",
-		"cjs": "transform-es src -d lib -c",
-		"esm": "transform-es src -t esm -d esm -c",
+		"start": "npm-run-all clean mkdir -p ts:watch babel",
+		"build": "npm-run-all clean mkdir ts cjs esm bundle",
+		"mkdir": "mkdirp dest",
+		"clean": "rimraf dest",
+		"ts:watch": "tsc -w",
+		"ts": "tsc",
+		"babel": "transform-es dest -d lib -c -w",
+		"cjs": "transform-es dest -d lib -c",
+		"esm": "transform-es dest -t esm -d esm -c",
 		"bundle": "packez bundle ./src/index.ts -d umd",
 		"test": "node test/index.js"
 	},
@@ -36,7 +42,10 @@
 	},
 	"homepage": "https://github.com/bplok20010/eval5#readme",
 	"devDependencies": {
+		"mkdirp": "^0.5.1",
+		"npm-run-all": "^4.1.5",
 		"packez": "^3.1.0",
+		"rimraf": "^3.0.0",
 		"transform-es": "^4.6.5"
 	},
 	"dependencies": {

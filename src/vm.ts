@@ -1,4 +1,4 @@
-import { Interpreter } from "./interpreter/index";
+import { Interpreter } from "./interpreter/main";
 import { VMContext, CompileOptions, ScriptOptions } from "./types";
 
 // class Context {}

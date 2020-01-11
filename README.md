@@ -23,7 +23,7 @@ const interpreter = new Interpreter(ctx, {
 });
 
 try {
-    interpreter.execuate('1+1')
+    interpreter.evaluate('1+1')
 } catch(e) {
     //..
 }

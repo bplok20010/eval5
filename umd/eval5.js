@@ -5478,7 +5478,7 @@ Object.defineProperty(exports, "__esModule", {
 Object.defineProperty(exports, "Interpreter", {
   enumerable: true,
   get: function get() {
-    return _index.Interpreter;
+    return _main.Interpreter;
   }
 });
 Object.defineProperty(exports, "evaluate", {
@@ -5495,7 +5495,7 @@ Object.defineProperty(exports, "Function", {
 });
 exports.vm = void 0;
 
-var _index = __webpack_require__(/*! ./interpreter/index */ "./src/interpreter/index.ts");
+var _main = __webpack_require__(/*! ./interpreter/main */ "./src/interpreter/main.ts");
 
 var vm = _interopRequireWildcard(__webpack_require__(/*! ./vm */ "./src/vm.ts"));
 
@@ -5507,10 +5507,10 @@ var _Function = _interopRequireDefault(__webpack_require__(/*! ./Function */ "./
 
 /***/ }),
 
-/***/ "./src/interpreter/index.ts":
-/*!**********************************!*\
-  !*** ./src/interpreter/index.ts ***!
-  \**********************************/
+/***/ "./src/interpreter/main.ts":
+/*!*********************************!*\
+  !*** ./src/interpreter/main.ts ***!
+  \*********************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -7343,7 +7343,7 @@ exports.compileFunction = compileFunction;
 exports.runInContext = _runInContext;
 exports.Script = exports.runInNewContext = void 0;
 
-var _index = __webpack_require__(/*! ./interpreter/index */ "./src/interpreter/index.ts");
+var _main = __webpack_require__(/*! ./interpreter/main */ "./src/interpreter/main.ts");
 
 // class Context {}
 function createContext(ctx) {
@@ -7366,7 +7366,7 @@ function compileFunction(code, params, options) {
   var ctx = options.parsingContext;
   var timeout = options.timeout === undefined ? 0 : options.timeout;
   var wrapCode = "\n    (function anonymous(" + params.join(",") + "){\n         " + code + "\n    });\n    ";
-  var interpreter = new _index.Interpreter(ctx, {
+  var interpreter = new _main.Interpreter(ctx, {
     timeout: timeout
   });
   interpreter.evaluate(wrapCode);
@@ -7374,7 +7374,7 @@ function compileFunction(code, params, options) {
 }
 
 function _runInContext(code, ctx, options) {
-  var interpreter = new _index.Interpreter(ctx, options);
+  var interpreter = new _main.Interpreter(ctx, options);
   interpreter.evaluate(code);
   return interpreter.getValue();
 }

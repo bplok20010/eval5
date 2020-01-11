@@ -1,4 +1,4 @@
-import { Interpreter } from "./interpreter/index";
+import { Interpreter } from "./interpreter/main";
 import * as vm from "./vm";
 import evaluate from "./evaluate";
 import Function from "./Function";
