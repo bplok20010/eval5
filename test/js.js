@@ -1,23 +1,18 @@
-const vm = require("vm");
+"use strict";
+function test1(a, b) {}
+var p = 6;
+Object.defineProperty(test1, "length", {
+	value: p,
+	writable: false,
+	enumerable: false,
+	configurable: true,
+});
 
-const ret = vm.runInNewContext(
-	`
-       function t(){
-        try {
-            // 56;
-            // throw 0
-        } catch (e) {
-            // 99
-        } finally {
-            console.log(2);
-            89;
-            return 345
-        }
-        }
-        t()
-        `,
-	{ console },
-	{ timeout: 115 }
-);
+Object.defineProperty(test1, "name", {
+	value: "adfasd",
+	writable: false,
+	enumerable: false,
+	configurable: true,
+});
 
-console.log(ret);
+console.log(test1.length, test1.name);

@@ -52,7 +52,7 @@
     // and `exports` are not HTML elements.)
     if (typeof exports != 'undefined' && !exports.nodeType) {
         if (typeof module != 'undefined' && !module.nodeType && module.exports) {
-            exports = module.exports = _;
+            exports =  _;
         }
         exports._ = _;
     } else {

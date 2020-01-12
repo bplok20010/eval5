@@ -6258,7 +6258,7 @@ function () {
       // bind current scope
       var runtimeScope = self.getCurrentScope();
 
-      function func() {
+      var func = function func() {
         for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
           args[_key] = arguments[_key];
         }
@@ -6286,26 +6286,38 @@ function () {
         if (result instanceof Return) {
           return result.value;
         }
-      }
+      };
 
-      Object.defineProperty(func, FunctionLengthSymbol, {
-        value: paramLength,
-        writable: false,
-        configurable: false,
-        enumerable: false
-      });
-      Object.defineProperty(func, FunctionNameSymbol, {
+      Object.defineProperty(func, "name", {
         value: name,
         writable: false,
-        configurable: false,
-        enumerable: false
+        enumerable: false,
+        configurable: true
       });
-      Object.defineProperty(func, isFunctionSymbol, {
-        value: true,
+      Object.defineProperty(func, "length", {
+        value: paramLength,
         writable: false,
-        configurable: false,
-        enumerable: false
-      });
+        enumerable: false,
+        configurable: true
+      }); // Object.defineProperty(func, FunctionLengthSymbol, {
+      // 	value: paramLength,
+      // 	writable: false,
+      // 	configurable: false,
+      // 	enumerable: false,
+      // });
+      // Object.defineProperty(func, FunctionNameSymbol, {
+      // 	value: name,
+      // 	writable: false,
+      // 	configurable: false,
+      // 	enumerable: false,
+      // });
+      // Object.defineProperty(func, isFunctionSymbol, {
+      // 	value: true,
+      // 	writable: false,
+      // 	configurable: false,
+      // 	enumerable: false,
+      // });
+
       Object.defineProperty(func, "toString", {
         value: function value() {
           return _this10.source.slice(node.start, node.end);
@@ -6358,15 +6370,13 @@ function () {
     return function () {
       var obj = objectGetter();
       var key = keyGetter(); // get function.length
-
-      if (obj && obj[isFunctionSymbol] && key === "length") {
-        key = FunctionLengthSymbol;
-      } // get function.name
-
-
-      if (obj && obj[isFunctionSymbol] && key === "name") {
-        key = FunctionNameSymbol;
-      }
+      // if (obj && obj[isFunctionSymbol] && key === "length") {
+      // 	key = FunctionLengthSymbol;
+      // }
+      // get function.name
+      // if (obj && obj[isFunctionSymbol] && key === "name") {
+      // 	key = FunctionNameSymbol;
+      // }
 
       return obj[key];
     };
@@ -6449,7 +6459,7 @@ function () {
       var rightValue = rightValueGetter();
 
       if (node.operator !== "=") {
-        // asdsad(undefined) += 1
+        // var1(undefined) += 1
         _this15.assertVariable(data, name, node);
       }
 
@@ -6972,13 +6982,13 @@ function () {
 
           if (ret === EmptyStatementReturn) continue;
 
-          if (ret === Break || ret === Continue) {
+          if (ret === Break) {
             break;
           }
 
           result = ret;
 
-          if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel) {
+          if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel || result === Continue) {
             break;
           }
         }

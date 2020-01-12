@@ -1,0 +1,109 @@
+const { evaluate } = require("../../lib");
+
+function deepEqual(a, b) {
+	expect(a).toEqual(b);
+}
+
+test("typeof", () => {
+	const type = evaluate(
+		`
+ typeof 123;
+  `
+	);
+
+	deepEqual(type, "number");
+});
+
+test("typeof before defined", () => {
+	const type = evaluate(
+		`
+
+ typeof a; // a is not defined, it should equal 'undefined'
+  `
+	);
+
+	deepEqual(type, "undefined");
+});
+
+test("typeof before var", () => {
+	const type = evaluate(
+		`
+
+ typeof a;
+var a;
+  `
+	);
+
+	deepEqual(type, "undefined");
+});
+
+test("void", () => {
+	const type = evaluate(
+		`
+ void 123;
+  `
+	);
+
+	deepEqual(type, undefined);
+});
+
+test("delete", () => {
+	const obj = evaluate(
+		`
+const obj = {
+  a: 123
+};
+
+delete obj.a;
+
+ obj;
+  `
+	);
+
+	deepEqual(obj.a, undefined);
+	deepEqual(Object.keys(obj).length, 0);
+});
+
+test("!", () => {
+	const isTrue = evaluate(
+		`
+const isTrue = !false;
+
+ isTrue;
+  `
+	);
+	deepEqual(true,isTrue);
+});
+
+test("+", () => {
+	const num = evaluate(
+		`
+const num = +("123");
+
+ num;
+  `
+	);
+	deepEqual(num, 123);
+});
+
+test("-", () => {
+	const num = evaluate(
+		`
+const num = -("123");
+
+ num;
+  `
+	);
+	deepEqual(num, -123);
+});
+
+test("~", () => {
+	const num = evaluate(
+		`
+const num = ~("123");
+
+ num;
+  `
+	);
+	deepEqual(num, -124);
+});

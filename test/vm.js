@@ -38,9 +38,9 @@ const result = func(16);
 
 console.log(result);
 
-console.log(vm.runInContext(code2));
+console.log(evaluate(code2));
 
-vm.runInContext("var a=1;console.log(1+1+a)");
+evaluate("var a=1;console.log(1+1+a)");
 
 const f1 = new Function("a", "b", "console.log(this);return a+b;");
 
