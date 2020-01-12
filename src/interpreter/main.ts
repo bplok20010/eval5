@@ -730,7 +730,7 @@ export class Interpreter {
 			// bind current scope
 			const runtimeScope = self.getCurrentScope();
 
-			function func(...args: any[]) {
+			const func = function(...args: any[]) {
 				self.callStack.push(`${name}`);
 
 				const prevScope = self.getCurrentScope();
@@ -760,26 +760,41 @@ export class Interpreter {
 				if (result instanceof Return) {
 					return result.value;
 				}
-			}
+			};
 
-			Object.defineProperty(func, FunctionLengthSymbol, {
-				value: paramLength,
-				writable: false,
-				configurable: false,
-				enumerable: false,
-			});
-			Object.defineProperty(func, FunctionNameSymbol, {
+			Object.defineProperty(func, "name", {
 				value: name,
 				writable: false,
-				configurable: false,
 				enumerable: false,
+				configurable: true,
 			});
-			Object.defineProperty(func, isFunctionSymbol, {
-				value: true,
+
+			Object.defineProperty(func, "length", {
+				value: paramLength,
 				writable: false,
-				configurable: false,
 				enumerable: false,
+				configurable: true,
 			});
+
+			// Object.defineProperty(func, FunctionLengthSymbol, {
+			// 	value: paramLength,
+			// 	writable: false,
+			// 	configurable: false,
+			// 	enumerable: false,
+			// });
+			// Object.defineProperty(func, FunctionNameSymbol, {
+			// 	value: name,
+			// 	writable: false,
+			// 	configurable: false,
+			// 	enumerable: false,
+			// });
+			// Object.defineProperty(func, isFunctionSymbol, {
+			// 	value: true,
+			// 	writable: false,
+			// 	configurable: false,
+			// 	enumerable: false,
+			// });
+
 			Object.defineProperty(func, "toString", {
 				value: () => {
 					return this.source.slice(node.start, node.end);
@@ -829,13 +844,13 @@ export class Interpreter {
 			let key = keyGetter();
 
 			// get function.length
-			if (obj && obj[isFunctionSymbol] && key === "length") {
-				key = FunctionLengthSymbol;
-			}
+			// if (obj && obj[isFunctionSymbol] && key === "length") {
+			// 	key = FunctionLengthSymbol;
+			// }
 			// get function.name
-			if (obj && obj[isFunctionSymbol] && key === "name") {
-				key = FunctionNameSymbol;
-			}
+			// if (obj && obj[isFunctionSymbol] && key === "name") {
+			// 	key = FunctionNameSymbol;
+			// }
 
 			return obj[key];
 		};
@@ -913,7 +928,7 @@ export class Interpreter {
 			const rightValue = rightValueGetter();
 
 			if (node.operator !== "=") {
-				// asdsad(undefined) += 1
+				// var1(undefined) += 1
 				this.assertVariable(data, name, node);
 			}
 
@@ -1409,7 +1424,7 @@ export class Interpreter {
 
 					// notice: never return Break or Continue!
 					if (ret === EmptyStatementReturn) continue;
-					if (ret === Break || ret === Continue) {
+					if (ret === Break) {
 						break;
 					}
 
@@ -1418,7 +1433,8 @@ export class Interpreter {
 					if (
 						result instanceof Return ||
 						result instanceof BreakLabel ||
-						result instanceof ContinueLabel
+						result instanceof ContinueLabel ||
+						result === Continue
 					) {
 						break;
 					}
