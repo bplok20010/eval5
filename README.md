@@ -1,6 +1,6 @@
 # eval5
 
-A JavaScript interpreter written in JavaScript
+A JavaScript interpreter, written completely in JavaScript; JavaScript 解释器
 
 ## usage
 

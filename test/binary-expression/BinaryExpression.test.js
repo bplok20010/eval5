@@ -55,6 +55,15 @@ test("*", () => {
 	deepEqual(num, 2);
 });
 
+test("**", () => {
+	const num = evaluate(
+		`
+ 2 ** 3;
+  `
+	);
+	deepEqual(num, 8);
+});
+
 test("*=", () => {
 	const num = evaluate(
 		`
@@ -65,6 +74,18 @@ a *= 2;
   `
 	);
 	deepEqual(num, 2);
+});
+
+test("**=", () => {
+	const num = evaluate(
+		`
+var a = 2;
+var b = 3;
+a **= b;
+
+  `
+	);
+	deepEqual(num, 8);
 });
 
 test("/", () => {

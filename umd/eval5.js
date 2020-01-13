@@ -5955,6 +5955,9 @@ function () {
         case "*":
           return leftValue * rightValue;
 
+        case "**":
+          return Math.pow(leftValue, rightValue);
+
         case "/":
           return leftValue / rightValue;
 
@@ -6492,6 +6495,10 @@ function () {
           value *= rightValue;
           break;
 
+        case "**=":
+          value = Math.pow(value, rightValue);
+          break;
+
         case "/=":
           value /= rightValue;
           break;
@@ -6988,7 +6995,7 @@ function () {
 
         if (match || test === value) {
           match = true;
-          ret = _this23.setValue(item.bodyClosure()); // notice: never return Break or Continue!
+          ret = _this23.setValue(item.bodyClosure()); // notice: never return Break!
 
           if (ret === EmptyStatementReturn) continue;
 

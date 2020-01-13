@@ -429,6 +429,8 @@ export class Interpreter {
 					return leftValue - rightValue;
 				case "*":
 					return leftValue * rightValue;
+				case "**":
+					return Math.pow(leftValue, rightValue);
 				case "/":
 					return leftValue / rightValue;
 				case "%":
@@ -962,6 +964,9 @@ export class Interpreter {
 				case "*=":
 					value *= rightValue;
 					break;
+				case "**=":
+					value = Math.pow(value, rightValue);
+					break;
 				case "/=":
 					value /= rightValue;
 					break;
@@ -1437,7 +1442,7 @@ export class Interpreter {
 					match = true;
 					ret = this.setValue(item.bodyClosure());
 
-					// notice: never return Break or Continue!
+					// notice: never return Break!
 					if (ret === EmptyStatementReturn) continue;
 					if (ret === Break) {
 						break;
