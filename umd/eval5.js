@@ -6084,7 +6084,7 @@ function () {
           throw _this5.createInternalThrowError(_messages.Messages.UpdateOperatorSyntaxError, node.operator, node);
       }
     };
-  } // var o = {a: 1, b: 's', get name(){}, ...}
+  } // var o = {a: 1, b: 's', get name(){}, set name(){}  ...}
   ;
 
   _proto.objectExpressionHandler = function objectExpressionHandler(node) {
@@ -6112,6 +6112,16 @@ function () {
 
       if (!properties[key] || kind === "init") {
         properties[key] = {};
+      } // set function.name
+      // var d = { test(){} }
+      // var d = { test: function(){} }
+
+
+      if (property.key.type === "Identifier" && property.value.type === "FunctionExpression" && kind === "init" && !property.value.id) {
+        property.value.id = {
+          type: "Identifier",
+          name: property.key.name
+        };
       }
 
       properties[key][kind] = _this6.createClosure(property.value);

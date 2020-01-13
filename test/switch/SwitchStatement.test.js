@@ -11,8 +11,8 @@ function t1(type) {
   switch (type) {
     case "world":
       return "hi world";
-    case "axetroy":
-      return "hi axetroy";
+    case "eval5":
+      return "hi eval5";
     default:
       return "hello world";
   }
@@ -24,7 +24,7 @@ function t1(type) {
 
 	deepEqual(true, typeof func === "function");
 	deepEqual(func("world"), "hi world");
-	deepEqual(func("axetroy"), "hi axetroy");
+	deepEqual(func("eval5"), "hi eval5");
 	deepEqual(func("aa"), "hello world");
 });
 
@@ -35,8 +35,8 @@ function t2(type) {
   switch (true) {
     case type === "world":
       return "hi world";
-    case type === "axetroy":
-      return "hi axetroy";
+    case type === "eval5":
+      return "hi eval5";
     default:
       return "hello world";
   }
@@ -48,7 +48,7 @@ function t2(type) {
 
 	deepEqual(true, typeof func === "function");
 	deepEqual(func("world"), "hi world");
-	deepEqual(func("axetroy"), "hi axetroy");
+	deepEqual(func("eval5"), "hi eval5");
 	deepEqual(func("aa"), "hello world");
 });
 

@@ -12,7 +12,7 @@ function People(name, age){
 }
 
 d = {
-  people: new People("axetroy", 12),
+  people: new People("eval5", 12),
   People: People
 };
   `
@@ -24,7 +24,7 @@ d = {
 
 	// entity
 	deepEqual(true, people instanceof People);
-	deepEqual(people.name, "axetroy");
+	deepEqual(people.name, "eval5");
 	deepEqual(true, people.constructor === People);
 });
 

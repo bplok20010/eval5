@@ -5478,7 +5478,7 @@ Object.defineProperty(exports, "__esModule", {
 Object.defineProperty(exports, "Interpreter", {
   enumerable: true,
   get: function get() {
-    return _index.Interpreter;
+    return _main.Interpreter;
   }
 });
 Object.defineProperty(exports, "evaluate", {
@@ -5495,7 +5495,7 @@ Object.defineProperty(exports, "Function", {
 });
 exports.vm = void 0;
 
-var _index = __webpack_require__(/*! ./interpreter/index */ "./src/interpreter/index.ts");
+var _main = __webpack_require__(/*! ./interpreter/main */ "./src/interpreter/main.ts");
 
 var vm = _interopRequireWildcard(__webpack_require__(/*! ./vm */ "./src/vm.ts"));
 
@@ -5507,10 +5507,10 @@ var _Function = _interopRequireDefault(__webpack_require__(/*! ./Function */ "./
 
 /***/ }),
 
-/***/ "./src/interpreter/index.ts":
-/*!**********************************!*\
-  !*** ./src/interpreter/index.ts ***!
-  \**********************************/
+/***/ "./src/interpreter/main.ts":
+/*!*********************************!*\
+  !*** ./src/interpreter/main.ts ***!
+  \*********************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -6084,7 +6084,7 @@ function () {
           throw _this5.createInternalThrowError(_messages.Messages.UpdateOperatorSyntaxError, node.operator, node);
       }
     };
-  } // var o = {a: 1, b: 's', get name(){}, ...}
+  } // var o = {a: 1, b: 's', get name(){}, set name(){}  ...}
   ;
 
   _proto.objectExpressionHandler = function objectExpressionHandler(node) {
@@ -6112,6 +6112,16 @@ function () {
 
       if (!properties[key] || kind === "init") {
         properties[key] = {};
+      } // set function.name
+      // var d = { test(){} }
+      // var d = { test: function(){} }
+
+
+      if (property.key.type === "Identifier" && property.value.type === "FunctionExpression" && kind === "init" && !property.value.id) {
+        property.value.id = {
+          type: "Identifier",
+          name: property.key.name
+        };
       }
 
       properties[key][kind] = _this6.createClosure(property.value);
@@ -6258,7 +6268,7 @@ function () {
       // bind current scope
       var runtimeScope = self.getCurrentScope();
 
-      function func() {
+      var func = function func() {
         for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
           args[_key] = arguments[_key];
         }
@@ -6286,26 +6296,38 @@ function () {
         if (result instanceof Return) {
           return result.value;
         }
-      }
+      };
 
-      Object.defineProperty(func, FunctionLengthSymbol, {
-        value: paramLength,
-        writable: false,
-        configurable: false,
-        enumerable: false
-      });
-      Object.defineProperty(func, FunctionNameSymbol, {
+      Object.defineProperty(func, "name", {
         value: name,
         writable: false,
-        configurable: false,
-        enumerable: false
+        enumerable: false,
+        configurable: true
       });
-      Object.defineProperty(func, isFunctionSymbol, {
-        value: true,
+      Object.defineProperty(func, "length", {
+        value: paramLength,
         writable: false,
-        configurable: false,
-        enumerable: false
-      });
+        enumerable: false,
+        configurable: true
+      }); // Object.defineProperty(func, FunctionLengthSymbol, {
+      // 	value: paramLength,
+      // 	writable: false,
+      // 	configurable: false,
+      // 	enumerable: false,
+      // });
+      // Object.defineProperty(func, FunctionNameSymbol, {
+      // 	value: name,
+      // 	writable: false,
+      // 	configurable: false,
+      // 	enumerable: false,
+      // });
+      // Object.defineProperty(func, isFunctionSymbol, {
+      // 	value: true,
+      // 	writable: false,
+      // 	configurable: false,
+      // 	enumerable: false,
+      // });
+
       Object.defineProperty(func, "toString", {
         value: function value() {
           return _this10.source.slice(node.start, node.end);
@@ -6358,15 +6380,13 @@ function () {
     return function () {
       var obj = objectGetter();
       var key = keyGetter(); // get function.length
-
-      if (obj && obj[isFunctionSymbol] && key === "length") {
-        key = FunctionLengthSymbol;
-      } // get function.name
-
-
-      if (obj && obj[isFunctionSymbol] && key === "name") {
-        key = FunctionNameSymbol;
-      }
+      // if (obj && obj[isFunctionSymbol] && key === "length") {
+      // 	key = FunctionLengthSymbol;
+      // }
+      // get function.name
+      // if (obj && obj[isFunctionSymbol] && key === "name") {
+      // 	key = FunctionNameSymbol;
+      // }
 
       return obj[key];
     };
@@ -6449,7 +6469,7 @@ function () {
       var rightValue = rightValueGetter();
 
       if (node.operator !== "=") {
-        // asdsad(undefined) += 1
+        // var1(undefined) += 1
         _this15.assertVariable(data, name, node);
       }
 
@@ -6972,13 +6992,13 @@ function () {
 
           if (ret === EmptyStatementReturn) continue;
 
-          if (ret === Break || ret === Continue) {
+          if (ret === Break) {
             break;
           }
 
           result = ret;
 
-          if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel) {
+          if (result instanceof Return || result instanceof BreakLabel || result instanceof ContinueLabel || result === Continue) {
             break;
           }
         }
@@ -7343,7 +7363,7 @@ exports.compileFunction = compileFunction;
 exports.runInContext = _runInContext;
 exports.Script = exports.runInNewContext = void 0;
 
-var _index = __webpack_require__(/*! ./interpreter/index */ "./src/interpreter/index.ts");
+var _main = __webpack_require__(/*! ./interpreter/main */ "./src/interpreter/main.ts");
 
 // class Context {}
 function createContext(ctx) {
@@ -7366,7 +7386,7 @@ function compileFunction(code, params, options) {
   var ctx = options.parsingContext;
   var timeout = options.timeout === undefined ? 0 : options.timeout;
   var wrapCode = "\n    (function anonymous(" + params.join(",") + "){\n         " + code + "\n    });\n    ";
-  var interpreter = new _index.Interpreter(ctx, {
+  var interpreter = new _main.Interpreter(ctx, {
     timeout: timeout
   });
   interpreter.evaluate(wrapCode);
@@ -7374,7 +7394,7 @@ function compileFunction(code, params, options) {
 }
 
 function _runInContext(code, ctx, options) {
-  var interpreter = new _index.Interpreter(ctx, options);
+  var interpreter = new _main.Interpreter(ctx, options);
   interpreter.evaluate(code);
   return interpreter.getValue();
 }

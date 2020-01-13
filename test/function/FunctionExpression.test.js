@@ -11,41 +11,40 @@ function throws(fn) {
 test("FunctionExpression-1", () => {
 	const testFunc = evaluate(
 		`
-function test(name){
+function test_x1(name){
   return "hello " + name;
 }
-
- test;
+test_x1;
   `
 	);
 
 	deepEqual(true, typeof testFunc === "function");
 	deepEqual(testFunc.length, 1);
-	deepEqual(testFunc.name, "test");
+	deepEqual(testFunc.name, "test_x1");
 	deepEqual(testFunc("world"), "hello world");
 });
 
 test("FunctionDeclaration-2", () => {
 	const testFunc = evaluate(
 		`
-const func = function test(name){
+var func = function(name){
   return "hello " + name;
 }
 
- func;
+func;
   `
 	);
 
 	deepEqual(true, typeof testFunc === "function");
 	deepEqual(testFunc.length, 1);
-	deepEqual(testFunc.name, "test");
+	deepEqual(testFunc.name, "func");
 	deepEqual(testFunc("world"), "hello world");
 });
 
 test("FunctionDeclaration-name", () => {
 	const person = evaluate(
 		`
-const person = {
+var person = {
   sayName() {
     console.log('hello!');
   },

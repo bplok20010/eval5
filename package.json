@@ -1,67 +1,67 @@
 {
-  "name": "eval5",
-  "version": "1.0.3",
-  "description": "A JavaScript interpreter written in JavaScript",
-  "main": "lib/index.js",
-  "module": "esm/index.js",
-  "scripts": {
-    "start": "npm-run-all clean mkdir -p ts:watch babel",
-    "build": "npm-run-all clean mkdir ts cjs esm bundle",
-    "mkdir": "mkdirp dest",
-    "clean": "rimraf dest",
-    "ts:watch": "tsc -w",
-    "ts": "tsc",
-    "babel": "transform-es dest -d lib -c -w",
-    "cjs": "transform-es dest -d lib -c",
-    "esm": "transform-es dest -t esm -d esm -c",
-    "bundle": "packez bundle ./src/index.ts -d umd",
-    "test": "jest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bplok20010/eval5.git"
-  },
-  "keywords": [
-    "interpreter",
-    "js-interpreter",
-    "eval",
-    "Function",
-    "vm",
-    "eval5"
-  ],
-  "files": [
-    "dist",
-    "lib",
-    "esm",
-    "*.md"
-  ],
-  "author": "nobo.zhou@foxmail.com",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/bplok20010/eval5/issues"
-  },
-  "homepage": "https://github.com/bplok20010/eval5#readme",
-  "devDependencies": {
-    "@types/jest": "^24.0.25",
-    "jest": "^24.9.0",
-    "mkdirp": "^0.5.1",
-    "npm-run-all": "^4.1.5",
-    "packez": "^3.1.0",
-    "rimraf": "^3.0.0",
-    "transform-es": "^4.6.5"
-  },
-  "dependencies": {
-    "@types/acorn": "^4.0.5",
-    "@types/estree": "0.0.41",
-    "acorn": "^7.1.0"
-  },
-  "browserslist": [
-    ">=0.2%",
-    "not dead",
-    "not op_mini all",
-    "not Android 4.4.3-4.4.4",
-    "not ios_saf < 10",
-    "not Chrome < 50",
-    "firefox ESR"
-  ]
+	"name": "eval5",
+	"version": "1.0.4",
+	"description": "A JavaScript interpreter written in JavaScript",
+	"main": "lib/index.js",
+	"module": "esm/index.js",
+	"scripts": {
+		"start": "npm-run-all clean mkdir -p ts:watch babel",
+		"build": "npm-run-all clean mkdir ts cjs esm bundle",
+		"mkdir": "mkdirp dest",
+		"clean": "rimraf dest",
+		"ts:watch": "tsc -w",
+		"ts": "tsc",
+		"babel": "transform-es dest -d lib -c -w",
+		"cjs": "transform-es dest -t cjs -d lib -c",
+		"esm": "transform-es dest -t esm -d esm -c",
+		"bundle": "packez bundle ./src/index.ts -d umd",
+		"test": "jest"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bplok20010/eval5.git"
+	},
+	"keywords": [
+		"interpreter",
+		"js-interpreter",
+		"eval",
+		"Function",
+		"vm",
+		"eval5"
+	],
+	"files": [
+		"umd",
+		"lib",
+		"esm",
+		"*.md"
+	],
+	"author": "nobo.zhou@foxmail.com",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/bplok20010/eval5/issues"
+	},
+	"homepage": "https://github.com/bplok20010/eval5#readme",
+	"devDependencies": {
+		"@types/jest": "^24.0.25",
+		"jest": "^24.9.0",
+		"mkdirp": "^0.5.1",
+		"npm-run-all": "^4.1.5",
+		"packez": "^3.1.0",
+		"rimraf": "^3.0.0",
+		"transform-es": "^4.6.5"
+	},
+	"dependencies": {
+		"@types/acorn": "^4.0.5",
+		"@types/estree": "0.0.41",
+		"acorn": "^7.1.0"
+	},
+	"browserslist": [
+		">=0.2%",
+		"not dead",
+		"not op_mini all",
+		"not Android 4.4.3-4.4.4",
+		"not ios_saf < 10",
+		"not Chrome < 50",
+		"firefox ESR"
+	]
 }

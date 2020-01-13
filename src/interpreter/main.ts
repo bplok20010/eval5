@@ -552,7 +552,7 @@ export class Interpreter {
 		};
 	}
 
-	// var o = {a: 1, b: 's', get name(){}, ...}
+	// var o = {a: 1, b: 's', get name(){}, set name(){}  ...}
 	objectExpressionHandler(node: ESTree.ObjectExpression) {
 		const items: {
 			key: string;
@@ -584,6 +584,21 @@ export class Interpreter {
 
 			if (!properties[key] || kind === "init") {
 				properties[key] = {};
+			}
+
+			// set function.name
+			// var d = { test(){} }
+			// var d = { test: function(){} }
+			if (
+				property.key.type === "Identifier" &&
+				property.value.type === "FunctionExpression" &&
+				kind === "init" &&
+				!property.value.id
+			) {
+				property.value.id = {
+					type: "Identifier",
+					name: property.key.name,
+				};
 			}
 
 			properties[key][kind] = this.createClosure(property.value);
