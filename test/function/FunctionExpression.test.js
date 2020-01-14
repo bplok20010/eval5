@@ -8,6 +8,40 @@ function throws(fn) {
 	expect(fn).toThrow();
 }
 
+test("declare function -1", () => {
+	const a = evaluate(
+		`
+var ttx=1;
+function ttx(name){
+  return "hello " + name;
+}
+
+ttx
+
+  `
+	);
+
+	deepEqual(typeof a, "number");
+});
+
+test("declare function -2", () => {
+	const a = evaluate(
+		`
+function ttxr(name){
+  return 1;
+}
+function ttxr(name){
+  return 2;
+}
+
+ttxr
+
+  `
+	);
+
+	deepEqual(a(), 2);
+});
+
 test("FunctionExpression-1", () => {
 	const testFunc = evaluate(
 		`
@@ -106,19 +140,82 @@ function test_1 (a) {
 	deepEqual(test(), "hello");
 });
 
-test("object function scope", () => {
+test("object function scope -1", () => {
 	const a = evaluate(
 		`
-var d = {
-    fy: function fy() {
-        return fy
+var dx = {
+    fy: function fy1() {
+        return typeof fy1
     }
-}
+};
 
-[typeof fy, d.fy()]
+[typeof fy1, dx.fy, dx.fy()]
     `
 	);
 
 	deepEqual(a[0], "undefined");
-	deepEqual(typeof a[1], "function");
+	deepEqual(a[1].name, "fy1");
+	deepEqual(a[2], "function");
+});
+
+test("object function scope -2", () => {
+	const a = evaluate(
+		`
+var d = {
+    fy: function() {
+        return typeof fy
+    }
+};
+
+[d.fy.name, d.fy()]
+    `
+	);
+
+	deepEqual(a[0], "fy");
+	deepEqual(a[1], "undefined");
+});
+
+test("object function scope -3", () => {
+	const a = evaluate(
+		`
+var d = {
+     fy() {
+        return typeof fy
+    }
+};
+
+[d.fy.name, d.fy()]
+    `
+	);
+
+	deepEqual(a[0], "fy");
+	deepEqual(a[1], "undefined");
+});
+
+test("function name scope -1", () => {
+	const a = evaluate(
+		`
+var tuh = 1;
+var t1 = function(){ return typeof t1 };
+tuh = function(){ return typeof tuh };
+
+[t1.name,t1(), tuh()]
+    `
+	);
+
+	deepEqual(a, ["t1", "function", "function"]);
+});
+
+test("function name scope -2", () => {
+	const a = evaluate(
+		`
+var u = 1
+
+var x = function u() { u = 2; return u };
+
+[u, x()]
+    `
+	);
+
+	deepEqual(a, [1, 2]);
 });

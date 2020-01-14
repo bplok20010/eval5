@@ -8,6 +8,15 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
+function defineFunctionName<T>(func: T, name: string) {
+	Object.defineProperty(func, "name", {
+		value: name,
+		writable: false,
+		enumerable: false,
+		configurable: true,
+	});
+}
+
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 const FunctionNameSymbol = Symbol("name");
 const FunctionLengthSymbol = Symbol("length");
@@ -32,7 +41,10 @@ const EmptyStatementReturn = Symbol("EmptyStatementReturn");
 // }
 
 type Getter = () => any;
-type BaseClosure = (pNode?: Node) => any;
+interface BaseClosure {
+	(pNode?: Node): any;
+	[prop: string]: any;
+}
 type CaseItem = {
 	testClosure: BaseClosure;
 	bodyClosure: BaseClosure;
@@ -558,6 +570,7 @@ export class Interpreter {
 	objectExpressionHandler(node: ESTree.ObjectExpression) {
 		const items: {
 			key: string;
+			property: ESTree.Property;
 		}[] = [];
 
 		function getKey(keyNode: ESTree.Expression): string {
@@ -574,9 +587,9 @@ export class Interpreter {
 		// collect value, getter, and/or setter.
 		const properties: {
 			[prop: string]: {
-				init?: Getter;
-				get?: Getter;
-				set?: Getter;
+				init?: BaseClosure;
+				get?: BaseClosure;
+				set?: BaseClosure;
 			};
 		} = Object.create(null);
 
@@ -588,25 +601,11 @@ export class Interpreter {
 				properties[key] = {};
 			}
 
-			// set function.name
-			// var d = { test(){} }
-			// var d = { test: function(){} }
-			if (
-				property.key.type === "Identifier" &&
-				property.value.type === "FunctionExpression" &&
-				kind === "init" &&
-				!property.value.id
-			) {
-				property.value.id = {
-					type: "Identifier",
-					name: property.key.name,
-				};
-			}
-
 			properties[key][kind] = this.createClosure(property.value);
 
 			items.push({
 				key,
+				property,
 			});
 		});
 
@@ -631,6 +630,20 @@ export class Interpreter {
 					};
 					Object.defineProperty(result, key, descriptor);
 				} else {
+					const property = item.property;
+					const kind = property.kind;
+					// set function.name
+					// var d = { test(){} }
+					// var d = { test: function(){} }
+					if (
+						property.key.type === "Identifier" &&
+						property.value.type === "FunctionExpression" &&
+						kind === "init" &&
+						!property.value.id
+					) {
+						defineFunctionName(value, property.key.name);
+					}
+
 					result[key] = value;
 				}
 			}
@@ -728,7 +741,7 @@ export class Interpreter {
 		node:
 			| (ESTree.FunctionExpression & { start?: number; end?: number })
 			| (ESTree.FunctionDeclaration & { start?: number; end?: number })
-	) {
+	): BaseClosure {
 		const self = this;
 		const oldDecls = this.collectDeclarations;
 		this.collectDeclarations = {};
@@ -755,6 +768,16 @@ export class Interpreter {
 				self.setCurrentScope(currentScope);
 
 				self.addDeclarationsToScope(declarations, currentScope);
+
+				// var t = function(){ typeof t } // function
+				// t = function(){ typeof t } // function
+				// z = function tx(){ typeof tx } // function
+				// but
+				// d = { say: function(){ typeof say } } // undefined
+				if (name) {
+					currentScope.data[name] = func;
+				}
+
 				// init arguments var
 				currentScope.data["arguments"] = arguments;
 				paramsGetter.forEach((getter, i) => {
@@ -779,12 +802,13 @@ export class Interpreter {
 				}
 			};
 
-			Object.defineProperty(func, "name", {
-				value: name,
-				writable: false,
-				enumerable: false,
-				configurable: true,
-			});
+			defineFunctionName(func, name);
+			// Object.defineProperty(func, "name", {
+			// 	value: name,
+			// 	writable: false,
+			// 	enumerable: false,
+			// 	configurable: true,
+			// });
 
 			Object.defineProperty(func, "length", {
 				value: paramLength,
@@ -1008,7 +1032,9 @@ export class Interpreter {
 	// function test(){}
 	functionDeclarationHandler(node: ESTree.FunctionDeclaration): BaseClosure {
 		if (node.id) {
-			this.funcDeclaration(node.id.name, this.functionExpressionHandler(node));
+			const functionClosure = this.functionExpressionHandler(node);
+			functionClosure.__$isFunc = true;
+			this.funcDeclaration(node.id.name, functionClosure);
 		}
 		return () => {
 			return EmptyStatementReturn;
@@ -1585,7 +1611,11 @@ export class Interpreter {
 
 	funcDeclaration(name: string, func: () => any): void {
 		const context = this.collectDeclarations;
-		if (!hasOwnProperty.call(context, name) || context[name] === undefined) {
+		if (
+			!hasOwnProperty.call(context, name) ||
+			context[name] === undefined ||
+			context[name]?.__$isFunc
+		) {
 			context[name] = func;
 		}
 	}

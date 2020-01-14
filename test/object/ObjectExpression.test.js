@@ -15,7 +15,7 @@ const obj = {
   `
 	);
 
-	deepEqual(true,typeof obj.i === "number");
+	deepEqual(true, typeof obj.i === "number");
 	deepEqual(obj.i, 0);
 });
 
@@ -69,4 +69,23 @@ const obj = {
 	deepEqual(obj.i, 0);
 	obj.value = 123;
 	deepEqual(obj.i, 123);
+});
+
+test("object function name", () => {
+	const a = evaluate(
+		`
+const obj = {
+   v1(){
+  },
+  
+  v2: function(){},
+
+  v: function v3(){}
+
+};
+
+ [obj.v1.name, obj.v2.name, obj.v.name]
+  `
+	);
+	deepEqual(a, ["v1", "v2", "v3"]);
 });

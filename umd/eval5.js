@@ -5530,6 +5530,15 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
+function defineFunctionName(func, name) {
+  Object.defineProperty(func, "name", {
+    value: name,
+    writable: false,
+    enumerable: false,
+    configurable: true
+  });
+}
+
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 var FunctionNameSymbol = Symbol("name");
 var FunctionLengthSymbol = Symbol("length");
@@ -6115,21 +6124,12 @@ function () {
 
       if (!properties[key] || kind === "init") {
         properties[key] = {};
-      } // set function.name
-      // var d = { test(){} }
-      // var d = { test: function(){} }
-
-
-      if (property.key.type === "Identifier" && property.value.type === "FunctionExpression" && kind === "init" && !property.value.id) {
-        property.value.id = {
-          type: "Identifier",
-          name: property.key.name
-        };
       }
 
       properties[key][kind] = _this6.createClosure(property.value);
       items.push({
-        key: key
+        key: key,
+        property: property
       });
     });
     return function () {
@@ -6153,6 +6153,15 @@ function () {
           };
           Object.defineProperty(result, key, descriptor);
         } else {
+          var property = item.property;
+          var kind = property.kind; // set function.name
+          // var d = { test(){} }
+          // var d = { test: function(){} }
+
+          if (property.key.type === "Identifier" && property.value.type === "FunctionExpression" && kind === "init" && !property.value.id) {
+            defineFunctionName(value, property.key.name);
+          }
+
           result[key] = value;
         }
       }
@@ -6280,7 +6289,16 @@ function () {
         var prevScope = self.getCurrentScope();
         var currentScope = createScope(runtimeScope, name);
         self.setCurrentScope(currentScope);
-        self.addDeclarationsToScope(declarations, currentScope); // init arguments var
+        self.addDeclarationsToScope(declarations, currentScope); // var t = function(){ typeof t } // function
+        // t = function(){ typeof t } // function
+        // z = function tx(){ typeof tx } // function
+        // but
+        // d = { say: function(){ typeof say } } // undefined
+
+        if (name) {
+          currentScope.data[name] = func;
+        } // init arguments var
+
 
         currentScope.data["arguments"] = arguments;
         paramsGetter.forEach(function (getter, i) {
@@ -6301,12 +6319,13 @@ function () {
         }
       };
 
-      Object.defineProperty(func, "name", {
-        value: name,
-        writable: false,
-        enumerable: false,
-        configurable: true
-      });
+      defineFunctionName(func, name); // Object.defineProperty(func, "name", {
+      // 	value: name,
+      // 	writable: false,
+      // 	enumerable: false,
+      // 	configurable: true,
+      // });
+
       Object.defineProperty(func, "length", {
         value: paramLength,
         writable: false,
@@ -6543,7 +6562,9 @@ function () {
 
   _proto.functionDeclarationHandler = function functionDeclarationHandler(node) {
     if (node.id) {
-      this.funcDeclaration(node.id.name, this.functionExpressionHandler(node));
+      var functionClosure = this.functionExpressionHandler(node);
+      functionClosure.__$isFunc = true;
+      this.funcDeclaration(node.id.name, functionClosure);
     }
 
     return function () {
@@ -7141,9 +7162,11 @@ function () {
   };
 
   _proto.funcDeclaration = function funcDeclaration(name, func) {
+    var _a;
+
     var context = this.collectDeclarations;
 
-    if (!hasOwnProperty.call(context, name) || context[name] === undefined) {
+    if (!hasOwnProperty.call(context, name) || context[name] === undefined || ((_a = context[name]) === null || _a === void 0 ? void 0 : _a.__$isFunc)) {
       context[name] = func;
     }
   };
