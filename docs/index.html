@@ -16,7 +16,7 @@
 
         </textarea>
 		<script>
-			var interpreter = new eval5.Interpreter(window);
+			var interpreter = new eval5.Interpreter(window, { timeout: 1000 * 30 });
 			function run() {
 				var source = code.value;
 				try {

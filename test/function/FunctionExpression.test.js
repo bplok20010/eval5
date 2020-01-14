@@ -105,3 +105,20 @@ function test_1 (a) {
 
 	deepEqual(test(), "hello");
 });
+
+test("object function scope", () => {
+	const a = evaluate(
+		`
+var d = {
+    fy: function fy() {
+        return fy
+    }
+}
+
+[typeof fy, d.fy()]
+    `
+	);
+
+	deepEqual(a[0], "undefined");
+	deepEqual(typeof a[1], "function");
+});

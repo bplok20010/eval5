@@ -1149,7 +1149,7 @@ export class Interpreter {
 
 		if (node.type === "ForStatement") {
 			initClosure = node.init ? this.createClosure(node.init) : initClosure;
-			updateClosure = node.update ? this.createClosure(node.update) : initClosure;
+			updateClosure = node.update ? this.createClosure(node.update) : noop;
 		}
 
 		return pNode => {

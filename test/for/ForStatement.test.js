@@ -4,7 +4,6 @@ function deepEqual(a, b) {
 	expect(a).toEqual(b);
 }
 
-
 test("ForStatement-1", () => {
 	const obj = evaluate(
 		`
@@ -14,11 +13,10 @@ for (let i = 0; i < 3; i++) {
 }
 
  obj;
-  `,
-		
+  `
 	);
 
-	deepEqual(true,typeof obj.num === "number");
+	deepEqual(true, typeof obj.num === "number");
 	deepEqual(obj.num, 3);
 });
 
@@ -34,10 +32,23 @@ for (;;) {
 }
 
  obj;
-  `,
-		
+  `
 	);
 
-	deepEqual(true,typeof obj.num === "number");
+	deepEqual(true, typeof obj.num === "number");
 	deepEqual(obj.num, 3);
+});
+
+test("ForStatement-3", () => {
+	const a = evaluate(
+		`
+var c = 0;
+for ( var i = 0;++i<5;) {
+  c++
+}
+c
+  `
+	);
+
+	deepEqual(a, 4);
 });

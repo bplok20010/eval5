@@ -5955,6 +5955,9 @@ function () {
         case "*":
           return leftValue * rightValue;
 
+        case "**":
+          return Math.pow(leftValue, rightValue);
+
         case "/":
           return leftValue / rightValue;
 
@@ -6492,6 +6495,10 @@ function () {
           value *= rightValue;
           break;
 
+        case "**=":
+          value = Math.pow(value, rightValue);
+          break;
+
         case "/=":
           value /= rightValue;
           break;
@@ -6682,7 +6689,7 @@ function () {
 
     if (node.type === "ForStatement") {
       initClosure = node.init ? this.createClosure(node.init) : initClosure;
-      updateClosure = node.update ? this.createClosure(node.update) : initClosure;
+      updateClosure = node.update ? this.createClosure(node.update) : noop;
     }
 
     return function (pNode) {
@@ -6988,7 +6995,7 @@ function () {
 
         if (match || test === value) {
           match = true;
-          ret = _this23.setValue(item.bodyClosure()); // notice: never return Break or Continue!
+          ret = _this23.setValue(item.bodyClosure()); // notice: never return Break!
 
           if (ret === EmptyStatementReturn) continue;
 
