@@ -1361,6 +1361,8 @@ export class Interpreter {
 					finalReturn = result;
 				}
 			} catch (err) {
+				//reset scope
+				this.setCurrentScope(currentScope);
 				currentScope.labelStack = labelStack;
 				this.callStack = callStack;
 
@@ -1375,6 +1377,8 @@ export class Interpreter {
 							finalReturn = result;
 						}
 					} catch (e) {
+						//reset scope
+						this.setCurrentScope(currentScope);
 						// save catch throw error
 						throwError = e;
 					}
@@ -1390,6 +1394,8 @@ export class Interpreter {
 					}
 					// finalReturn = finalizerClosure();
 				} catch (e) {
+					//reset scope
+					this.setCurrentScope(currentScope);
 					// save finally throw error
 					throwError = e;
 				}

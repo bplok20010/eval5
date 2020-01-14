@@ -6895,6 +6895,8 @@ function () {
           finalReturn = result;
         }
       } catch (err) {
+        _this21.setCurrentScope(currentScope);
+
         currentScope.labelStack = labelStack;
         _this21.callStack = callStack;
 
@@ -6910,7 +6912,9 @@ function () {
               finalReturn = result;
             }
           } catch (e) {
-            // save catch throw error
+            _this21.setCurrentScope(currentScope); // save catch throw error
+
+
             throwError = e;
           }
         }
@@ -6927,7 +6931,9 @@ function () {
           } // finalReturn = finalizerClosure();
 
         } catch (e) {
-          // save finally throw error
+          _this21.setCurrentScope(currentScope); // save finally throw error
+
+
           throwError = e;
         } // if (finalReturn instanceof Return) {
         // 	result = finalReturn;
