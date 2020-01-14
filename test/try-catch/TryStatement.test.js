@@ -149,3 +149,55 @@ while(i<5){
 	);
 	deepEqual(arr, [1, 3, 5]);
 });
+
+test("try-catch reset scope", () => {
+	const a = evaluate(
+		`
+function m1(){
+    var title = 'm1'
+
+    throw 'error'
+}
+function m2(){
+    var title = 'm2';
+    m1();
+    
+}
+function m3(){
+    var title = 'm3';
+    try {
+        m2();
+    } catch(e) {
+      return  title
+    }
+}
+
+m3()
+  `
+	);
+	deepEqual(a, "m3");
+});
+
+test("try-catch reset context", () => {
+	const a = evaluate(
+		`
+function m1(){
+    throw 'error'
+}
+function m2(){
+    m1.call('m1');
+    
+}
+function m3(){
+    try {
+        m2.call('m2');
+    } catch(e) {
+      return this;
+    }
+}
+
+m3.call('m3')
+  `
+	);
+	deepEqual(a, "m3");
+});

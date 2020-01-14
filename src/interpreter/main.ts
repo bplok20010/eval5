@@ -43,7 +43,7 @@ const EmptyStatementReturn = Symbol("EmptyStatementReturn");
 type Getter = () => any;
 interface BaseClosure {
 	(pNode?: Node): any;
-	[prop: string]: any;
+	isFunctionDeclareClosure?: boolean;
 }
 type CaseItem = {
 	testClosure: BaseClosure;
@@ -376,6 +376,9 @@ export class Interpreter {
 				break;
 			case "LabeledStatement":
 				closure = this.labeledStatementHandler(node);
+				break;
+			case "DebuggerStatement":
+				closure = this.debuggerStatementHandler(node);
 				break;
 			default:
 				throw this.createInternalThrowError(Messages.NodeTypeSyntaxError, node.type, node);
@@ -1033,7 +1036,12 @@ export class Interpreter {
 	functionDeclarationHandler(node: ESTree.FunctionDeclaration): BaseClosure {
 		if (node.id) {
 			const functionClosure = this.functionExpressionHandler(node);
-			functionClosure.__$isFunc = true;
+			Object.defineProperty(functionClosure, "isFunctionDeclareClosure", {
+				value: true,
+				writable: false,
+				configurable: false,
+				enumerable: false,
+			});
 			this.funcDeclaration(node.id.name, functionClosure);
 		}
 		return () => {
@@ -1338,11 +1346,19 @@ export class Interpreter {
 
 		return () => {
 			const currentScope = this.getCurrentScope();
+			const currentContext = this.getCurrentContext();
 			const labelStack = currentScope.labelStack.concat([]);
 			const callStack: string[] = this.callStack.concat([]);
 			let result: any = EmptyStatementReturn;
 			let finalReturn: any;
 			let throwError;
+
+			const reset = () => {
+				this.setCurrentScope(currentScope); //reset scope
+				this.setCurrentContext(currentContext); //reset context
+				currentScope.labelStack = labelStack; //reset label stack
+				this.callStack = callStack; //reset call stack
+			};
 
 			/**
 			 * try{...}catch(e){...}finally{...} execution sequence:
@@ -1361,10 +1377,7 @@ export class Interpreter {
 					finalReturn = result;
 				}
 			} catch (err) {
-				//reset scope
-				this.setCurrentScope(currentScope);
-				currentScope.labelStack = labelStack;
-				this.callStack = callStack;
+				reset();
 
 				if (this.isInterruptThrow(err)) {
 					throw err;
@@ -1377,8 +1390,7 @@ export class Interpreter {
 							finalReturn = result;
 						}
 					} catch (e) {
-						//reset scope
-						this.setCurrentScope(currentScope);
+						reset();
 						// save catch throw error
 						throwError = e;
 					}
@@ -1394,8 +1406,7 @@ export class Interpreter {
 					}
 					// finalReturn = finalizerClosure();
 				} catch (e) {
-					//reset scope
-					this.setCurrentScope(currentScope);
+					reset();
 					// save finally throw error
 					throwError = e;
 				}
@@ -1543,6 +1554,13 @@ export class Interpreter {
 		};
 	}
 
+	debuggerStatementHandler(node: ESTree.DebuggerStatement): BaseClosure {
+		return () => {
+			debugger;
+			return EmptyStatementReturn;
+		};
+	}
+
 	// get es3/5 param name
 	createParamNameGetter(node: ESTree.Pattern): ReturnStringClosure {
 		if (node.type === "Identifier") {
@@ -1620,7 +1638,7 @@ export class Interpreter {
 		if (
 			!hasOwnProperty.call(context, name) ||
 			context[name] === undefined ||
-			context[name]?.__$isFunc
+			context[name]?.isFunctionDeclareClosure
 		) {
 			context[name] = func;
 		}

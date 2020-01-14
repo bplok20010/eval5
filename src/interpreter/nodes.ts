@@ -39,4 +39,5 @@ export type Node =
 	| ESTree.BreakStatement
 	| ESTree.SwitchStatement
 	| ESTree.SwitchCase
-	| ESTree.LabeledStatement;
+	| ESTree.LabeledStatement
+	| ESTree.DebuggerStatement;

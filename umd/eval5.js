@@ -5890,6 +5890,10 @@ function () {
         closure = this.labeledStatementHandler(node);
         break;
 
+      case "DebuggerStatement":
+        closure = this.debuggerStatementHandler(node);
+        break;
+
       default:
         throw this.createInternalThrowError(_messages.Messages.NodeTypeSyntaxError, node.type, node);
     }
@@ -6563,7 +6567,12 @@ function () {
   _proto.functionDeclarationHandler = function functionDeclarationHandler(node) {
     if (node.id) {
       var functionClosure = this.functionExpressionHandler(node);
-      functionClosure.__$isFunc = true;
+      Object.defineProperty(functionClosure, "isFunctionDeclareClosure", {
+        value: true,
+        writable: false,
+        configurable: false,
+        enumerable: false
+      });
       this.funcDeclaration(node.id.name, functionClosure);
     }
 
@@ -6870,6 +6879,8 @@ function () {
     return function () {
       var currentScope = _this21.getCurrentScope();
 
+      var currentContext = _this21.getCurrentContext();
+
       var labelStack = currentScope.labelStack.concat([]);
 
       var callStack = _this21.callStack.concat([]);
@@ -6877,6 +6888,18 @@ function () {
       var result = EmptyStatementReturn;
       var finalReturn;
       var throwError;
+
+      var reset = function reset() {
+        _this21.setCurrentScope(currentScope); //reset scope
+
+
+        _this21.setCurrentContext(currentContext); //reset context
+
+
+        currentScope.labelStack = labelStack; //reset label stack
+
+        _this21.callStack = callStack; //reset call stack
+      };
       /**
        * try{...}catch(e){...}finally{...} execution sequence:
        * try stmt
@@ -6888,6 +6911,7 @@ function () {
        * try return
        */
 
+
       try {
         result = _this21.setValue(blockClosure());
 
@@ -6895,10 +6919,7 @@ function () {
           finalReturn = result;
         }
       } catch (err) {
-        _this21.setCurrentScope(currentScope);
-
-        currentScope.labelStack = labelStack;
-        _this21.callStack = callStack;
+        reset();
 
         if (_this21.isInterruptThrow(err)) {
           throw err;
@@ -6912,8 +6933,7 @@ function () {
               finalReturn = result;
             }
           } catch (e) {
-            _this21.setCurrentScope(currentScope); // save catch throw error
-
+            reset(); // save catch throw error
 
             throwError = e;
           }
@@ -6931,8 +6951,7 @@ function () {
           } // finalReturn = finalizerClosure();
 
         } catch (e) {
-          _this21.setCurrentScope(currentScope); // save finally throw error
-
+          reset(); // save finally throw error
 
           throwError = e;
         } // if (finalReturn instanceof Return) {
@@ -7088,6 +7107,13 @@ function () {
       currentScope.labelStack.pop();
       return result;
     };
+  };
+
+  _proto.debuggerStatementHandler = function debuggerStatementHandler(node) {
+    return function () {
+      debugger;
+      return EmptyStatementReturn;
+    };
   } // get es3/5 param name
   ;
 
@@ -7172,7 +7198,7 @@ function () {
 
     var context = this.collectDeclarations;
 
-    if (!hasOwnProperty.call(context, name) || context[name] === undefined || ((_a = context[name]) === null || _a === void 0 ? void 0 : _a.__$isFunc)) {
+    if (!hasOwnProperty.call(context, name) || context[name] === undefined || ((_a = context[name]) === null || _a === void 0 ? void 0 : _a.isFunctionDeclareClosure)) {
       context[name] = func;
     }
   };
