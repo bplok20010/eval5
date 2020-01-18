@@ -5540,9 +5540,6 @@ function defineFunctionName(func, name) {
 }
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
-var FunctionNameSymbol = Symbol("name");
-var FunctionLengthSymbol = Symbol("length");
-var isFunctionSymbol = Symbol("isFunction");
 var Break = Symbol("Break");
 var Continue = Symbol("Continue");
 var DefaultCase = Symbol("DefaultCase");
@@ -5620,7 +5617,6 @@ function () {
     }
 
     this.collectDeclarations = {};
-    this.error = null;
     this.isVarDeclMode = false;
     this.lastExecNode = null;
     this.options = {
@@ -5655,7 +5651,6 @@ function () {
     this.collectDeclarations = {};
     this.execStartTime = Date.now();
     this.execEndTime = this.execStartTime;
-    this.error = null;
   };
 
   _proto.evaluate = function evaluate(code, ctx) {
@@ -6323,37 +6318,13 @@ function () {
         }
       };
 
-      defineFunctionName(func, name); // Object.defineProperty(func, "name", {
-      // 	value: name,
-      // 	writable: false,
-      // 	enumerable: false,
-      // 	configurable: true,
-      // });
-
+      defineFunctionName(func, name);
       Object.defineProperty(func, "length", {
         value: paramLength,
         writable: false,
         enumerable: false,
         configurable: true
-      }); // Object.defineProperty(func, FunctionLengthSymbol, {
-      // 	value: paramLength,
-      // 	writable: false,
-      // 	configurable: false,
-      // 	enumerable: false,
-      // });
-      // Object.defineProperty(func, FunctionNameSymbol, {
-      // 	value: name,
-      // 	writable: false,
-      // 	configurable: false,
-      // 	enumerable: false,
-      // });
-      // Object.defineProperty(func, isFunctionSymbol, {
-      // 	value: true,
-      // 	writable: false,
-      // 	configurable: false,
-      // 	enumerable: false,
-      // });
-
+      });
       Object.defineProperty(func, "toString", {
         value: function value() {
           return _this10.source.slice(node.start, node.end);
@@ -6405,15 +6376,7 @@ function () {
     var keyGetter = this.createMemberKeyGetter(node);
     return function () {
       var obj = objectGetter();
-      var key = keyGetter(); // get function.length
-      // if (obj && obj[isFunctionSymbol] && key === "length") {
-      // 	key = FunctionLengthSymbol;
-      // }
-      // get function.name
-      // if (obj && obj[isFunctionSymbol] && key === "name") {
-      // 	key = FunctionNameSymbol;
-      // }
-
+      var key = keyGetter();
       return obj[key];
     };
   } //this
@@ -6932,10 +6895,15 @@ function () {
             if (result instanceof Return) {
               finalReturn = result;
             }
-          } catch (e) {
-            reset(); // save catch throw error
+          } catch (err) {
+            reset();
 
-            throwError = e;
+            if (_this21.isInterruptThrow(err)) {
+              throw err;
+            } // save catch throw error
+
+
+            throwError = err;
           }
         }
       } // finally {
@@ -6950,10 +6918,15 @@ function () {
             finalReturn = result;
           } // finalReturn = finalizerClosure();
 
-        } catch (e) {
-          reset(); // save finally throw error
+        } catch (err) {
+          reset();
 
-          throwError = e;
+          if (_this21.isInterruptThrow(err)) {
+            throw err;
+          } // save finally throw error
+
+
+          throwError = err;
         } // if (finalReturn instanceof Return) {
         // 	result = finalReturn;
         // }

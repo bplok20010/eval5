@@ -1,7 +1,11 @@
-module.exports = function() {
+module.exports = function(opts) {
+	const isProd = opts.program.state === "min";
 	return {
+		mode: isProd ? "production" : "development",
+		clean: isProd ? false : true,
 		shouldUseEntryHTML: false,
 		polyfills: null,
+		shouldUseSourceMap: true,
 		output: {
 			globalObject: "this",
 			libraryTarget: "umd",
@@ -9,7 +13,7 @@ module.exports = function() {
 		},
 		assest: {
 			js: {
-				name: "eval5.js",
+				name: isProd ? "eval5.min.js" : "eval5.js",
 				output: "",
 			},
 		},

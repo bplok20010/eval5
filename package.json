@@ -1,12 +1,12 @@
 {
 	"name": "eval5",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "A JavaScript interpreter, written completely in JavaScript",
 	"main": "lib/index.js",
 	"module": "esm/index.js",
 	"scripts": {
 		"start": "npm-run-all clean mkdir -p ts:watch babel",
-		"build": "npm-run-all clean mkdir ts cjs esm bundle",
+		"build": "npm-run-all clean mkdir ts cjs esm bundle bundle:min",
 		"mkdir": "mkdirp dest",
 		"clean": "rimraf dest",
 		"ts:watch": "tsc -w",
@@ -14,7 +14,8 @@
 		"babel": "transform-es dest -d lib -c -w",
 		"cjs": "transform-es dest -t cjs -d lib -c",
 		"esm": "transform-es dest -t esm -d esm -c",
-		"bundle": "packez bundle ./src/index.ts -d umd",
+		"bundle": "packez bundle ./src/index.ts -d umd -c",
+		"bundle:min": "packez bundle ./src/index.ts -d umd --state min",
 		"test": "jest"
 	},
 	"repository": {

@@ -18,27 +18,10 @@ function defineFunctionName<T>(func: T, name: string) {
 }
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
-const FunctionNameSymbol = Symbol("name");
-const FunctionLengthSymbol = Symbol("length");
-const isFunctionSymbol = Symbol("isFunction");
 const Break = Symbol("Break");
 const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
 const EmptyStatementReturn = Symbol("EmptyStatementReturn");
-
-// interface Position {
-// 	line: number;
-// 	column: number;
-// }
-
-// interface SourcePosition {
-// 	start?: number;
-// 	end?: number;
-// 	loc?: {
-// 		start: Position;
-// 		end: Position;
-// 	};
-// }
 
 type Getter = () => any;
 interface BaseClosure {
@@ -123,9 +106,11 @@ function getGlobal() {
 
 	return {};
 }
+
 function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope({} /* or Object.create(null)? */, parent, name);
 }
+
 export class Interpreter {
 	context: Context;
 	// last expression value
@@ -139,7 +124,6 @@ export class Interpreter {
 	options: Options;
 	callStack: string[];
 	collectDeclarations: CollectDeclarations = {};
-	protected error: Error | null = null;
 	protected isVarDeclMode: boolean = false;
 
 	protected lastExecNode: Node | null = null;
@@ -166,15 +150,15 @@ export class Interpreter {
 		);
 	}
 
-	setCurrentContext(ctx: Context) {
+	protected setCurrentContext(ctx: Context) {
 		this.currentContext = ctx;
 	}
 
-	setCurrentScope(scope: Scope) {
+	protected setCurrentScope(scope: Scope) {
 		this.currentScope = scope;
 	}
 
-	initEnvironment(ctx: Context) {
+	protected initEnvironment(ctx: Context) {
 		//init global scope
 		this.rootScope = new Scope(ctx, null, "root");
 		this.currentScope = this.rootScope;
@@ -186,7 +170,6 @@ export class Interpreter {
 
 		this.execStartTime = Date.now();
 		this.execEndTime = this.execStartTime;
-		this.error = null;
 	}
 
 	evaluate(code: string = "", ctx: Context = this.context) {
@@ -806,12 +789,6 @@ export class Interpreter {
 			};
 
 			defineFunctionName(func, name);
-			// Object.defineProperty(func, "name", {
-			// 	value: name,
-			// 	writable: false,
-			// 	enumerable: false,
-			// 	configurable: true,
-			// });
 
 			Object.defineProperty(func, "length", {
 				value: paramLength,
@@ -819,25 +796,6 @@ export class Interpreter {
 				enumerable: false,
 				configurable: true,
 			});
-
-			// Object.defineProperty(func, FunctionLengthSymbol, {
-			// 	value: paramLength,
-			// 	writable: false,
-			// 	configurable: false,
-			// 	enumerable: false,
-			// });
-			// Object.defineProperty(func, FunctionNameSymbol, {
-			// 	value: name,
-			// 	writable: false,
-			// 	configurable: false,
-			// 	enumerable: false,
-			// });
-			// Object.defineProperty(func, isFunctionSymbol, {
-			// 	value: true,
-			// 	writable: false,
-			// 	configurable: false,
-			// 	enumerable: false,
-			// });
 
 			Object.defineProperty(func, "toString", {
 				value: () => {
@@ -886,15 +844,6 @@ export class Interpreter {
 		return () => {
 			const obj = objectGetter();
 			let key = keyGetter();
-
-			// get function.length
-			// if (obj && obj[isFunctionSymbol] && key === "length") {
-			// 	key = FunctionLengthSymbol;
-			// }
-			// get function.name
-			// if (obj && obj[isFunctionSymbol] && key === "name") {
-			// 	key = FunctionNameSymbol;
-			// }
 
 			return obj[key];
 		};
@@ -1389,10 +1338,15 @@ export class Interpreter {
 						if (result instanceof Return) {
 							finalReturn = result;
 						}
-					} catch (e) {
+					} catch (err) {
 						reset();
+
+						if (this.isInterruptThrow(err)) {
+							throw err;
+						}
+
 						// save catch throw error
-						throwError = e;
+						throwError = err;
 					}
 				}
 			}
@@ -1405,10 +1359,15 @@ export class Interpreter {
 						finalReturn = result;
 					}
 					// finalReturn = finalizerClosure();
-				} catch (e) {
+				} catch (err) {
 					reset();
+
+					if (this.isInterruptThrow(err)) {
+						throw err;
+					}
+
 					// save finally throw error
-					throwError = e;
+					throwError = err;
 				}
 
 				// if (finalReturn instanceof Return) {
