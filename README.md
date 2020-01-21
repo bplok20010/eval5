@@ -83,7 +83,7 @@ ISC
 
 -   ECMA5
 
-## 感谢
+## Related
 
 [evaljs][]
 [closure-interpreter][]
