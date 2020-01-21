@@ -5721,6 +5721,14 @@ function () {
     return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
   };
 
+  _proto.setExecTimeout = function setExecTimeout(timeout) {
+    if (timeout === void 0) {
+      timeout = 0;
+    }
+
+    this.options.timeout = timeout;
+  };
+
   _proto.checkTimeout = function checkTimeout() {
     var timeout = this.options.timeout || 0;
     var now = Date.now();

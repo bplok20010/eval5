@@ -74,3 +74,15 @@ console.log(func(1,2))
 -   vm.runInContext
 -   vm.runInNewContext
 -   vm.Script
+
+## License
+
+ISC
+
+## 感谢
+
+[evaljs][]
+[closure-interpreter][]
+
+[evaljs]: https://github.com/marten-de-vries/evaljs
+[closure-interpreter]: https://github.com/int3/closure-interpreter

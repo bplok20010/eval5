@@ -230,7 +230,11 @@ export class Interpreter {
 
 	createInternalThrowError<T extends MessageItem>(msg: T, value: string | number, node?: Node) {
 		return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
-	}
+    }
+    
+    setExecTimeout(timeout:number = 0){
+        this.options.timeout = timeout;
+    }
 
 	protected checkTimeout() {
 		const timeout = this.options.timeout || 0;
