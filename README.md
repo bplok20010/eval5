@@ -79,6 +79,10 @@ console.log(func(1,2))
 
 ISC
 
+## Support
+
+-   ECMA5
+
 ## 感谢
 
 [evaljs][]
