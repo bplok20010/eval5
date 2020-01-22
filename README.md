@@ -4,7 +4,7 @@
 
 > 用于解决在不支持`eval`或`Function`的执行环境下执行 JavaScript 代码。例如：各种小程序。
 
-## usage
+## Usage
 
 `npm install --save eval5`
 
@@ -14,7 +14,7 @@ import { evaluate, Function, vm, Interpreter } from 'eval5';
 // 设置默认作用域
 Interpreter.global = window;
 
-evaluate("1+1"); // 2
+evaluate("1+1", window); // 2
 
 const func = new Function('a','b', 'return a+b;');
 
@@ -27,12 +27,11 @@ const interpreter = new Interpreter(ctx, {
 let result;
 
 try {
-    result = interpreter.evaluate('1+1')
+    result = interpreter.evaluate('1+1');
+    console.log(result) //2
 } catch(e) {
     //..
 }
-
-console.log(result) //2
 
 ```
 
@@ -42,17 +41,37 @@ console.log(result) //2
 
 设置默认作用域对象
 
+例如:
+
+```
+Interpreter.global = window;
+
+```
+
 ### `constructor`(ctx: {}, options?: { timeout?: number})
 
 构造函数
 
+```
+var interpreter = new Interpreter(window);
+```
+
 ### `evaluate`(code: string, ctx?: {}): any
 
-返回脚本中执行的最后一个表达式结果的结果
+返回脚本中执行的最后一个表达式结果
 
-## evaluate(code, ctx?)
+```
+var interpreter = new Interpreter(window);
+interpreter.evaluate('alert(1+1)')
+```
 
-执行给定的字符串脚本
+## evaluate(code: string, ctx?: {})
+
+执行给定的字符串脚本,返回脚本中执行的最后一个表达式结果
+
+```
+evaluate('console.log(1+1)', {console: console})
+```
 
 ## Function
 
