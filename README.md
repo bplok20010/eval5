@@ -14,6 +14,7 @@ import { evaluate, Function, vm, Interpreter } from 'eval5';
 // 设置默认作用域
 Interpreter.global = window;
 
+//或 evaluate("1+1", Object.create(window));
 evaluate("1+1", window); // 2
 
 const func = new Function('a','b', 'return a+b;');

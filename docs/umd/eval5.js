@@ -5616,7 +5616,8 @@ function () {
       options = {};
     }
 
-    this.collectDeclarations = {};
+    this.collectDeclVars = Object.create(null);
+    this.collectDeclFuncs = Object.create(null);
     this.isVarDeclMode = false;
     this.lastExecNode = null;
     this.options = {
@@ -5648,7 +5649,8 @@ function () {
     this.rootContext = ctx;
     this.currentContext = ctx; // collect var/function declare
 
-    this.collectDeclarations = {};
+    this.collectDeclVars = Object.create(null);
+    this.collectDeclFuncs = Object.create(null);
     this.execStartTime = Date.now();
     this.execEndTime = this.execStartTime;
   };
@@ -5684,9 +5686,10 @@ function () {
     this.ast = node;
     var bodyClosure = this.createClosure(node); // add declares to data
 
-    this.addDeclarationsToScope(this.collectDeclarations, this.getCurrentScope()); // reset
+    this.addDeclarationsToScope(this.collectDeclVars, this.collectDeclFuncs, this.getCurrentScope()); // reset
 
-    this.collectDeclarations = {}; // start run
+    this.collectDeclVars = Object.create(null);
+    this.collectDeclFuncs = Object.create(null); // start run
 
     try {
       bodyClosure();
@@ -6242,12 +6245,12 @@ function () {
           if (!func || !isFunction(func)) {
             throw _this8.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
           } // function call
-          // this = rootContext
+          // this = undefined
           // tips:
-          // test(...) === test.call(this.rootContext, ...)
+          // test(...) === test.call(undefined, ...)
 
 
-          return func.bind(_this8.rootContext);
+          return func.bind(Interpreter.rootContext);
         };
     }
   } // func()
@@ -6272,8 +6275,10 @@ function () {
     var _this10 = this;
 
     var self = this;
-    var oldDecls = this.collectDeclarations;
-    this.collectDeclarations = {};
+    var oldDeclVars = this.collectDeclVars;
+    var oldDeclFuncs = this.collectDeclFuncs;
+    this.collectDeclVars = Object.create(null);
+    this.collectDeclFuncs = Object.create(null);
     var name = node.id ? node.id.name : "";
     var paramLength = node.params.length;
     var paramsGetter = node.params.map(function (param) {
@@ -6281,8 +6286,10 @@ function () {
     }); // set scope
 
     var bodyClosure = this.createClosure(node.body);
-    var declarations = this.collectDeclarations;
-    this.collectDeclarations = oldDecls;
+    var declVars = this.collectDeclVars;
+    var declFuncs = this.collectDeclFuncs;
+    this.collectDeclVars = oldDeclVars;
+    this.collectDeclFuncs = oldDeclFuncs;
     return function () {
       // bind current scope
       var runtimeScope = self.getCurrentScope();
@@ -6296,7 +6303,7 @@ function () {
         var prevScope = self.getCurrentScope();
         var currentScope = createScope(runtimeScope, name);
         self.setCurrentScope(currentScope);
-        self.addDeclarationsToScope(declarations, currentScope); // var t = function(){ typeof t } // function
+        self.addDeclarationsToScope(declVars, declFuncs, currentScope); // var t = function(){ typeof t } // function
         // t = function(){ typeof t } // function
         // z = function tx(){ typeof tx } // function
         // but
@@ -6601,7 +6608,7 @@ function () {
   };
 
   _proto.assertVariable = function assertVariable(data, name, node) {
-    if (data === this.rootScope.data && !(name in data)) {
+    if (data === this.rootScope.data && name !== "undefined" && !(name in data)) {
       throw this.createInternalThrowError(_messages.Messages.VariableUndefinedReferenceError, name, node);
     }
   } // {...}
@@ -7167,31 +7174,26 @@ function () {
   };
 
   _proto.varDeclaration = function varDeclaration(name) {
-    var context = this.collectDeclarations;
-
-    if (!hasOwnProperty.call(context, name)) {
-      context[name] = undefined;
-    }
+    var context = this.collectDeclVars;
+    context[name] = undefined;
   };
 
   _proto.funcDeclaration = function funcDeclaration(name, func) {
-    var _a;
-
-    var context = this.collectDeclarations;
-
-    if (!hasOwnProperty.call(context, name) || context[name] === undefined || ((_a = context[name]) === null || _a === void 0 ? void 0 : _a.isFunctionDeclareClosure)) {
-      context[name] = func;
-    }
+    var context = this.collectDeclFuncs;
+    context[name] = func;
   };
 
-  _proto.addDeclarationsToScope = function addDeclarationsToScope(declarations, scope) {
+  _proto.addDeclarationsToScope = function addDeclarationsToScope(declVars, declFuncs, scope) {
     var scopeData = scope.data;
-    var isRootScope = this.rootScope === scope;
 
-    for (var key in declarations) {
-      if (hasOwnProperty.call(declarations, key) && (isRootScope ? !(key in scopeData) : !hasOwnProperty.call(scopeData, key))) {
-        var value = declarations[key];
-        scopeData[key] = value ? value() : value;
+    for (var key in declFuncs) {
+      var value = declFuncs[key];
+      scopeData[key] = value ? value() : value;
+    }
+
+    for (var _key2 in declVars) {
+      if (!(_key2 in scopeData)) {
+        scopeData[_key2] = void 0;
       }
     }
   };
@@ -7244,6 +7246,8 @@ function () {
 }();
 
 exports.Interpreter = Interpreter;
+Interpreter.version = "1.0.9";
+Interpreter.rootContext = void 0;
 Interpreter.global = getGlobal();
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 

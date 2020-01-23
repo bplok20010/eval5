@@ -123,7 +123,8 @@ export class Interpreter {
 	currentContext: Context;
 	options: Options;
 	callStack: string[];
-	collectDeclarations: CollectDeclarations = {};
+	collectDeclVars: CollectDeclarations = Object.create(null);
+	collectDeclFuncs: CollectDeclarations = Object.create(null);
 	protected isVarDeclMode: boolean = false;
 
 	protected lastExecNode: Node | null = null;
@@ -131,6 +132,8 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
+	static version = "1.0.9";
+	static rootContext = void 0;
 	static global = getGlobal();
 
 	constructor(context: Context = Interpreter.global, options: Options = {}) {
@@ -166,7 +169,8 @@ export class Interpreter {
 		this.rootContext = ctx;
 		this.currentContext = ctx;
 		// collect var/function declare
-		this.collectDeclarations = {};
+		this.collectDeclVars = Object.create(null);
+		this.collectDeclFuncs = Object.create(null);
 
 		this.execStartTime = Date.now();
 		this.execEndTime = this.execStartTime;
@@ -192,10 +196,15 @@ export class Interpreter {
 		const bodyClosure = this.createClosure(node);
 
 		// add declares to data
-		this.addDeclarationsToScope(this.collectDeclarations, this.getCurrentScope());
+		this.addDeclarationsToScope(
+			this.collectDeclVars,
+			this.collectDeclFuncs,
+			this.getCurrentScope()
+		);
 
 		// reset
-		this.collectDeclarations = {};
+		this.collectDeclVars = Object.create(null);
+		this.collectDeclFuncs = Object.create(null);
 		// start run
 		try {
 			bodyClosure();
@@ -230,11 +239,11 @@ export class Interpreter {
 
 	createInternalThrowError<T extends MessageItem>(msg: T, value: string | number, node?: Node) {
 		return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
-    }
-    
-    setExecTimeout(timeout:number = 0){
-        this.options.timeout = timeout;
-    }
+	}
+
+	setExecTimeout(timeout: number = 0) {
+		this.options.timeout = timeout;
+	}
 
 	protected checkTimeout() {
 		const timeout = this.options.timeout || 0;
@@ -709,10 +718,10 @@ export class Interpreter {
 					}
 
 					// function call
-					// this = rootContext
+					// this = undefined
 					// tips:
-					// test(...) === test.call(this.rootContext, ...)
-					return func.bind(this.rootContext);
+					// test(...) === test.call(undefined, ...)
+					return func.bind(Interpreter.rootContext);
 				};
 		}
 	}
@@ -733,8 +742,10 @@ export class Interpreter {
 			| (ESTree.FunctionDeclaration & { start?: number; end?: number })
 	): BaseClosure {
 		const self = this;
-		const oldDecls = this.collectDeclarations;
-		this.collectDeclarations = {};
+		const oldDeclVars = this.collectDeclVars;
+		const oldDeclFuncs = this.collectDeclFuncs;
+		this.collectDeclVars = Object.create(null);
+		this.collectDeclFuncs = Object.create(null);
 		const name = node.id ? node.id.name : "";
 		const paramLength = node.params.length;
 
@@ -742,9 +753,11 @@ export class Interpreter {
 		// set scope
 		const bodyClosure = this.createClosure(node.body);
 
-		const declarations = this.collectDeclarations;
+		const declVars = this.collectDeclVars;
+		const declFuncs = this.collectDeclFuncs;
 
-		this.collectDeclarations = oldDecls;
+		this.collectDeclVars = oldDeclVars;
+		this.collectDeclFuncs = oldDeclFuncs;
 
 		return () => {
 			// bind current scope
@@ -757,7 +770,7 @@ export class Interpreter {
 				const currentScope = createScope(runtimeScope, name);
 				self.setCurrentScope(currentScope);
 
-				self.addDeclarationsToScope(declarations, currentScope);
+				self.addDeclarationsToScope(declVars, declFuncs, currentScope);
 
 				// var t = function(){ typeof t } // function
 				// t = function(){ typeof t } // function
@@ -1047,7 +1060,7 @@ export class Interpreter {
 	}
 
 	assertVariable(data: ScopeData, name: string, node: Node): void | never {
-		if (data === this.rootScope.data && !(name in data)) {
+		if (data === this.rootScope.data && name !== "undefined" && !(name in data)) {
 			throw this.createInternalThrowError(
 				Messages.VariableUndefinedReferenceError,
 				name,
@@ -1590,33 +1603,30 @@ export class Interpreter {
 	}
 
 	varDeclaration(name: string): void {
-		const context = this.collectDeclarations;
-		if (!hasOwnProperty.call(context, name)) {
-			context[name] = undefined;
-		}
+		const context = this.collectDeclVars;
+		context[name] = undefined;
 	}
 
 	funcDeclaration(name: string, func: () => any): void {
-		const context = this.collectDeclarations;
-		if (
-			!hasOwnProperty.call(context, name) ||
-			context[name] === undefined ||
-			context[name]?.isFunctionDeclareClosure
-		) {
-			context[name] = func;
-		}
+		const context = this.collectDeclFuncs;
+		context[name] = func;
 	}
 
-	addDeclarationsToScope(declarations: CollectDeclarations, scope: Scope) {
+	addDeclarationsToScope(
+		declVars: CollectDeclarations,
+		declFuncs: CollectDeclarations,
+		scope: Scope
+	) {
 		const scopeData = scope.data;
-		const isRootScope = this.rootScope === scope;
-		for (let key in declarations) {
-			if (
-				hasOwnProperty.call(declarations, key) &&
-				(isRootScope ? !(key in scopeData) : !hasOwnProperty.call(scopeData, key))
-			) {
-				const value = declarations[key];
-				scopeData[key] = value ? value() : value;
+
+		for (let key in declFuncs) {
+			const value = declFuncs[key];
+			scopeData[key] = value ? value() : value;
+		}
+
+		for (let key in declVars) {
+			if (!(key in scopeData)) {
+				scopeData[key] = void 0;
 			}
 		}
 	}

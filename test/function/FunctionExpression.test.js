@@ -1,4 +1,4 @@
-const { evaluate } = require("../../lib");
+const { evaluate, Interpreter } = require("../../lib");
 
 function deepEqual(a, b) {
 	expect(a).toEqual(b);
@@ -218,4 +218,139 @@ var x = function u() { u = 2; return u };
 	);
 
 	deepEqual(a, [1, 2]);
+});
+
+test("function call non context", () => {
+	const a = evaluate(
+		`
+        function call_1(){
+            return typeof this;
+        }
+        call_1();
+    `
+	);
+
+	deepEqual(a, "undefined");
+});
+
+test("function call default context", () => {
+	Interpreter.rootContext = "eval5";
+
+	const a = evaluate(
+		`
+        function call_2(){
+            return this;
+        }
+        call_2();
+    `
+	);
+
+	Interpreter.rootContext = void 0;
+
+	deepEqual(a, "eval5");
+});
+
+test("function overlap1", () => {
+	global.overlap1 = function() {
+		return 1;
+	};
+
+	const a = evaluate(
+		`
+        function overlap1(){
+            return 2;
+        }
+        overlap1();
+    `,
+		global
+	);
+
+	deepEqual(a, 2);
+});
+
+test("function overlap2", () => {
+	const a = evaluate(
+		`
+        var overlap1 = 1;
+        function overlap1(){
+            return 2;
+        }
+        typeof overlap1;
+    `,
+		{}
+	);
+
+	deepEqual(a, "number");
+});
+
+test("function overlap3", () => {
+	var ctx = {};
+
+	evaluate(
+		`
+        var overlap1 = 1;
+    `,
+		ctx
+	);
+
+	const a = evaluate(
+		`
+        function overlap1(){
+            return 2;
+        }
+        typeof overlap1;
+    `,
+		ctx
+	);
+
+	deepEqual(a, "function");
+});
+
+test("function overlap4", () => {
+	var ctx = {};
+
+	const a = evaluate(
+		`
+      var dat = undefined; 
+      function dat() { }
+
+      typeof dat
+    `,
+		ctx
+	);
+
+	deepEqual(a, "undefined");
+});
+
+test("function overlap5", () => {
+	var ctx = {};
+
+	const a = evaluate(
+		`
+      var dat; 
+      function dat() { }
+
+      typeof dat
+    `,
+		ctx
+	);
+
+	deepEqual(a, "function");
+});
+
+test("function overlap5", () => {
+	var ctx = {};
+
+	const a = evaluate(
+		`
+      function dat() {
+         function d1(){}    
+      }
+
+      typeof d1
+    `,
+		ctx
+	);
+
+	deepEqual(a, "undefined");
 });
