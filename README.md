@@ -2,7 +2,7 @@
 
 基于 JavaScript 编写的 JavaScript 解释器;A JavaScript interpreter, written completely in JavaScript;
 
-> 用于解决在不支持`eval`或`Function`的执行环境下执行 JavaScript 代码。例如：各种小程序。
+> 解决在不支持`eval`或`Function`的执行环境下执行 JavaScript 代码。例如：微信小程序 [示例](https://github.com/bplok20010/eval5-wx-demo)。
 
 ## Usage
 
@@ -38,7 +38,9 @@ try {
 
 ## Interpreter
 
-### `static` global
+### static `version`
+
+### static `global`
 
 设置默认作用域对象
 
@@ -48,6 +50,37 @@ try {
 Interpreter.global = window;
 
 ```
+
+### static `eval`
+
+替代原有的`eval`占位符
+
+> 如果执行环境支持 eval 函数建议使用原生的 eval，除非 eval 需要使用局部变量时，如下情况：
+
+```
+const ctx = Object.create(window);
+
+ctx.eval = Interpreter.eval;
+
+const interpreter = new Interpreter(ctx);
+
+interpreter.evaluate(`
+    function test(){
+        var a = 1;
+        return eval('a+1')
+    }
+    test();
+`); // output 2
+
+```
+
+### static `Function`
+
+替代原有的`Function`占位符
+
+作用同`Interpreter.eval`
+
+> 除非不支持`Function`的环境，否则不建议使用
 
 ### `constructor`(ctx: {}, options?: { timeout?: number})
 

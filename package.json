@@ -1,6 +1,6 @@
 {
 	"name": "eval5",
-	"version": "1.0.9",
+	"version": "1.1.0",
 	"description": "A JavaScript interpreter, written completely in JavaScript",
 	"main": "lib/index.js",
 	"module": "esm/index.js",

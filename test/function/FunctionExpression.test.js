@@ -354,3 +354,81 @@ test("function overlap5", () => {
 
 	deepEqual(a, "undefined");
 });
+
+test("function .call -1", () => {
+	const a = evaluate(
+		`
+        function test(){
+            return this;
+        }
+        test();
+    `,
+		{}
+	);
+
+	deepEqual(a, undefined);
+});
+
+test("function .call -2", () => {
+	const a = evaluate(
+		`
+        function test(){
+            return  this;
+        }
+        test.call(100);
+    `,
+		{}
+	);
+
+	deepEqual(a, 100);
+});
+
+test("function .call -3", () => {
+	const a = evaluate(
+		`
+        function test(){
+            return  this;
+        }
+        test.bind(100)();
+    `,
+		{}
+	);
+
+	deepEqual(a, 100);
+});
+
+test("function .call -4", () => {
+	const a = evaluate(
+		`
+        function test(){
+            return  this.o;
+        }
+        var da = {
+            o: true,
+            func: test,
+        }
+        da.func();
+    `,
+		{}
+	);
+
+	deepEqual(a, true);
+});
+
+test("function .call -5", () => {
+	const a = evaluate(
+		`
+        function test(){
+            return  this;
+        }
+        var da = {
+            o: true,
+            func: test,
+        };
+        (0, da.func)();
+    `,
+		{}
+	);
+
+	deepEqual(a, undefined);
+});

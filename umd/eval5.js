@@ -5374,37 +5374,6 @@ function tokenizer(input, options) {
 
 /***/ }),
 
-/***/ "./node_modules/webpack/buildin/global.js":
-/*!***********************************!*\
-  !*** (webpack)/buildin/global.js ***!
-  \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-var g;
-
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
-
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || new Function("return this")();
-} catch (e) {
-	// This works if the window reference is available
-	if (typeof window === "object") g = window;
-}
-
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
-
-module.exports = g;
-
-
-/***/ }),
-
 /***/ "./src/Function.ts":
 /*!*************************!*\
   !*** ./src/Function.ts ***!
@@ -5515,7 +5484,7 @@ var _Function = _interopRequireDefault(__webpack_require__(/*! ./Function */ "./
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* WEBPACK VAR INJECTION */(function(global) {
+
 
 var _interopRequireDefault = __webpack_require__(/*! @babel/runtime/helpers/interopRequireDefault */ "./node_modules/@babel/runtime/helpers/interopRequireDefault.js");
 
@@ -5544,6 +5513,8 @@ var Break = Symbol("Break");
 var Continue = Symbol("Continue");
 var DefaultCase = Symbol("DefaultCase");
 var EmptyStatementReturn = Symbol("EmptyStatementReturn");
+var IEval = Symbol("IEval");
+var IFunction = Symbol("IFunction");
 
 function isFunction(func) {
   return typeof func === "function";
@@ -5574,34 +5545,12 @@ var Scope = function Scope(data, parent, name) {
 
 function noop() {}
 
-function getGlobal() {
-  if (typeof self !== "undefined") {
-    return self;
-  }
-
-  if (typeof window !== "undefined") {
-    return window;
-  }
-
-  if (typeof global !== "undefined") {
-    return global;
-  }
-
-  if (typeof this !== "undefined") {
-    return this;
-  }
-
-  return {};
-}
-
 function createScope(parent, name) {
   if (parent === void 0) {
     parent = null;
   }
 
-  return new Scope({}
-  /* or Object.create(null)? */
-  , parent, name);
+  return new Scope(Object.create(null), parent, name);
 }
 
 var Interpreter =
@@ -5621,7 +5570,8 @@ function () {
     this.isVarDeclMode = false;
     this.lastExecNode = null;
     this.options = {
-      timeout: options.timeout || 0
+      timeout: options.timeout || 0,
+      initEnv: options.initEnv
     };
     this.context = context;
     this.callStack = [];
@@ -5633,6 +5583,105 @@ function () {
     return err instanceof _messages.InterruptThrowError || err instanceof _messages.InterruptThrowReferenceError || err instanceof _messages.InterruptThrowSyntaxError;
   };
 
+  _proto.getSuperScope = function getSuperScope() {
+    var _this = this;
+
+    var data = {
+      NaN: NaN,
+      Infinity: Infinity,
+      undefined: undefined,
+      // null,
+      Object: Object,
+      Array: Array,
+      String: String,
+      Boolean: Boolean,
+      Number: Number,
+      Date: Date,
+      RegExp: RegExp,
+      Error: Error,
+      TypeError: TypeError,
+      Math: Math,
+      parseInt: parseInt,
+      parseFloat: parseFloat,
+      isNaN: isNaN,
+      isFinite: isFinite,
+      decodeURI: decodeURI,
+      decodeURIComponent: decodeURIComponent,
+      encodeURI: encodeURI,
+      encodeURIComponent: encodeURIComponent,
+      escape: escape,
+      unescape: unescape
+    };
+
+    data.eval = function (code, useGlobalScope) {
+      if (useGlobalScope === void 0) {
+        useGlobalScope = true;
+      }
+
+      if (typeof code !== "string") return code;
+      if (!code) return void 0;
+      var options = {
+        timeout: _this.options.timeout,
+        initEnv: function initEnv(inst) {
+          // set caller context
+          if (!useGlobalScope) {
+            inst.setCurrentContext(_this.getCurrentContext());
+          }
+
+          inst.execStartTime = _this.execStartTime;
+          inst.execEndTime = inst.execStartTime;
+        }
+      };
+      var currentScope = useGlobalScope ? _this.rootScope : _this.getCurrentScope();
+      var interpreter = new Interpreter(currentScope, options);
+      return interpreter.evaluate(code);
+    };
+
+    Object.defineProperty(data.eval, "__IS_EVAL_FUNC", {
+      value: true,
+      writable: false,
+      enumerable: false,
+      configurable: false
+    });
+
+    data.Function = function () {
+      for (var _len = arguments.length, params = new Array(_len), _key = 0; _key < _len; _key++) {
+        params[_key] = arguments[_key];
+      }
+
+      var code = params.pop();
+      var interpreter = new Interpreter(_this.rootScope, _this.options);
+      var wrapCode = "\n\t\t    (function anonymous(" + params.join(",") + "){\n\t\t        " + code + "\n\t\t    });\n\t\t    ";
+      return interpreter.evaluate(wrapCode);
+    };
+
+    Object.defineProperty(data.Function, "__IS_FUNCTION_FUNC", {
+      value: true,
+      writable: false,
+      enumerable: false,
+      configurable: false
+    }); // ES5 Object
+
+    if (typeof JSON !== "undefined") {
+      data.JSON = JSON;
+    } //ES6 Object
+    // if (typeof Promise !== "undefined") {
+    // 	data.Promise = Promise;
+    // }
+    // if (typeof Set !== "undefined") {
+    // 	data.Set = Set;
+    // }
+    // if (typeof Map !== "undefined") {
+    // 	data.Map = Map;
+    // }
+    // if (typeof Symbol !== "undefined") {
+    // 	data.Symbol = Symbol;
+    // }
+
+
+    return new Scope(data, null, "root");
+  };
+
   _proto.setCurrentContext = function setCurrentContext(ctx) {
     this.currentContext = ctx;
   };
@@ -5642,17 +5691,38 @@ function () {
   };
 
   _proto.initEnvironment = function initEnvironment(ctx) {
-    //init global scope
-    this.rootScope = new Scope(ctx, null, "root");
+    var superScope = this.getSuperScope();
+
+    if (!(ctx instanceof Scope)) {
+      // replace Interpreter.eval and Interpreter.Function
+      Object.keys(ctx).forEach(function (key) {
+        if (ctx[key] === IEval) {
+          ctx[key] = superScope.data.eval;
+        }
+
+        if (ctx[key] === IFunction) {
+          ctx[key] = superScope.data.Function;
+        }
+      });
+    } //init global scope
+
+
+    var scope = ctx instanceof Scope ? ctx : new Scope(ctx, superScope, "global");
+    this.rootScope = scope;
     this.currentScope = this.rootScope; //init global context == this
 
-    this.rootContext = ctx;
-    this.currentContext = ctx; // collect var/function declare
+    this.rootContext = scope.data;
+    this.currentContext = scope.data; // collect var/function declare
 
     this.collectDeclVars = Object.create(null);
     this.collectDeclFuncs = Object.create(null);
     this.execStartTime = Date.now();
     this.execEndTime = this.execStartTime;
+    var initEnv = this.options.initEnv;
+
+    if (initEnv) {
+      initEnv(this);
+    }
   };
 
   _proto.evaluate = function evaluate(code, ctx) {
@@ -5753,7 +5823,7 @@ function () {
   };
 
   _proto.createClosure = function createClosure(node) {
-    var _this = this;
+    var _this2 = this;
 
     var timeout = this.options.timeout;
     var closure;
@@ -5906,24 +5976,24 @@ function () {
 
     if (timeout && timeout > 0) {
       return function () {
-        if (_this.checkTimeout()) {
-          throw _this.createInternalThrowError(_messages.Messages.ExecutionTimeOutError, timeout, node);
+        if (_this2.checkTimeout()) {
+          throw _this2.createInternalThrowError(_messages.Messages.ExecutionTimeOutError, timeout, node);
         }
 
-        _this.lastExecNode = node;
+        _this2.lastExecNode = node;
         return closure.apply(void 0, arguments);
       };
     }
 
     return function () {
-      _this.lastExecNode = node;
+      _this2.lastExecNode = node;
       return closure.apply(void 0, arguments);
     };
   } // a==b a/b
   ;
 
   _proto.binaryExpressionHandler = function binaryExpressionHandler(node) {
-    var _this2 = this;
+    var _this3 = this;
 
     var leftExpression = this.createClosure(node.left);
     var rightExpression = this.createClosure(node.right);
@@ -5999,14 +6069,14 @@ function () {
           return leftValue instanceof rightValue;
 
         default:
-          throw _this2.createInternalThrowError(_messages.Messages.BinaryOperatorSyntaxError, node.operator, node);
+          throw _this3.createInternalThrowError(_messages.Messages.BinaryOperatorSyntaxError, node.operator, node);
       }
     };
   } // a && b
   ;
 
   _proto.logicalExpressionHandler = function logicalExpressionHandler(node) {
-    var _this3 = this;
+    var _this4 = this;
 
     var leftExpression = this.createClosure(node.left);
     var rightExpression = this.createClosure(node.right);
@@ -6019,14 +6089,14 @@ function () {
           return leftExpression() && rightExpression();
 
         default:
-          throw _this3.createInternalThrowError(_messages.Messages.LogicalOperatorSyntaxError, node.operator, node);
+          throw _this4.createInternalThrowError(_messages.Messages.LogicalOperatorSyntaxError, node.operator, node);
       }
     };
   } // typeof a !a()
   ;
 
   _proto.unaryExpressionHandler = function unaryExpressionHandler(node) {
-    var _this4 = this;
+    var _this5 = this;
 
     switch (node.operator) {
       case "delete":
@@ -6077,7 +6147,7 @@ function () {
               return typeof value;
 
             default:
-              throw _this4.createInternalThrowError(_messages.Messages.UnaryOperatorSyntaxError, node.operator, node);
+              throw _this5.createInternalThrowError(_messages.Messages.UnaryOperatorSyntaxError, node.operator, node);
           }
         };
     }
@@ -6085,7 +6155,7 @@ function () {
   ;
 
   _proto.updateExpressionHandler = function updateExpressionHandler(node) {
-    var _this5 = this;
+    var _this6 = this;
 
     var objectGetter = this.createObjectGetter(node.argument);
     var nameGetter = this.createNameGetter(node.argument);
@@ -6093,7 +6163,7 @@ function () {
       var obj = objectGetter();
       var name = nameGetter();
 
-      _this5.assertVariable(obj, name, node);
+      _this6.assertVariable(obj, name, node);
 
       switch (node.operator) {
         case "++":
@@ -6103,14 +6173,14 @@ function () {
           return node.prefix ? --obj[name] : obj[name]--;
 
         default:
-          throw _this5.createInternalThrowError(_messages.Messages.UpdateOperatorSyntaxError, node.operator, node);
+          throw _this6.createInternalThrowError(_messages.Messages.UpdateOperatorSyntaxError, node.operator, node);
       }
     };
   } // var o = {a: 1, b: 's', get name(){}, set name(){}  ...}
   ;
 
   _proto.objectExpressionHandler = function objectExpressionHandler(node) {
-    var _this6 = this;
+    var _this7 = this;
 
     var items = [];
 
@@ -6136,7 +6206,7 @@ function () {
         properties[key] = {};
       }
 
-      properties[key][kind] = _this6.createClosure(property.value);
+      properties[key][kind] = _this7.createClosure(property.value);
       items.push({
         key: key,
         property: property
@@ -6182,11 +6252,11 @@ function () {
   ;
 
   _proto.arrayExpressionHandler = function arrayExpressionHandler(node) {
-    var _this7 = this;
+    var _this8 = this;
 
     //fix: [,,,1,2]
     var items = node.elements.map(function (element) {
-      return element ? _this7.createClosure(element) : element;
+      return element ? _this8.createClosure(element) : element;
     });
     return function () {
       var len = items.length;
@@ -6209,7 +6279,7 @@ function () {
   };
 
   _proto.createCallFunctionGetter = function createCallFunctionGetter(node) {
-    var _this8 = this;
+    var _this9 = this;
 
     switch (node.type) {
       case "MemberExpression":
@@ -6219,12 +6289,18 @@ function () {
           var obj = objectGetter();
           var key = keyGetter();
 
-          var func = _this8.safeObjectGet(obj, key, node);
+          var func = _this9.safeObjectGet(obj, key, node);
 
           if (!func || !isFunction(func)) {
-            var name = _this8.source.slice(node.start, node.end);
+            var name = _this9.source.slice(node.start, node.end);
 
-            throw _this8.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
+            throw _this9.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
+          }
+
+          if (func.__IS_EVAL_FUNC) {
+            return function (code) {
+              return func(code, true);
+            };
           } // method call
           // tips:
           // test.call(ctx, ...) === test.call.bind(test)(ctx, ...)
@@ -6237,13 +6313,34 @@ function () {
         };
 
       default:
+        // test() or (0.test)() or a[1]() ...
         var closure = this.createClosure(node);
         return function () {
-          var name = node.name;
+          var name = "";
+
+          if (node.type === "Identifier") {
+            name = node.name;
+          } // const name: string = (<ESTree.Identifier>node).name;
+
+
           var func = closure();
 
           if (!func || !isFunction(func)) {
-            throw _this8.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
+            throw _this9.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
+          } // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
+          // calling eval scope check
+          // var geval = eval;
+          // geval("a+1");
+
+
+          if (node.type === "Identifier" && func.__IS_EVAL_FUNC) {
+            return function (code) {
+              var scope = _this9.getScopeFromName(name, _this9.getCurrentScope());
+
+              var isSuperScope = !scope.parent || _this9.rootScope === scope; // use local scope if calling eval in super scope
+
+              return func(code, !isSuperScope);
+            };
           } // function call
           // this = undefined
           // tips:
@@ -6257,11 +6354,11 @@ function () {
   ;
 
   _proto.callExpressionHandler = function callExpressionHandler(node) {
-    var _this9 = this;
+    var _this10 = this;
 
     var funcGetter = this.createCallFunctionGetter(node.callee);
     var argsGetter = node.arguments.map(function (arg) {
-      return _this9.createClosure(arg);
+      return _this10.createClosure(arg);
     });
     return function () {
       return funcGetter().apply(void 0, argsGetter.map(function (arg) {
@@ -6272,7 +6369,7 @@ function () {
   ;
 
   _proto.functionExpressionHandler = function functionExpressionHandler(node) {
-    var _this10 = this;
+    var _this11 = this;
 
     var self = this;
     var oldDeclVars = this.collectDeclVars;
@@ -6282,7 +6379,7 @@ function () {
     var name = node.id ? node.id.name : "";
     var paramLength = node.params.length;
     var paramsGetter = node.params.map(function (param) {
-      return _this10.createParamNameGetter(param);
+      return _this11.createParamNameGetter(param);
     }); // set scope
 
     var bodyClosure = this.createClosure(node.body);
@@ -6295,8 +6392,8 @@ function () {
       var runtimeScope = self.getCurrentScope();
 
       var func = function func() {
-        for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-          args[_key] = arguments[_key];
+        for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          args[_key2] = arguments[_key2];
         }
 
         self.callStack.push("" + name);
@@ -6342,7 +6439,7 @@ function () {
       });
       Object.defineProperty(func, "toString", {
         value: function value() {
-          return _this10.source.slice(node.start, node.end);
+          return _this11.source.slice(node.start, node.end);
         },
         writable: true,
         configurable: true,
@@ -6350,7 +6447,7 @@ function () {
       });
       Object.defineProperty(func, "valueOf", {
         value: function value() {
-          return _this10.source.slice(node.start, node.end);
+          return _this11.source.slice(node.start, node.end);
         },
         writable: true,
         configurable: true,
@@ -6362,11 +6459,11 @@ function () {
   ;
 
   _proto.newExpressionHandler = function newExpressionHandler(node) {
-    var _this11 = this;
+    var _this12 = this;
 
     var expression = this.createClosure(node.callee);
     var args = node.arguments.map(function (arg) {
-      return _this11.createClosure(arg);
+      return _this12.createClosure(arg);
     });
     return function () {
       var construct = expression();
@@ -6374,9 +6471,9 @@ function () {
       if (!isFunction(construct)) {
         var callee = node.callee;
 
-        var name = _this11.source.slice(callee.start, callee.end);
+        var name = _this12.source.slice(callee.start, callee.end);
 
-        throw _this11.createInternalThrowError(_messages.Messages.IsNotConstructor, name, node);
+        throw _this12.createInternalThrowError(_messages.Messages.IsNotConstructor, name, node);
       }
 
       return (0, _construct2.default)(construct, args.map(function (arg) {
@@ -6398,19 +6495,19 @@ function () {
   ;
 
   _proto.thisExpressionHandler = function thisExpressionHandler(node) {
-    var _this12 = this;
+    var _this13 = this;
 
     return function () {
-      return _this12.getCurrentContext();
+      return _this13.getCurrentContext();
     };
   } // var1,var2,...
   ;
 
   _proto.sequenceExpressionHandler = function sequenceExpressionHandler(node) {
-    var _this13 = this;
+    var _this14 = this;
 
     var expressions = node.expressions.map(function (item) {
-      return _this13.createClosure(item);
+      return _this14.createClosure(item);
     });
     return function () {
       var result;
@@ -6438,14 +6535,14 @@ function () {
   ;
 
   _proto.identifierHandler = function identifierHandler(node) {
-    var _this14 = this;
+    var _this15 = this;
 
     return function () {
-      var currentScope = _this14.getCurrentScope();
+      var currentScope = _this15.getCurrentScope();
 
-      var data = _this14.getScopeDataFromName(node.name, currentScope);
+      var data = _this15.getScopeDataFromName(node.name, currentScope);
 
-      _this14.assertVariable(data, node.name, node);
+      _this15.assertVariable(data, node.name, node);
 
       return data[node.name];
     };
@@ -6453,7 +6550,7 @@ function () {
   ;
 
   _proto.assignmentExpressionHandler = function assignmentExpressionHandler(node) {
-    var _this15 = this;
+    var _this16 = this;
 
     // var s = function(){}
     // s.name === s
@@ -6474,7 +6571,7 @@ function () {
 
       if (node.operator !== "=") {
         // var1(undefined) += 1
-        _this15.assertVariable(data, name, node);
+        _this16.assertVariable(data, name, node);
       }
 
       var value = data[name];
@@ -6533,7 +6630,7 @@ function () {
           break;
 
         default:
-          throw _this15.createInternalThrowError(_messages.Messages.AssignmentExpressionSyntaxError, node.type, node);
+          throw _this16.createInternalThrowError(_messages.Messages.AssignmentExpressionSyntaxError, node.type, node);
       }
 
       data[name] = value;
@@ -6570,7 +6667,7 @@ function () {
   ;
 
   _proto.variableDeclarationHandler = function variableDeclarationHandler(node) {
-    var _this16 = this;
+    var _this17 = this;
 
     var assignmentsClosure;
     var assignments = [];
@@ -6598,9 +6695,9 @@ function () {
 
     return function () {
       if (assignmentsClosure) {
-        _this16.isVarDeclMode = true;
+        _this17.isVarDeclMode = true;
         assignmentsClosure();
-        _this16.isVarDeclMode = false;
+        _this17.isVarDeclMode = false;
       }
 
       return EmptyStatementReturn;
@@ -6608,19 +6705,19 @@ function () {
   };
 
   _proto.assertVariable = function assertVariable(data, name, node) {
-    if (data === this.rootScope.data && name !== "undefined" && !(name in data)) {
+    if (data === this.rootScope.data && !(name in data)) {
       throw this.createInternalThrowError(_messages.Messages.VariableUndefinedReferenceError, name, node);
     }
   } // {...}
   ;
 
   _proto.programHandler = function programHandler(node) {
-    var _this17 = this;
+    var _this18 = this;
 
     // const currentScope = this.getCurrentScope();
     var stmtClosures = node.body.map(function (stmt) {
       // if (stmt.type === "EmptyStatement") return null;
-      return _this17.createClosure(stmt);
+      return _this18.createClosure(stmt);
     });
     return function () {
       var result = EmptyStatementReturn;
@@ -6628,7 +6725,7 @@ function () {
       for (var i = 0; i < stmtClosures.length; i++) {
         var stmtClosure = stmtClosures[i]; // save last value
 
-        var ret = _this17.setValue(stmtClosure()); // if (!stmtClosure) continue;
+        var ret = _this18.setValue(stmtClosure()); // if (!stmtClosure) continue;
         // EmptyStatement
 
 
@@ -6686,7 +6783,7 @@ function () {
   ;
 
   _proto.forStatementHandler = function forStatementHandler(node) {
-    var _this18 = this;
+    var _this19 = this;
 
     var initClosure = noop;
     var testClosure = node.test ? this.createClosure(node.test) : function () {
@@ -6712,7 +6809,7 @@ function () {
       for (initClosure(); shouldInitExec || testClosure(); updateClosure()) {
         shouldInitExec = false; // save last value
 
-        var ret = _this18.setValue(bodyClosure()); // notice: never return Break or Continue!
+        var ret = _this19.setValue(bodyClosure()); // notice: never return Break or Continue!
 
 
         if (ret === EmptyStatementReturn || ret === Continue) continue;
@@ -6747,7 +6844,7 @@ function () {
   };
 
   _proto.forInStatementHandler = function forInStatementHandler(node) {
-    var _this19 = this;
+    var _this20 = this;
 
     // for( k in obj) or for(o.k in obj) ...
     var left = node.left;
@@ -6777,7 +6874,7 @@ function () {
         // assign left to scope
         // k = x
         // o.k = x
-        _this19.assignmentExpressionHandler({
+        _this20.assignmentExpressionHandler({
           type: "AssignmentExpression",
           operator: "=",
           left: left,
@@ -6788,7 +6885,7 @@ function () {
         })(); // save last value
 
 
-        var ret = _this19.setValue(bodyClosure()); // Important: never return Break or Continue!
+        var ret = _this20.setValue(bodyClosure()); // Important: never return Break or Continue!
 
 
         if (ret === EmptyStatementReturn || ret === Continue) continue;
@@ -6814,12 +6911,12 @@ function () {
   };
 
   _proto.withStatementHandler = function withStatementHandler(node) {
-    var _this20 = this;
+    var _this21 = this;
 
     var objectClosure = this.createClosure(node.object);
     var bodyClosure = this.createClosure(node.body);
     return function () {
-      var currentScope = _this20.getCurrentScope();
+      var currentScope = _this21.getCurrentScope();
 
       var newScope = createScope(currentScope, "with");
       var data = objectClosure(); // newScope.data = data;
@@ -6829,12 +6926,12 @@ function () {
         newScope.data[k] = data[k];
       }
 
-      _this20.setCurrentScope(newScope); // save last value
+      _this21.setCurrentScope(newScope); // save last value
 
 
-      var result = _this20.setValue(bodyClosure());
+      var result = _this21.setValue(bodyClosure());
 
-      _this20.setCurrentScope(currentScope);
+      _this21.setCurrentScope(currentScope);
 
       return result;
     };
@@ -6849,34 +6946,34 @@ function () {
   ;
 
   _proto.tryStatementHandler = function tryStatementHandler(node) {
-    var _this21 = this;
+    var _this22 = this;
 
     var blockClosure = this.createClosure(node.block);
     var handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
     var finalizerClosure = node.finalizer ? this.createClosure(node.finalizer) : null;
     return function () {
-      var currentScope = _this21.getCurrentScope();
+      var currentScope = _this22.getCurrentScope();
 
-      var currentContext = _this21.getCurrentContext();
+      var currentContext = _this22.getCurrentContext();
 
       var labelStack = currentScope.labelStack.concat([]);
 
-      var callStack = _this21.callStack.concat([]);
+      var callStack = _this22.callStack.concat([]);
 
       var result = EmptyStatementReturn;
       var finalReturn;
       var throwError;
 
       var reset = function reset() {
-        _this21.setCurrentScope(currentScope); //reset scope
+        _this22.setCurrentScope(currentScope); //reset scope
 
 
-        _this21.setCurrentContext(currentContext); //reset context
+        _this22.setCurrentContext(currentContext); //reset context
 
 
         currentScope.labelStack = labelStack; //reset label stack
 
-        _this21.callStack = callStack; //reset call stack
+        _this22.callStack = callStack; //reset call stack
       };
       /**
        * try{...}catch(e){...}finally{...} execution sequence:
@@ -6891,7 +6988,7 @@ function () {
 
 
       try {
-        result = _this21.setValue(blockClosure());
+        result = _this22.setValue(blockClosure());
 
         if (result instanceof Return) {
           finalReturn = result;
@@ -6899,13 +6996,13 @@ function () {
       } catch (err) {
         reset();
 
-        if (_this21.isInterruptThrow(err)) {
+        if (_this22.isInterruptThrow(err)) {
           throw err;
         }
 
         if (handlerClosure) {
           try {
-            result = _this21.setValue(handlerClosure(err));
+            result = _this22.setValue(handlerClosure(err));
 
             if (result instanceof Return) {
               finalReturn = result;
@@ -6913,7 +7010,7 @@ function () {
           } catch (err) {
             reset();
 
-            if (_this21.isInterruptThrow(err)) {
+            if (_this22.isInterruptThrow(err)) {
               throw err;
             } // save catch throw error
 
@@ -6936,7 +7033,7 @@ function () {
         } catch (err) {
           reset();
 
-          if (_this21.isInterruptThrow(err)) {
+          if (_this22.isInterruptThrow(err)) {
             throw err;
           } // save finally throw error
 
@@ -6961,14 +7058,14 @@ function () {
   ;
 
   _proto.catchClauseHandler = function catchClauseHandler(node) {
-    var _this22 = this;
+    var _this23 = this;
 
     var paramNameGetter = this.createParamNameGetter(node.param);
     var bodyClosure = this.createClosure(node.body);
     return function (e) {
       var result;
 
-      var currentScope = _this22.getCurrentScope();
+      var currentScope = _this23.getCurrentScope();
 
       var scopeData = currentScope.data; // get param name "e"
 
@@ -7006,11 +7103,11 @@ function () {
   };
 
   _proto.switchStatementHandler = function switchStatementHandler(node) {
-    var _this23 = this;
+    var _this24 = this;
 
     var discriminantClosure = this.createClosure(node.discriminant);
     var caseClosures = node.cases.map(function (item) {
-      return _this23.switchCaseHandler(item);
+      return _this24.switchCaseHandler(item);
     });
     return function () {
       var value = discriminantClosure();
@@ -7029,7 +7126,7 @@ function () {
 
         if (match || test === value) {
           match = true;
-          ret = _this23.setValue(item.bodyClosure()); // notice: never return Break!
+          ret = _this24.setValue(item.bodyClosure()); // notice: never return Break!
 
           if (ret === EmptyStatementReturn) continue;
 
@@ -7046,7 +7143,7 @@ function () {
       }
 
       if (!match && defaultCase) {
-        ret = _this23.setValue(defaultCase.bodyClosure());
+        ret = _this24.setValue(defaultCase.bodyClosure());
         var isEBC = ret === EmptyStatementReturn || ret === Break || ret === Continue; // notice: never return Break or Continue!
 
         if (!isEBC) {
@@ -7076,14 +7173,14 @@ function () {
   ;
 
   _proto.labeledStatementHandler = function labeledStatementHandler(node) {
-    var _this24 = this;
+    var _this25 = this;
 
     var labelName = node.label.name;
     var bodyClosure = this.createClosure(node.body);
     return function () {
       var result;
 
-      var currentScope = _this24.getCurrentScope();
+      var currentScope = _this25.getCurrentScope();
 
       currentScope.labelStack.push(labelName);
       result = bodyClosure(node); // stop break label
@@ -7141,12 +7238,12 @@ function () {
   ;
 
   _proto.createObjectGetter = function createObjectGetter(node) {
-    var _this25 = this;
+    var _this26 = this;
 
     switch (node.type) {
       case "Identifier":
         return function () {
-          return _this25.getScopeDataFromName(node.name, _this25.getCurrentScope());
+          return _this26.getScopeDataFromName(node.name, _this26.getCurrentScope());
         };
 
       case "MemberExpression":
@@ -7191,9 +7288,9 @@ function () {
       scopeData[key] = value ? value() : value;
     }
 
-    for (var _key2 in declVars) {
-      if (!(_key2 in scopeData)) {
-        scopeData[_key2] = void 0;
+    for (var _key3 in declVars) {
+      if (!(_key3 in scopeData)) {
+        scopeData[_key3] = void 0;
       }
     }
   };
@@ -7211,7 +7308,8 @@ function () {
     var scope = startScope;
 
     do {
-      if (hasOwnProperty.call(scope.data, name)) {
+      if (name in scope.data) {
+        //if (hasOwnProperty.call(scope.data, name)) {
         return scope;
       }
     } while (scope = scope.parent);
@@ -7246,10 +7344,13 @@ function () {
 }();
 
 exports.Interpreter = Interpreter;
-Interpreter.version = "1.0.9";
+Interpreter.version = "1.1.0";
+Interpreter.eval = IEval;
+Interpreter.Function = IFunction; // alert.call(rootContext, 1);
+// But alert({}, 1); // Illegal invocation
+
 Interpreter.rootContext = void 0;
-Interpreter.global = getGlobal();
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+Interpreter.global = Object.create(null);
 
 /***/ }),
 

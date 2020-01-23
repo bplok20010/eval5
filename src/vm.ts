@@ -11,7 +11,7 @@ export function compileFunction(
 	code: string,
 	params: string[] = [],
 	options: CompileOptions = {}
-): (...args: any[]) => any {
+): (...args: string[]) => any {
 	const ctx: any = options.parsingContext;
 	const timeout = options.timeout === undefined ? 0 : options.timeout;
 

@@ -137,3 +137,16 @@ a
 		},
 	});
 });
+
+test("VariableDeclaration-var9", () => {
+	const a = evaluate(
+		`
+        var a = undefined;
+        a;
+
+        `,
+		Object.create(null)
+	);
+
+	expect(a).toEqual(undefined);
+});

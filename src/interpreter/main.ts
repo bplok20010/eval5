@@ -22,6 +22,8 @@ const Break = Symbol("Break");
 const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
 const EmptyStatementReturn = Symbol("EmptyStatementReturn");
+const IEval = Symbol("IEval");
+const IFunction = Symbol("IFunction");
 
 type Getter = () => any;
 interface BaseClosure {
@@ -62,13 +64,17 @@ class ContinueLabel {
 
 interface Options {
 	timeout?: number;
+	initEnv?: (inst: Interpreter) => void;
 }
 
 interface CollectDeclarations {
 	[key: string]: undefined | BaseClosure;
 }
 
-type ScopeData = {};
+type ScopeData = {
+	[prop: string]: any;
+	[prop: number]: any;
+};
 
 class Scope {
 	name: string | undefined;
@@ -83,36 +89,19 @@ class Scope {
 	}
 }
 
-type Context = {};
+type Context = {
+	[prop: string]: any;
+	[prop: number]: any;
+};
 
 function noop() {}
 
-function getGlobal() {
-	if (typeof self !== "undefined") {
-		return self;
-	}
-
-	if (typeof window !== "undefined") {
-		return window;
-	}
-
-	if (typeof global !== "undefined") {
-		return global;
-	}
-
-	if (typeof this !== "undefined") {
-		return this;
-	}
-
-	return {};
-}
-
 function createScope(parent: Scope | null = null, name?: string): Scope {
-	return new Scope({} /* or Object.create(null)? */, parent, name);
+	return new Scope(Object.create(null), parent, name);
 }
 
 export class Interpreter {
-	context: Context;
+	context: Context | Scope;
 	// last expression value
 	value: any;
 	rootContext: Context;
@@ -132,13 +121,18 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
-	static version = "1.0.9";
+	static readonly version = "1.1.0";
+	static readonly eval = IEval;
+	static readonly Function = IFunction;
+	// alert.call(rootContext, 1);
+	// But alert({}, 1); // Illegal invocation
 	static rootContext = void 0;
-	static global = getGlobal();
+	static global = Object.create(null);
 
-	constructor(context: Context = Interpreter.global, options: Options = {}) {
+	constructor(context: Context | Scope = Interpreter.global, options: Options = {}) {
 		this.options = {
 			timeout: options.timeout || 0,
+			initEnv: options.initEnv,
 		};
 
 		this.context = context;
@@ -153,6 +147,106 @@ export class Interpreter {
 		);
 	}
 
+	getSuperScope(): Scope {
+		let data: any = {
+			NaN,
+			Infinity,
+			undefined,
+			// null,
+			Object,
+			Array,
+			String,
+			Boolean,
+			Number,
+			Date,
+			RegExp,
+			Error,
+			TypeError,
+			Math,
+			parseInt,
+			parseFloat,
+			isNaN,
+			isFinite,
+			decodeURI,
+			decodeURIComponent,
+			encodeURI,
+			encodeURIComponent,
+			escape,
+			unescape,
+		};
+
+		data.eval = (code: string, useGlobalScope: boolean = true): any => {
+			if (typeof code !== "string") return code;
+			if (!code) return void 0;
+
+			const options: Options = {
+				timeout: this.options.timeout,
+				initEnv: inst => {
+					// set caller context
+					if (!useGlobalScope) {
+						inst.setCurrentContext(this.getCurrentContext());
+					}
+					inst.execStartTime = this.execStartTime;
+					inst.execEndTime = inst.execStartTime;
+				},
+			};
+
+			const currentScope = useGlobalScope ? this.rootScope : this.getCurrentScope();
+			const interpreter = new Interpreter(currentScope, options);
+
+			return interpreter.evaluate(code);
+		};
+		Object.defineProperty(data.eval, "__IS_EVAL_FUNC", {
+			value: true,
+			writable: false,
+			enumerable: false,
+			configurable: false,
+		});
+
+		data.Function = (...params: string[]) => {
+			const code = params.pop();
+			const interpreter = new Interpreter(this.rootScope, this.options);
+
+			const wrapCode = `
+		    (function anonymous(${params.join(",")}){
+		        ${code}
+		    });
+		    `;
+
+			return interpreter.evaluate(wrapCode);
+		};
+		Object.defineProperty(data.Function, "__IS_FUNCTION_FUNC", {
+			value: true,
+			writable: false,
+			enumerable: false,
+			configurable: false,
+		});
+
+		// ES5 Object
+		if (typeof JSON !== "undefined") {
+			data.JSON = JSON;
+		}
+
+		//ES6 Object
+		// if (typeof Promise !== "undefined") {
+		// 	data.Promise = Promise;
+		// }
+
+		// if (typeof Set !== "undefined") {
+		// 	data.Set = Set;
+		// }
+
+		// if (typeof Map !== "undefined") {
+		// 	data.Map = Map;
+		// }
+
+		// if (typeof Symbol !== "undefined") {
+		// 	data.Symbol = Symbol;
+		// }
+
+		return new Scope(data, null, "root");
+	}
+
 	protected setCurrentContext(ctx: Context) {
 		this.currentContext = ctx;
 	}
@@ -161,19 +255,38 @@ export class Interpreter {
 		this.currentScope = scope;
 	}
 
-	protected initEnvironment(ctx: Context) {
+	protected initEnvironment(ctx: Context | Scope) {
+		const superScope = this.getSuperScope();
+		if (!(ctx instanceof Scope)) {
+			// replace Interpreter.eval and Interpreter.Function
+			Object.keys(ctx).forEach(key => {
+				if (ctx[key] === IEval) {
+					ctx[key] = superScope.data.eval;
+				}
+				if (ctx[key] === IFunction) {
+					ctx[key] = superScope.data.Function;
+				}
+			});
+		}
+
 		//init global scope
-		this.rootScope = new Scope(ctx, null, "root");
+		const scope = ctx instanceof Scope ? ctx : new Scope(ctx, superScope, "global");
+		this.rootScope = scope;
 		this.currentScope = this.rootScope;
 		//init global context == this
-		this.rootContext = ctx;
-		this.currentContext = ctx;
+		this.rootContext = scope.data;
+		this.currentContext = scope.data;
 		// collect var/function declare
 		this.collectDeclVars = Object.create(null);
 		this.collectDeclFuncs = Object.create(null);
 
 		this.execStartTime = Date.now();
 		this.execEndTime = this.execStartTime;
+
+		const initEnv = this.options.initEnv;
+		if (initEnv) {
+			initEnv(this);
+		}
 	}
 
 	evaluate(code: string = "", ctx: Context = this.context) {
@@ -695,6 +808,12 @@ export class Interpreter {
 						);
 					}
 
+					if (func.__IS_EVAL_FUNC) {
+						return (code: string) => {
+							return func(code, true);
+						};
+					}
+
 					// method call
 					// tips:
 					// test.call(ctx, ...) === test.call.bind(test)(ctx, ...)
@@ -704,9 +823,14 @@ export class Interpreter {
 					return func.bind(obj);
 				};
 			default:
+				// test() or (0.test)() or a[1]() ...
 				const closure = this.createClosure(node);
 				return () => {
-					const name: string = (<ESTree.Identifier>node).name;
+					let name: string = "";
+					if (node.type === "Identifier") {
+						name = node.name;
+					}
+					// const name: string = (<ESTree.Identifier>node).name;
 					const func = closure();
 
 					if (!func || !isFunction(func)) {
@@ -717,6 +841,18 @@ export class Interpreter {
 						);
 					}
 
+					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
+					// calling eval scope check
+					// var geval = eval;
+					// geval("a+1");
+					if (node.type === "Identifier" && func.__IS_EVAL_FUNC) {
+						return (code: string) => {
+							const scope = this.getScopeFromName(name, this.getCurrentScope());
+							const isSuperScope = !scope.parent || this.rootScope === scope;
+							// use local scope if calling eval in super scope
+							return func(code, !isSuperScope);
+						};
+					}
 					// function call
 					// this = undefined
 					// tips:
@@ -1060,7 +1196,7 @@ export class Interpreter {
 	}
 
 	assertVariable(data: ScopeData, name: string, node: Node): void | never {
-		if (data === this.rootScope.data && name !== "undefined" && !(name in data)) {
+		if (data === this.rootScope.data && !(name in data)) {
 			throw this.createInternalThrowError(
 				Messages.VariableUndefinedReferenceError,
 				name,
@@ -1644,7 +1780,8 @@ export class Interpreter {
 		let scope: Scope | null = startScope;
 
 		do {
-			if (hasOwnProperty.call(scope.data, name)) {
+			if (name in scope.data) {
+				//if (hasOwnProperty.call(scope.data, name)) {
 				return scope;
 			}
 		} while ((scope = scope.parent));
