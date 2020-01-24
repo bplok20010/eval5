@@ -5665,19 +5665,39 @@ function () {
     if (typeof JSON !== "undefined") {
       data.JSON = JSON;
     } //ES6 Object
-    // if (typeof Promise !== "undefined") {
-    // 	data.Promise = Promise;
-    // }
-    // if (typeof Set !== "undefined") {
-    // 	data.Set = Set;
-    // }
-    // if (typeof Map !== "undefined") {
-    // 	data.Map = Map;
-    // }
-    // if (typeof Symbol !== "undefined") {
-    // 	data.Symbol = Symbol;
-    // }
 
+
+    if (typeof Promise !== "undefined") {
+      data.Promise = Promise;
+    }
+
+    if (typeof Set !== "undefined") {
+      data.Set = Set;
+    }
+
+    if (typeof Map !== "undefined") {
+      data.Map = Map;
+    }
+
+    if (typeof Symbol !== "undefined") {
+      data.Symbol = Symbol;
+    }
+
+    if (typeof Proxy !== "undefined") {
+      data.Proxy = Proxy;
+    }
+
+    if (typeof WeakMap !== "undefined") {
+      data.WeakMap = WeakMap;
+    }
+
+    if (typeof WeakSet !== "undefined") {
+      data.WeakSet = WeakSet;
+    }
+
+    if (typeof Reflect !== "undefined") {
+      data.Reflect = Reflect;
+    }
 
     return new Scope(data, null, "root");
   };
@@ -7348,7 +7368,7 @@ function () {
 }();
 
 exports.Interpreter = Interpreter;
-Interpreter.version = "1.1.1";
+Interpreter.version = "1.1.2";
 Interpreter.eval = IEval;
 Interpreter.Function = IFunction; // alert.call(rootContext, 1);
 // But alert({}, 1); // Illegal invocation

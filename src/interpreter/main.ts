@@ -121,7 +121,7 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
-	static readonly version = "1.1.1";
+	static readonly version = "1.1.2";
 	static readonly eval = IEval;
 	static readonly Function = IFunction;
 	// alert.call(rootContext, 1);
@@ -228,21 +228,37 @@ export class Interpreter {
 		}
 
 		//ES6 Object
-		// if (typeof Promise !== "undefined") {
-		// 	data.Promise = Promise;
-		// }
+		if (typeof Promise !== "undefined") {
+			data.Promise = Promise;
+		}
 
-		// if (typeof Set !== "undefined") {
-		// 	data.Set = Set;
-		// }
+		if (typeof Set !== "undefined") {
+			data.Set = Set;
+		}
 
-		// if (typeof Map !== "undefined") {
-		// 	data.Map = Map;
-		// }
+		if (typeof Map !== "undefined") {
+			data.Map = Map;
+		}
 
-		// if (typeof Symbol !== "undefined") {
-		// 	data.Symbol = Symbol;
-		// }
+		if (typeof Symbol !== "undefined") {
+			data.Symbol = Symbol;
+		}
+
+		if (typeof Proxy !== "undefined") {
+			data.Proxy = Proxy;
+		}
+
+		if (typeof WeakMap !== "undefined") {
+			data.WeakMap = WeakMap;
+		}
+
+		if (typeof WeakSet !== "undefined") {
+			data.WeakSet = WeakSet;
+		}
+
+		if (typeof Reflect !== "undefined") {
+			data.Reflect = Reflect;
+		}
 
 		return new Scope(data, null, "root");
 	}
