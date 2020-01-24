@@ -40,7 +40,11 @@ try {
 
 ### static `version`
 
+VERSION
+
 ### static `global`
+
+`object` 默认：`Object.create(null)`
 
 设置默认作用域对象
 
@@ -52,6 +56,8 @@ Interpreter.global = window;
 ```
 
 ### static `eval`
+
+`readonly`
 
 替代原有的`eval`占位符
 
@@ -75,6 +81,8 @@ interpreter.evaluate(`
 ```
 
 ### static `Function`
+
+`readonly`
 
 替代原有的`Function`占位符
 

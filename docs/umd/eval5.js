@@ -6885,7 +6885,7 @@ function () {
         })(); // save last value
 
 
-        var ret = _this20.setValue(bodyClosure()); // Important: never return Break or Continue!
+        var ret = _this20.setValue(bodyClosure()); // notice: never return Break or Continue!
 
 
         if (ret === EmptyStatementReturn || ret === Continue) continue;
@@ -6938,42 +6938,46 @@ function () {
   };
 
   _proto.throwStatementHandler = function throwStatementHandler(node) {
+    var _this22 = this;
+
     var argumentClosure = this.createClosure(node.argument);
     return function () {
+      _this22.setValue(undefined);
+
       throw argumentClosure();
     };
   } // try{...}catch(e){...}finally{}
   ;
 
   _proto.tryStatementHandler = function tryStatementHandler(node) {
-    var _this22 = this;
+    var _this23 = this;
 
     var blockClosure = this.createClosure(node.block);
     var handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
     var finalizerClosure = node.finalizer ? this.createClosure(node.finalizer) : null;
     return function () {
-      var currentScope = _this22.getCurrentScope();
+      var currentScope = _this23.getCurrentScope();
 
-      var currentContext = _this22.getCurrentContext();
+      var currentContext = _this23.getCurrentContext();
 
       var labelStack = currentScope.labelStack.concat([]);
 
-      var callStack = _this22.callStack.concat([]);
+      var callStack = _this23.callStack.concat([]);
 
       var result = EmptyStatementReturn;
       var finalReturn;
       var throwError;
 
       var reset = function reset() {
-        _this22.setCurrentScope(currentScope); //reset scope
+        _this23.setCurrentScope(currentScope); //reset scope
 
 
-        _this22.setCurrentContext(currentContext); //reset context
+        _this23.setCurrentContext(currentContext); //reset context
 
 
         currentScope.labelStack = labelStack; //reset label stack
 
-        _this22.callStack = callStack; //reset call stack
+        _this23.callStack = callStack; //reset call stack
       };
       /**
        * try{...}catch(e){...}finally{...} execution sequence:
@@ -6988,7 +6992,7 @@ function () {
 
 
       try {
-        result = _this22.setValue(blockClosure());
+        result = _this23.setValue(blockClosure());
 
         if (result instanceof Return) {
           finalReturn = result;
@@ -6996,13 +7000,13 @@ function () {
       } catch (err) {
         reset();
 
-        if (_this22.isInterruptThrow(err)) {
+        if (_this23.isInterruptThrow(err)) {
           throw err;
         }
 
         if (handlerClosure) {
           try {
-            result = _this22.setValue(handlerClosure(err));
+            result = _this23.setValue(handlerClosure(err));
 
             if (result instanceof Return) {
               finalReturn = result;
@@ -7010,7 +7014,7 @@ function () {
           } catch (err) {
             reset();
 
-            if (_this22.isInterruptThrow(err)) {
+            if (_this23.isInterruptThrow(err)) {
               throw err;
             } // save catch throw error
 
@@ -7033,7 +7037,7 @@ function () {
         } catch (err) {
           reset();
 
-          if (_this22.isInterruptThrow(err)) {
+          if (_this23.isInterruptThrow(err)) {
             throw err;
           } // save finally throw error
 
@@ -7058,14 +7062,14 @@ function () {
   ;
 
   _proto.catchClauseHandler = function catchClauseHandler(node) {
-    var _this23 = this;
+    var _this24 = this;
 
     var paramNameGetter = this.createParamNameGetter(node.param);
     var bodyClosure = this.createClosure(node.body);
     return function (e) {
       var result;
 
-      var currentScope = _this23.getCurrentScope();
+      var currentScope = _this24.getCurrentScope();
 
       var scopeData = currentScope.data; // get param name "e"
 
@@ -7103,11 +7107,11 @@ function () {
   };
 
   _proto.switchStatementHandler = function switchStatementHandler(node) {
-    var _this24 = this;
+    var _this25 = this;
 
     var discriminantClosure = this.createClosure(node.discriminant);
     var caseClosures = node.cases.map(function (item) {
-      return _this24.switchCaseHandler(item);
+      return _this25.switchCaseHandler(item);
     });
     return function () {
       var value = discriminantClosure();
@@ -7126,7 +7130,7 @@ function () {
 
         if (match || test === value) {
           match = true;
-          ret = _this24.setValue(item.bodyClosure()); // notice: never return Break!
+          ret = _this25.setValue(item.bodyClosure()); // notice: never return Break!
 
           if (ret === EmptyStatementReturn) continue;
 
@@ -7143,7 +7147,7 @@ function () {
       }
 
       if (!match && defaultCase) {
-        ret = _this24.setValue(defaultCase.bodyClosure());
+        ret = _this25.setValue(defaultCase.bodyClosure());
         var isEBC = ret === EmptyStatementReturn || ret === Break || ret === Continue; // notice: never return Break or Continue!
 
         if (!isEBC) {
@@ -7173,14 +7177,14 @@ function () {
   ;
 
   _proto.labeledStatementHandler = function labeledStatementHandler(node) {
-    var _this25 = this;
+    var _this26 = this;
 
     var labelName = node.label.name;
     var bodyClosure = this.createClosure(node.body);
     return function () {
       var result;
 
-      var currentScope = _this25.getCurrentScope();
+      var currentScope = _this26.getCurrentScope();
 
       currentScope.labelStack.push(labelName);
       result = bodyClosure(node); // stop break label
@@ -7238,12 +7242,12 @@ function () {
   ;
 
   _proto.createObjectGetter = function createObjectGetter(node) {
-    var _this26 = this;
+    var _this27 = this;
 
     switch (node.type) {
       case "Identifier":
         return function () {
-          return _this26.getScopeDataFromName(node.name, _this26.getCurrentScope());
+          return _this27.getScopeDataFromName(node.name, _this27.getCurrentScope());
         };
 
       case "MemberExpression":
@@ -7344,7 +7348,7 @@ function () {
 }();
 
 exports.Interpreter = Interpreter;
-Interpreter.version = "1.1.0";
+Interpreter.version = "1.1.1";
 Interpreter.eval = IEval;
 Interpreter.Function = IFunction; // alert.call(rootContext, 1);
 // But alert({}, 1); // Illegal invocation

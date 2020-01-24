@@ -201,3 +201,13 @@ m3.call('m3')
 	);
 	deepEqual(a, "m3");
 });
+
+test("try-catch value returns -1", () => {
+	const a = evaluate(`
+        45;
+        try {
+            throw 'error'
+        } catch(e){}
+    `);
+	expect(a).toEqual(undefined);
+});

@@ -121,7 +121,7 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
-	static readonly version = "1.1.0";
+	static readonly version = "1.1.1";
 	static readonly eval = IEval;
 	static readonly Function = IFunction;
 	// alert.call(rootContext, 1);
@@ -1379,7 +1379,7 @@ export class Interpreter {
 				// save last value
 				const ret = this.setValue(bodyClosure());
 
-				// Important: never return Break or Continue!
+				// notice: never return Break or Continue!
 				if (ret === EmptyStatementReturn || ret === Continue) continue;
 				if (ret === Break) {
 					break;
@@ -1436,6 +1436,7 @@ export class Interpreter {
 		const argumentClosure = this.createClosure(node.argument);
 
 		return () => {
+			this.setValue(undefined);
 			throw argumentClosure();
 		};
 	}
