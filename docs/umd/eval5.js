@@ -5499,7 +5499,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.1.3";
+var version = "1.1.4";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5702,15 +5702,14 @@ function () {
       enumerable: false,
       configurable: false
     });
+    var buildInObjectKeys = Object.keys(data);
     data[IEval] = data.eval;
     data[IFunction] = data.Function;
-
-    for (var key in ctx) {
-      if (hasOwnProperty.call(data, key)) {
+    buildInObjectKeys.forEach(function (key) {
+      if (key in ctx) {
         delete data[key];
       }
-    }
-
+    });
     return new Scope(data, null, "root");
   };
 
@@ -5849,7 +5848,8 @@ function () {
 
   _proto.getNodePosition = function getNodePosition(node) {
     if (node) {
-      var errorCode = this.source.slice(node.start, node.end);
+      var errorCode = ""; //this.source.slice(node.start, node.end);
+
       return node.loc ? " [" + node.loc.start.line + ":" + node.loc.start.column + "]" + errorCode : "";
     }
 

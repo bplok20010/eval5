@@ -8,7 +8,7 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
-const version = "1.1.3";
+const version = "1.1.4";
 
 function defineFunctionName<T>(func: T, name: string) {
 	Object.defineProperty(func, "name", {
@@ -267,14 +267,16 @@ export class Interpreter {
 			configurable: false,
 		});
 
+		const buildInObjectKeys = Object.keys(data);
+
 		data[IEval] = data.eval;
 		data[IFunction] = data.Function;
 
-		for (let key in ctx) {
-			if (hasOwnProperty.call(data, key)) {
+		buildInObjectKeys.forEach(key => {
+			if (key in ctx) {
 				delete data[key];
 			}
-		}
+		});
 
 		return new Scope(data, null, "root");
 	}
@@ -406,7 +408,7 @@ export class Interpreter {
 
 	getNodePosition(node: (Node & { start?: number; end?: number }) | null) {
 		if (node) {
-			const errorCode = this.source.slice(node.start, node.end);
+			const errorCode = ""; //this.source.slice(node.start, node.end);
 			return node.loc ? ` [${node.loc.start.line}:${node.loc.start.column}]${errorCode}` : "";
 		}
 
