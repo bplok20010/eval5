@@ -5499,6 +5499,8 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
+var version = "1.1.3";
+
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
     value: name,
@@ -5553,6 +5555,70 @@ function createScope(parent, name) {
   return new Scope(Object.create(null), parent, name);
 }
 
+var BuildInObjects = {
+  NaN: NaN,
+  Infinity: Infinity,
+  undefined: undefined,
+  // null,
+  Object: Object,
+  Array: Array,
+  String: String,
+  Boolean: Boolean,
+  Number: Number,
+  Date: Date,
+  RegExp: RegExp,
+  Error: Error,
+  TypeError: TypeError,
+  Math: Math,
+  parseInt: parseInt,
+  parseFloat: parseFloat,
+  isNaN: isNaN,
+  isFinite: isFinite,
+  decodeURI: decodeURI,
+  decodeURIComponent: decodeURIComponent,
+  encodeURI: encodeURI,
+  encodeURIComponent: encodeURIComponent,
+  escape: escape,
+  unescape: unescape
+}; // ES5 Object
+
+if (typeof JSON !== "undefined") {
+  BuildInObjects.JSON = JSON;
+} //ES6 Object
+
+
+if (typeof Promise !== "undefined") {
+  BuildInObjects.Promise = Promise;
+}
+
+if (typeof Set !== "undefined") {
+  BuildInObjects.Set = Set;
+}
+
+if (typeof Map !== "undefined") {
+  BuildInObjects.Map = Map;
+}
+
+if (typeof Symbol !== "undefined") {
+  BuildInObjects.Symbol = Symbol;
+}
+
+if (typeof Proxy !== "undefined") {
+  BuildInObjects.Proxy = Proxy;
+}
+
+if (typeof WeakMap !== "undefined") {
+  BuildInObjects.WeakMap = WeakMap;
+}
+
+if (typeof WeakSet !== "undefined") {
+  BuildInObjects.WeakSet = WeakSet;
+}
+
+if (typeof Reflect !== "undefined") {
+  BuildInObjects.Reflect = Reflect;
+}
+
 var Interpreter =
 /*#__PURE__*/
 function () {
@@ -5583,35 +5649,10 @@ function () {
     return err instanceof _messages.InterruptThrowError || err instanceof _messages.InterruptThrowReferenceError || err instanceof _messages.InterruptThrowSyntaxError;
   };
 
-  _proto.getSuperScope = function getSuperScope() {
+  _proto.getSuperScope = function getSuperScope(ctx) {
     var _this = this;
 
-    var data = {
-      NaN: NaN,
-      Infinity: Infinity,
-      undefined: undefined,
-      // null,
-      Object: Object,
-      Array: Array,
-      String: String,
-      Boolean: Boolean,
-      Number: Number,
-      Date: Date,
-      RegExp: RegExp,
-      Error: Error,
-      TypeError: TypeError,
-      Math: Math,
-      parseInt: parseInt,
-      parseFloat: parseFloat,
-      isNaN: isNaN,
-      isFinite: isFinite,
-      decodeURI: decodeURI,
-      decodeURIComponent: decodeURIComponent,
-      encodeURI: encodeURI,
-      encodeURIComponent: encodeURIComponent,
-      escape: escape,
-      unescape: unescape
-    };
+    var data = Object.assign({}, BuildInObjects);
 
     data.eval = function (code, useGlobalScope) {
       if (useGlobalScope === void 0) {
@@ -5660,43 +5701,14 @@ function () {
       writable: false,
       enumerable: false,
       configurable: false
-    }); // ES5 Object
+    });
+    data[IEval] = data.eval;
+    data[IFunction] = data.Function;
 
-    if (typeof JSON !== "undefined") {
-      data.JSON = JSON;
-    } //ES6 Object
-
-
-    if (typeof Promise !== "undefined") {
-      data.Promise = Promise;
-    }
-
-    if (typeof Set !== "undefined") {
-      data.Set = Set;
-    }
-
-    if (typeof Map !== "undefined") {
-      data.Map = Map;
-    }
-
-    if (typeof Symbol !== "undefined") {
-      data.Symbol = Symbol;
-    }
-
-    if (typeof Proxy !== "undefined") {
-      data.Proxy = Proxy;
-    }
-
-    if (typeof WeakMap !== "undefined") {
-      data.WeakMap = WeakMap;
-    }
-
-    if (typeof WeakSet !== "undefined") {
-      data.WeakSet = WeakSet;
-    }
-
-    if (typeof Reflect !== "undefined") {
-      data.Reflect = Reflect;
+    for (var key in ctx) {
+      if (hasOwnProperty.call(data, key)) {
+        delete data[key];
+      }
     }
 
     return new Scope(data, null, "root");
@@ -5711,23 +5723,25 @@ function () {
   };
 
   _proto.initEnvironment = function initEnvironment(ctx) {
-    var superScope = this.getSuperScope();
+    var scope; //init global scope
 
-    if (!(ctx instanceof Scope)) {
-      // replace Interpreter.eval and Interpreter.Function
+    if (ctx instanceof Scope) {
+      scope = ctx;
+    } else {
+      var superScope = this.getSuperScope(ctx); // replace Interpreter.eval and Interpreter.Function
+
       Object.keys(ctx).forEach(function (key) {
         if (ctx[key] === IEval) {
-          ctx[key] = superScope.data.eval;
+          ctx[key] = superScope.data[IEval];
         }
 
         if (ctx[key] === IFunction) {
-          ctx[key] = superScope.data.Function;
+          ctx[key] = superScope.data[IFunction];
         }
       });
-    } //init global scope
+      scope = new Scope(ctx, superScope, "global");
+    }
 
-
-    var scope = ctx instanceof Scope ? ctx : new Scope(ctx, superScope, "global");
     this.rootScope = scope;
     this.currentScope = this.rootScope; //init global context == this
 
@@ -7368,7 +7382,7 @@ function () {
 }();
 
 exports.Interpreter = Interpreter;
-Interpreter.version = "1.1.2";
+Interpreter.version = version;
 Interpreter.eval = IEval;
 Interpreter.Function = IFunction; // alert.call(rootContext, 1);
 // But alert({}, 1); // Illegal invocation

@@ -8,6 +8,8 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
+const version = "1.1.3";
+
 function defineFunctionName<T>(func: T, name: string) {
 	Object.defineProperty(func, "name", {
 		value: name,
@@ -74,6 +76,8 @@ interface CollectDeclarations {
 type ScopeData = {
 	[prop: string]: any;
 	[prop: number]: any;
+	[IEval]?: (code: string, useGlobalScope: boolean) => any;
+	[IFunction]?: (...params: string[]) => (...args: any[]) => any;
 };
 
 class Scope {
@@ -100,6 +104,70 @@ function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope(Object.create(null), parent, name);
 }
 
+const BuildInObjects: ScopeData = {
+	NaN,
+	Infinity,
+	undefined,
+	// null,
+	Object,
+	Array,
+	String,
+	Boolean,
+	Number,
+	Date,
+	RegExp,
+	Error,
+	TypeError,
+	Math,
+	parseInt,
+	parseFloat,
+	isNaN,
+	isFinite,
+	decodeURI,
+	decodeURIComponent,
+	encodeURI,
+	encodeURIComponent,
+	escape,
+	unescape,
+};
+// ES5 Object
+if (typeof JSON !== "undefined") {
+	BuildInObjects.JSON = JSON;
+}
+
+//ES6 Object
+if (typeof Promise !== "undefined") {
+	BuildInObjects.Promise = Promise;
+}
+
+if (typeof Set !== "undefined") {
+	BuildInObjects.Set = Set;
+}
+
+if (typeof Map !== "undefined") {
+	BuildInObjects.Map = Map;
+}
+
+if (typeof Symbol !== "undefined") {
+	BuildInObjects.Symbol = Symbol;
+}
+
+if (typeof Proxy !== "undefined") {
+	BuildInObjects.Proxy = Proxy;
+}
+
+if (typeof WeakMap !== "undefined") {
+	BuildInObjects.WeakMap = WeakMap;
+}
+
+if (typeof WeakSet !== "undefined") {
+	BuildInObjects.WeakSet = WeakSet;
+}
+
+if (typeof Reflect !== "undefined") {
+	BuildInObjects.Reflect = Reflect;
+}
+
 export class Interpreter {
 	context: Context | Scope;
 	// last expression value
@@ -121,7 +189,7 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
-	static readonly version = "1.1.2";
+	static readonly version = version;
 	static readonly eval = IEval;
 	static readonly Function = IFunction;
 	// alert.call(rootContext, 1);
@@ -147,32 +215,9 @@ export class Interpreter {
 		);
 	}
 
-	getSuperScope(): Scope {
-		let data: any = {
-			NaN,
-			Infinity,
-			undefined,
-			// null,
-			Object,
-			Array,
-			String,
-			Boolean,
-			Number,
-			Date,
-			RegExp,
-			Error,
-			TypeError,
-			Math,
-			parseInt,
-			parseFloat,
-			isNaN,
-			isFinite,
-			decodeURI,
-			decodeURIComponent,
-			encodeURI,
-			encodeURIComponent,
-			escape,
-			unescape,
+	getSuperScope(ctx: Context): Scope {
+		let data: ScopeData = {
+			...BuildInObjects,
 		};
 
 		data.eval = (code: string, useGlobalScope: boolean = true): any => {
@@ -203,7 +248,7 @@ export class Interpreter {
 			configurable: false,
 		});
 
-		data.Function = (...params: string[]) => {
+		data.Function = (...params: string[]): ((...args: any[]) => any) => {
 			const code = params.pop();
 			const interpreter = new Interpreter(this.rootScope, this.options);
 
@@ -222,42 +267,13 @@ export class Interpreter {
 			configurable: false,
 		});
 
-		// ES5 Object
-		if (typeof JSON !== "undefined") {
-			data.JSON = JSON;
-		}
+		data[IEval] = data.eval;
+		data[IFunction] = data.Function;
 
-		//ES6 Object
-		if (typeof Promise !== "undefined") {
-			data.Promise = Promise;
-		}
-
-		if (typeof Set !== "undefined") {
-			data.Set = Set;
-		}
-
-		if (typeof Map !== "undefined") {
-			data.Map = Map;
-		}
-
-		if (typeof Symbol !== "undefined") {
-			data.Symbol = Symbol;
-		}
-
-		if (typeof Proxy !== "undefined") {
-			data.Proxy = Proxy;
-		}
-
-		if (typeof WeakMap !== "undefined") {
-			data.WeakMap = WeakMap;
-		}
-
-		if (typeof WeakSet !== "undefined") {
-			data.WeakSet = WeakSet;
-		}
-
-		if (typeof Reflect !== "undefined") {
-			data.Reflect = Reflect;
+		for (let key in ctx) {
+			if (hasOwnProperty.call(data, key)) {
+				delete data[key];
+			}
 		}
 
 		return new Scope(data, null, "root");
@@ -272,21 +288,24 @@ export class Interpreter {
 	}
 
 	protected initEnvironment(ctx: Context | Scope) {
-		const superScope = this.getSuperScope();
-		if (!(ctx instanceof Scope)) {
+		let scope: Scope;
+		//init global scope
+		if (ctx instanceof Scope) {
+			scope = ctx;
+		} else {
+			const superScope = this.getSuperScope(ctx);
 			// replace Interpreter.eval and Interpreter.Function
 			Object.keys(ctx).forEach(key => {
 				if (ctx[key] === IEval) {
-					ctx[key] = superScope.data.eval;
+					ctx[key] = superScope.data[IEval];
 				}
 				if (ctx[key] === IFunction) {
-					ctx[key] = superScope.data.Function;
+					ctx[key] = superScope.data[IFunction];
 				}
 			});
+			scope = new Scope(ctx, superScope, "global");
 		}
 
-		//init global scope
-		const scope = ctx instanceof Scope ? ctx : new Scope(ctx, superScope, "global");
 		this.rootScope = scope;
 		this.currentScope = this.rootScope;
 		//init global context == this

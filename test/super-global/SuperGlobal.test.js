@@ -177,3 +177,43 @@ test("global object", () => {
 		JSON,
 	]);
 });
+
+test("delete global prop -1", () => {
+	const ctx = {
+		JSON,
+	};
+	const a = evaluate(
+		`
+    delete JSON;
+    typeof JSON;
+    `,
+		ctx
+	);
+	expect(a).toEqual("undefined");
+});
+
+test("delete global prop -2", () => {
+	const O_JSON = global.JSON;
+	const JSON_ = {};
+	global.JSON = JSON_;
+	const ctx = global;
+	const a1 = evaluate(`delete JSON; typeof JSON;`, ctx);
+	const a2 = evaluate(
+		`
+     JSON;
+    `,
+		ctx
+	);
+	expect([a1, a2]).toEqual(["undefined", O_JSON]);
+
+	global.JSON = O_JSON;
+});
+
+test("replace super scope prop", () => {
+	const ctx = Object.create({
+		Map: 1,
+	});
+	ctx.Set = 2;
+	const a = evaluate(`delete Map;[Map, Set]`, ctx);
+	expect(a).toEqual([1, 2]);
+});
