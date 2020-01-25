@@ -37,7 +37,7 @@
 		"*.md"
 	],
 	"author": "nobo.zhou@foxmail.com",
-	"license": "ISC",
+	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/bplok20010/eval5/issues"
 	},
