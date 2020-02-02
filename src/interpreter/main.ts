@@ -8,7 +8,10 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
-const version = "1.1.4";
+//TODO:
+//appendCode
+
+const version = "1.1.5";
 
 function defineFunctionName<T>(func: T, name: string) {
 	Object.defineProperty(func, "name", {
@@ -179,9 +182,9 @@ export class Interpreter {
 	rootScope: Scope;
 	currentContext: Context;
 	options: Options;
-	callStack: string[];
-	collectDeclVars: CollectDeclarations = Object.create(null);
-	collectDeclFuncs: CollectDeclarations = Object.create(null);
+	protected callStack: string[];
+	protected collectDeclVars: CollectDeclarations = Object.create(null);
+	protected collectDeclFuncs: CollectDeclarations = Object.create(null);
 	protected isVarDeclMode: boolean = false;
 
 	protected lastExecNode: Node | null = null;
@@ -416,8 +419,7 @@ export class Interpreter {
 	}
 
 	createClosure(node: Node): BaseClosure {
-		const timeout = this.options.timeout;
-		let closure;
+		let closure: BaseClosure;
 
 		switch (node.type) {
 			case "BinaryExpression":
@@ -530,24 +532,15 @@ export class Interpreter {
 				throw this.createInternalThrowError(Messages.NodeTypeSyntaxError, node.type, node);
 		}
 
-		if (timeout && timeout > 0) {
-			return (...args: any[]) => {
-				if (this.checkTimeout()) {
-					throw this.createInternalThrowError(
-						Messages.ExecutionTimeOutError,
-						timeout,
-						node
-					);
-				}
-
-				this.lastExecNode = node;
-
-				return closure(...args);
-			};
-		}
-
 		return (...args: any[]) => {
+			const timeout = this.options.timeout;
+
+			if (timeout && timeout > 0 && this.checkTimeout()) {
+				throw this.createInternalThrowError(Messages.ExecutionTimeOutError, timeout, node);
+			}
+
 			this.lastExecNode = node;
+
 			return closure(...args);
 		};
 	}
@@ -919,7 +912,7 @@ export class Interpreter {
 		const oldDeclFuncs = this.collectDeclFuncs;
 		this.collectDeclVars = Object.create(null);
 		this.collectDeclFuncs = Object.create(null);
-		const name = node.id ? node.id.name : "";
+		const name = node.id ? node.id.name : "" /**anonymous*/;
 		const paramLength = node.params.length;
 
 		const paramsGetter = node.params.map(param => this.createParamNameGetter(param));
