@@ -108,6 +108,10 @@ var interpreter = new Interpreter(window);
 interpreter.evaluate("alert(1+1)");
 ```
 
+### setExecTimeout(timeout: number)
+
+单位：ms
+
 ## evaluate(code: string, ctx?: {})
 
 执行给定的字符串脚本,返回脚本中执行的最后一个表达式结果

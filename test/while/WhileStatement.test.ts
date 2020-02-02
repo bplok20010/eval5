@@ -1,4 +1,4 @@
-const { evaluate } = require("../../lib");
+import { evaluate } from "../../src";
 
 function deepEqual(a, b) {
 	expect(a).toEqual(b);

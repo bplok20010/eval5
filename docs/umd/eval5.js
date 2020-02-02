@@ -299,6 +299,8 @@ module.exports = _setPrototypeOf;
 /***/ (function(module, exports) {
 
 function _typeof(obj) {
+  "@babel/helpers - typeof";
+
   if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
     module.exports = _typeof = function _typeof(obj) {
       return typeof obj;
@@ -5499,7 +5501,9 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.1.4";
+//TODO:
+//appendCode
+var version = "1.1.5";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5859,7 +5863,6 @@ function () {
   _proto.createClosure = function createClosure(node) {
     var _this2 = this;
 
-    var timeout = this.options.timeout;
     var closure;
 
     switch (node.type) {
@@ -6008,18 +6011,13 @@ function () {
         throw this.createInternalThrowError(_messages.Messages.NodeTypeSyntaxError, node.type, node);
     }
 
-    if (timeout && timeout > 0) {
-      return function () {
-        if (_this2.checkTimeout()) {
-          throw _this2.createInternalThrowError(_messages.Messages.ExecutionTimeOutError, timeout, node);
-        }
-
-        _this2.lastExecNode = node;
-        return closure.apply(void 0, arguments);
-      };
-    }
-
     return function () {
+      var timeout = _this2.options.timeout;
+
+      if (timeout && timeout > 0 && _this2.checkTimeout()) {
+        throw _this2.createInternalThrowError(_messages.Messages.ExecutionTimeOutError, timeout, node);
+      }
+
       _this2.lastExecNode = node;
       return closure.apply(void 0, arguments);
     };
@@ -6410,7 +6408,9 @@ function () {
     var oldDeclFuncs = this.collectDeclFuncs;
     this.collectDeclVars = Object.create(null);
     this.collectDeclFuncs = Object.create(null);
-    var name = node.id ? node.id.name : "";
+    var name = node.id ? node.id.name : ""
+    /**anonymous*/
+    ;
     var paramLength = node.params.length;
     var paramsGetter = node.params.map(function (param) {
       return _this11.createParamNameGetter(param);

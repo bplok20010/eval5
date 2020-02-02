@@ -1,19 +1,17 @@
 {
 	"name": "eval5",
-	"version": "1.1.4",
+	"version": "1.1.5",
 	"description": "A JavaScript interpreter, written completely in JavaScript",
-	"main": "lib/index.js",
-	"module": "esm/index.js",
+	"main": "./dist/cjs/index.js",
+	"module": "./dist/esm/index.js",
+	"types": "./lib/index.d.ts",
 	"scripts": {
-		"start": "npm-run-all clean mkdir -p ts:watch babel",
-		"build": "npm-run-all clean mkdir ts cjs esm bundle bundle:min",
-		"mkdir": "mkdirp dest",
-		"clean": "rimraf dest",
-		"ts:watch": "tsc -w",
-		"ts": "tsc",
-		"babel": "transform-es dest -d lib -c -w",
-		"cjs": "transform-es dest -t cjs -d lib -c",
-		"esm": "transform-es dest -t esm -d esm -c",
+		"start": "tsc -w",
+		"build": "run-s clear build:* bundle bundle:min",
+		"build:lib": "tsc",
+		"build:cjs": "babel lib --config-file=./babel.config.js  --out-dir dist/cjs",
+		"build:esm": "babel lib --config-file=./babel.config.esm.js  --out-dir dist/esm",
+		"clear": "rimraf lib dist umd",
 		"bundle": "packez bundle ./src/index.ts -d umd -c",
 		"bundle:min": "packez bundle ./src/index.ts -d umd --state min",
 		"test": "jest"
@@ -33,7 +31,7 @@
 	"files": [
 		"umd",
 		"lib",
-		"esm",
+		"dist",
 		"*.md"
 	],
 	"author": "nobo.zhou@foxmail.com",
@@ -43,21 +41,22 @@
 	},
 	"homepage": "https://github.com/bplok20010/eval5#readme",
 	"devDependencies": {
+		"@babel/cli": "^7.8.4",
 		"@types/jest": "^24.0.25",
+		"babel-preset-packez": "^1.0.0",
 		"jest": "^24.9.0",
-		"mkdirp": "^0.5.1",
 		"npm-run-all": "^4.1.5",
 		"packez": "^3.1.0",
-		"rimraf": "^3.0.0",
-		"transform-es": "^4.6.5"
+		"rimraf": "^3.0.0"
 	},
 	"dependencies": {
+		"@babel/runtime": "^7.8.4",
 		"@types/acorn": "^4.0.5",
 		"@types/estree": "0.0.41",
 		"acorn": "^7.1.0"
 	},
 	"browserslist": [
-		">=0.2%",
+		">=0.25%",
 		"not dead",
 		"not op_mini all",
 		"not Android 4.4.3-4.4.4",

@@ -1,4 +1,4 @@
-const { evaluate } = require("../../lib");
+import { evaluate } from "../../src";
 
 test("ArrayExpression-1", () => {
 	const arr = evaluate(

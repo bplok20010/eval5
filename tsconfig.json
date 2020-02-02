@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"outDir": "dest",
+		"outDir": "lib",
 		"declaration": true,
 		"module": "esnext",
 		"target": "es2016",

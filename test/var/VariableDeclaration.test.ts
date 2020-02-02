@@ -1,4 +1,4 @@
-const { evaluate } = require("../../lib");
+import { evaluate } from "../../src";
 
 test("VariableDeclaration-var1", () => {
 	const a = evaluate(
