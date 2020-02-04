@@ -93,6 +93,7 @@ alert(result.join(', '));
 		</div>
 		<div id="root"></div>
 		<script>
+			eval5.Interpreter.rootContext = window;
 			var interpreter = new eval5.Interpreter(window);
 			function run() {
 				var source = code.value;
