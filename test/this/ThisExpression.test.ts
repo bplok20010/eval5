@@ -16,9 +16,23 @@ function t(){
   `
 	);
 
-	const ctx = {};
+	const ctx: { [x: string]: any } = {};
 
 	func.call(ctx);
 
 	deepEqual(ctx.name, "hello");
+});
+
+test("global this", () => {
+	const ctx = {
+		test: 1,
+	};
+	const a = evaluate(
+		`
+        this
+  `,
+		ctx
+	);
+
+	expect(a === ctx).toEqual(true);
 });

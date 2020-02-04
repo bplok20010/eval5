@@ -194,7 +194,7 @@ test("delete global prop -1", () => {
 
 test("delete global prop -2", () => {
 	const O_JSON = global.JSON;
-	const JSON_ = {};
+	const JSON_ = {} as JSON;
 	global.JSON = JSON_;
 	const ctx = global;
 	const a1 = evaluate(`delete JSON; typeof JSON;`, ctx);

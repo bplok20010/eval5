@@ -1,4 +1,4 @@
-const { evaluate, Interpreter } = require("../../lib");
+import { evaluate, Interpreter } from "../../src";
 
 function deepEqual(a, b) {
 	expect(a).toEqual(b);
@@ -251,7 +251,8 @@ test("function call default context", () => {
 });
 
 test("function overlap1", () => {
-	global.overlap1 = function() {
+	const ctx: { [x: string]: any } = {};
+	ctx.overlap1 = function() {
 		return 1;
 	};
 
@@ -262,7 +263,7 @@ test("function overlap1", () => {
         }
         overlap1();
     `,
-		global
+		ctx
 	);
 
 	deepEqual(a, 2);
