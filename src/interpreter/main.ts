@@ -281,7 +281,7 @@ export class Interpreter {
 			}
 		});
 
-		return new Scope(data, null, "root");
+		return new Scope(data, null, "superRoot");
 	}
 
 	protected setCurrentContext(ctx: Context) {
@@ -308,7 +308,7 @@ export class Interpreter {
 					ctx[key] = superScope.data[IFunction];
 				}
 			});
-			scope = new Scope(ctx, superScope, "global");
+			scope = new Scope(ctx, superScope, "root");
 		}
 
 		this.rootScope = scope;
