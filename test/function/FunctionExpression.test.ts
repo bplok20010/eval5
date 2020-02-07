@@ -433,3 +433,36 @@ test("function .call -5", () => {
 
 	deepEqual(a, undefined);
 });
+
+test("function toString -1", () => {
+	const a = evaluate(
+		`
+        function test(a,b,c,d){return  this;}
+
+        test
+    `,
+		{}
+	);
+
+	expect(a.toString()).toEqual(`function test(a,b,c,d){return  this;}`);
+});
+
+test("function toString -2", () => {
+	const interpreter = new Interpreter({});
+
+	const a = interpreter.evaluate(
+		`
+        function test(a,b,c,d){return  this;}
+
+        test
+    `
+	);
+
+	interpreter.evaluate(
+		`
+        test
+    `
+	);
+
+	expect(a.toString()).toEqual(`function test(a,b,c,d){return  this;}`);
+});

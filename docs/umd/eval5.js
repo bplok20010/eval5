@@ -5501,9 +5501,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-//TODO:
-//appendCode
-var version = "1.1.5";
+var version = "1.2.0";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5635,6 +5633,7 @@ function () {
       options = {};
     }
 
+    this.sourceList = [];
     this.collectDeclVars = Object.create(null);
     this.collectDeclFuncs = Object.create(null);
     this.isVarDeclMode = false;
@@ -5645,9 +5644,47 @@ function () {
     };
     this.context = context;
     this.callStack = [];
+    this.initEnvironment(context);
   }
 
   var _proto = Interpreter.prototype;
+
+  _proto.initEnvironment = function initEnvironment(ctx) {
+    var scope; //init global scope
+
+    if (ctx instanceof Scope) {
+      scope = ctx;
+    } else {
+      var superScope = this.getSuperScope(ctx); // replace Interpreter.eval and Interpreter.Function
+
+      Object.keys(ctx).forEach(function (key) {
+        if (ctx[key] === IEval) {
+          ctx[key] = superScope.data[IEval];
+        }
+
+        if (ctx[key] === IFunction) {
+          ctx[key] = superScope.data[IFunction];
+        }
+      });
+      scope = new Scope(ctx, superScope, "root");
+    }
+
+    this.rootScope = scope;
+    this.currentScope = this.rootScope; //init global context == this
+
+    this.rootContext = scope.data;
+    this.currentContext = scope.data; // collect var/function declare
+
+    this.collectDeclVars = Object.create(null);
+    this.collectDeclFuncs = Object.create(null);
+    this.execStartTime = Date.now();
+    this.execEndTime = this.execStartTime;
+    var initEnv = this.options.initEnv;
+
+    if (initEnv) {
+      initEnv(this);
+    }
+  };
 
   _proto.isInterruptThrow = function isInterruptThrow(err) {
     return err instanceof _messages.InterruptThrowError || err instanceof _messages.InterruptThrowReferenceError || err instanceof _messages.InterruptThrowSyntaxError;
@@ -5714,7 +5751,7 @@ function () {
         delete data[key];
       }
     });
-    return new Scope(data, null, "root");
+    return new Scope(data, null, "superRoot");
   };
 
   _proto.setCurrentContext = function setCurrentContext(ctx) {
@@ -5725,72 +5762,31 @@ function () {
     this.currentScope = scope;
   };
 
-  _proto.initEnvironment = function initEnvironment(ctx) {
-    var scope; //init global scope
-
-    if (ctx instanceof Scope) {
-      scope = ctx;
-    } else {
-      var superScope = this.getSuperScope(ctx); // replace Interpreter.eval and Interpreter.Function
-
-      Object.keys(ctx).forEach(function (key) {
-        if (ctx[key] === IEval) {
-          ctx[key] = superScope.data[IEval];
-        }
-
-        if (ctx[key] === IFunction) {
-          ctx[key] = superScope.data[IFunction];
-        }
-      });
-      scope = new Scope(ctx, superScope, "global");
-    }
-
-    this.rootScope = scope;
-    this.currentScope = this.rootScope; //init global context == this
-
-    this.rootContext = scope.data;
-    this.currentContext = scope.data; // collect var/function declare
-
-    this.collectDeclVars = Object.create(null);
-    this.collectDeclFuncs = Object.create(null);
-    this.execStartTime = Date.now();
-    this.execEndTime = this.execStartTime;
-    var initEnv = this.options.initEnv;
-
-    if (initEnv) {
-      initEnv(this);
-    }
-  };
-
-  _proto.evaluate = function evaluate(code, ctx) {
+  _proto.evaluate = function evaluate(code) {
     if (code === void 0) {
       code = "";
     }
 
-    if (ctx === void 0) {
-      ctx = this.context;
-    }
-
     var node;
+    if (!code) return;
     node = (0, _acorn.parse)(code, {
       ranges: true,
       locations: true
     });
-    return this.evaluateNode(node, code, ctx);
+    return this.evaluateNode(node, code);
   };
 
-  _proto.evaluateNode = function evaluateNode(node, source, ctx) {
+  _proto.appendCode = function appendCode(code) {
+    return this.evaluate(code);
+  };
+
+  _proto.evaluateNode = function evaluateNode(node, source) {
     if (source === void 0) {
       source = "";
     }
 
-    if (ctx === void 0) {
-      ctx = this.context;
-    }
-
-    this.initEnvironment(ctx);
     this.source = source;
-    this.ast = node;
+    this.sourceList.push(source);
     var bodyClosure = this.createClosure(node); // add declares to data
 
     this.addDeclarationsToScope(this.collectDeclVars, this.collectDeclFuncs, this.getCurrentScope()); // reset
@@ -6317,6 +6313,7 @@ function () {
       case "MemberExpression":
         var objectGetter = this.createClosure(node.object);
         var keyGetter = this.createMemberKeyGetter(node);
+        var source = this.source;
         return function () {
           var obj = objectGetter();
           var key = keyGetter();
@@ -6324,8 +6321,7 @@ function () {
           var func = _this9.safeObjectGet(obj, key, node);
 
           if (!func || !isFunction(func)) {
-            var name = _this9.source.slice(node.start, node.end);
-
+            var name = source.slice(node.start, node.end);
             throw _this9.createInternalThrowError(_messages.Messages.FunctionUndefinedReferenceError, name, node);
           }
 
@@ -6404,6 +6400,7 @@ function () {
     var _this11 = this;
 
     var self = this;
+    var source = this.source;
     var oldDeclVars = this.collectDeclVars;
     var oldDeclFuncs = this.collectDeclFuncs;
     this.collectDeclVars = Object.create(null);
@@ -6473,7 +6470,7 @@ function () {
       });
       Object.defineProperty(func, "toString", {
         value: function value() {
-          return _this11.source.slice(node.start, node.end);
+          return source.slice(node.start, node.end);
         },
         writable: true,
         configurable: true,
@@ -6481,7 +6478,7 @@ function () {
       });
       Object.defineProperty(func, "valueOf", {
         value: function value() {
-          return _this11.source.slice(node.start, node.end);
+          return source.slice(node.start, node.end);
         },
         writable: true,
         configurable: true,
@@ -6495,6 +6492,7 @@ function () {
   _proto.newExpressionHandler = function newExpressionHandler(node) {
     var _this12 = this;
 
+    var source = this.source;
     var expression = this.createClosure(node.callee);
     var args = node.arguments.map(function (arg) {
       return _this12.createClosure(arg);
@@ -6504,9 +6502,7 @@ function () {
 
       if (!isFunction(construct)) {
         var callee = node.callee;
-
-        var name = _this12.source.slice(callee.start, callee.end);
-
+        var name = source.slice(callee.start, callee.end);
         throw _this12.createInternalThrowError(_messages.Messages.IsNotConstructor, name, node);
       }
 

@@ -8,10 +8,7 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
-//TODO:
-//appendCode
-
-const version = "1.1.5";
+const version = "1.2.0";
 
 function defineFunctionName<T>(func: T, name: string) {
 	Object.defineProperty(func, "name", {
@@ -172,16 +169,16 @@ if (typeof Reflect !== "undefined") {
 }
 
 export class Interpreter {
-	context: Context | Scope;
 	// last expression value
 	value: any;
-	rootContext: Context;
-	ast: ESTree.Program;
-	source: string;
-	currentScope: Scope;
-	rootScope: Scope;
-	currentContext: Context;
-	options: Options;
+	protected context: Context | Scope;
+	protected rootContext: Context;
+	protected source: string;
+	protected sourceList: string[] = [];
+	protected currentScope: Scope;
+	protected rootScope: Scope;
+	protected currentContext: Context;
+	protected options: Options;
 	protected callStack: string[];
 	protected collectDeclVars: CollectDeclarations = Object.create(null);
 	protected collectDeclFuncs: CollectDeclarations = Object.create(null);
@@ -208,6 +205,45 @@ export class Interpreter {
 
 		this.context = context;
 		this.callStack = [];
+
+		this.initEnvironment(context);
+	}
+
+	protected initEnvironment(ctx: Context | Scope) {
+		let scope: Scope;
+		//init global scope
+		if (ctx instanceof Scope) {
+			scope = ctx;
+		} else {
+			const superScope = this.getSuperScope(ctx);
+			// replace Interpreter.eval and Interpreter.Function
+			Object.keys(ctx).forEach(key => {
+				if (ctx[key] === IEval) {
+					ctx[key] = superScope.data[IEval];
+				}
+				if (ctx[key] === IFunction) {
+					ctx[key] = superScope.data[IFunction];
+				}
+			});
+			scope = new Scope(ctx, superScope, "root");
+		}
+
+		this.rootScope = scope;
+		this.currentScope = this.rootScope;
+		//init global context == this
+		this.rootContext = scope.data;
+		this.currentContext = scope.data;
+		// collect var/function declare
+		this.collectDeclVars = Object.create(null);
+		this.collectDeclFuncs = Object.create(null);
+
+		this.execStartTime = Date.now();
+		this.execEndTime = this.execStartTime;
+
+		const initEnv = this.options.initEnv;
+		if (initEnv) {
+			initEnv(this);
+		}
 	}
 
 	isInterruptThrow<T>(err: T): boolean {
@@ -292,59 +328,26 @@ export class Interpreter {
 		this.currentScope = scope;
 	}
 
-	protected initEnvironment(ctx: Context | Scope) {
-		let scope: Scope;
-		//init global scope
-		if (ctx instanceof Scope) {
-			scope = ctx;
-		} else {
-			const superScope = this.getSuperScope(ctx);
-			// replace Interpreter.eval and Interpreter.Function
-			Object.keys(ctx).forEach(key => {
-				if (ctx[key] === IEval) {
-					ctx[key] = superScope.data[IEval];
-				}
-				if (ctx[key] === IFunction) {
-					ctx[key] = superScope.data[IFunction];
-				}
-			});
-			scope = new Scope(ctx, superScope, "root");
-		}
-
-		this.rootScope = scope;
-		this.currentScope = this.rootScope;
-		//init global context == this
-		this.rootContext = scope.data;
-		this.currentContext = scope.data;
-		// collect var/function declare
-		this.collectDeclVars = Object.create(null);
-		this.collectDeclFuncs = Object.create(null);
-
-		this.execStartTime = Date.now();
-		this.execEndTime = this.execStartTime;
-
-		const initEnv = this.options.initEnv;
-		if (initEnv) {
-			initEnv(this);
-		}
-	}
-
-	evaluate(code: string = "", ctx: Context = this.context) {
+	evaluate(code: string = "") {
 		let node: unknown;
+
+		if (!code) return;
 
 		node = parse(code, {
 			ranges: true,
 			locations: true,
 		});
 
-		return this.evaluateNode(node as ESTree.Program, code, ctx);
+		return this.evaluateNode(node as ESTree.Program, code);
 	}
 
-	evaluateNode(node: ESTree.Program, source: string = "", ctx: Context = this.context) {
-		this.initEnvironment(ctx);
+	appendCode(code: string) {
+		return this.evaluate(code);
+	}
 
+	evaluateNode(node: ESTree.Program, source: string = "") {
 		this.source = source;
-		this.ast = node;
+		this.sourceList.push(source);
 
 		const bodyClosure = this.createClosure(node);
 
@@ -824,13 +827,15 @@ export class Interpreter {
 			case "MemberExpression":
 				const objectGetter = this.createClosure(node.object);
 				const keyGetter = this.createMemberKeyGetter(node);
+				const source = this.source;
+
 				return () => {
 					const obj = objectGetter();
 					const key = keyGetter();
 					const func = this.safeObjectGet(obj, key, node);
 
 					if (!func || !isFunction(func)) {
-						const name = this.source.slice(node.start, node.end);
+						const name = source.slice(node.start, node.end);
 						throw this.createInternalThrowError(
 							Messages.FunctionUndefinedReferenceError,
 							name,
@@ -908,6 +913,7 @@ export class Interpreter {
 			| (ESTree.FunctionDeclaration & { start?: number; end?: number })
 	): BaseClosure {
 		const self = this;
+		const source = this.source;
 		const oldDeclVars = this.collectDeclVars;
 		const oldDeclFuncs = this.collectDeclFuncs;
 		this.collectDeclVars = Object.create(null);
@@ -982,7 +988,7 @@ export class Interpreter {
 
 			Object.defineProperty(func, "toString", {
 				value: () => {
-					return this.source.slice(node.start, node.end);
+					return source.slice(node.start, node.end);
 				},
 				writable: true,
 				configurable: true,
@@ -990,7 +996,7 @@ export class Interpreter {
 			});
 			Object.defineProperty(func, "valueOf", {
 				value: () => {
-					return this.source.slice(node.start, node.end);
+					return source.slice(node.start, node.end);
 				},
 				writable: true,
 				configurable: true,
@@ -1003,6 +1009,7 @@ export class Interpreter {
 
 	// new Ctrl()
 	newExpressionHandler(node: ESTree.NewExpression): BaseClosure {
+		const source = this.source;
 		const expression = this.createClosure(node.callee);
 		const args = node.arguments.map(arg => this.createClosure(arg));
 
@@ -1011,7 +1018,7 @@ export class Interpreter {
 
 			if (!isFunction(construct)) {
 				const callee = <ESTree.Expression & { start?: number; end?: number }>node.callee;
-				const name = this.source.slice(callee.start, callee.end);
+				const name = source.slice(callee.start, callee.end);
 
 				throw this.createInternalThrowError(Messages.IsNotConstructor, name, node);
 			}

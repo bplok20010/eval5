@@ -214,6 +214,13 @@ test("replace super scope prop", () => {
 		Map: 1,
 	});
 	ctx.Set = 2;
-	const a = evaluate(`delete Map;[Map, Set]`, ctx);
-	expect(a).toEqual([1, 2]);
+	ctx.Promise = 3;
+	const a = evaluate(`delete Map;delete Promise;[Map, Set, typeof Promise]`, ctx);
+	expect(a).toEqual([1, 2, "undefined"]);
+});
+
+test("replace super scope prop", () => {
+	const ctx = Object.create(null);
+	evaluate(`d = 1`, ctx);
+	expect(ctx).toEqual({ d: 1 });
 });

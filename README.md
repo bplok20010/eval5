@@ -99,7 +99,7 @@ interpreter.evaluate(`
 var interpreter = new Interpreter(window);
 ```
 
-### `evaluate`(code: string, ctx?: {}): any
+### `evaluate`(code: string): any
 
 返回脚本中执行的最后一个表达式结果
 
@@ -107,6 +107,10 @@ var interpreter = new Interpreter(window);
 var interpreter = new Interpreter(window);
 interpreter.evaluate("alert(1+1)");
 ```
+
+### appendCode(code: string): any
+
+作用同`evaluate`
 
 ### setExecTimeout(timeout: number)
 
