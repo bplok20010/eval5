@@ -91,6 +91,31 @@ interpreter.evaluate(`
 
 > 除非不支持`Function`的环境，否则不建议使用
 
+### static `ecmaVersion`
+
+可选值： `3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020`
+
+默认： `5`
+
+> 注：eval5 只支持 es5 语法，如果将 ecmaVersion 设为高版本尽管能编译通过，但解释时可能会报错或得到错误结果。
+
+例如，如果设`ecmaVersion=6`或更高，以下代码可以正常解析执行，但结果非预期：
+
+```
+const a = [];
+for(let i = 0; i < 10; i++) {
+    a.push(function(){
+        console.log(i);
+    })
+}
+
+...
+
+// output: 10 10 10...
+```
+
+**原因在于解释器会忽略`const` `let`类型，都当作`var`处理。**
+
 ### `constructor`(ctx: {}, options?: { timeout?: number})
 
 构造函数
@@ -115,6 +140,8 @@ interpreter.evaluate("alert(1+1)");
 ### setExecTimeout(timeout: number)
 
 单位：ms
+
+获取`evaluate`的执行时间
 
 ## evaluate(code: string, ctx?: {})
 

@@ -49,6 +49,13 @@
 				right: 0;
 				top: 0;
 			}
+
+			#log {
+				width: 60%;
+				margin: 0 auto;
+				padding: 15px 0;
+				color: red;
+			}
 		</style>
 	</head>
 	<body>
@@ -98,6 +105,7 @@ alert(result.join(', '));
 			>
 		</div>
 		<div id="root"></div>
+		<div id="log"></div>
 		<script>
 			eval5.Interpreter.rootContext = window;
 			var interpreter = new eval5.Interpreter(window);
@@ -106,8 +114,10 @@ alert(result.join(', '));
 
 				try {
 					interpreter.evaluate(source);
+					log.innerHTML = "";
 				} catch (e) {
 					console.log(e);
+					log.innerHTML = e.message;
 				}
 			}
 		</script>

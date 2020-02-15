@@ -7,7 +7,7 @@ function deepEqual(a, b) {
 test("basic without flags", () => {
 	const func = evaluate(
 		`
-const reg = /^hello/;
+var reg = /^hello/;
 
 function isSayHi(word) {
   return reg.test(word);
@@ -24,7 +24,7 @@ function isSayHi(word) {
 test("with flags", () => {
 	const func = evaluate(
 		`
-const reg = /^hello/i;
+var reg = /^hello/i;
 
 function isSayHi(word) {
   return reg.test(word);
@@ -41,7 +41,7 @@ function isSayHi(word) {
 test("with multiple flags", () => {
 	const func = evaluate(
 		`
-const reg = /^hello/im;
+var reg = /^hello/im;
 
 function isSayHi(word) {
   return reg.test(word);

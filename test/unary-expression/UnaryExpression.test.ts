@@ -50,7 +50,7 @@ test("void", () => {
 test("delete", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   a: 123
 };
 
@@ -67,18 +67,18 @@ delete obj.a;
 test("!", () => {
 	const isTrue = evaluate(
 		`
-const isTrue = !false;
+var isTrue = !false;
 
  isTrue;
   `
 	);
-	deepEqual(true,isTrue);
+	deepEqual(true, isTrue);
 });
 
 test("+", () => {
 	const num = evaluate(
 		`
-const num = +("123");
+var num = +("123");
 
  num;
   `
@@ -89,7 +89,7 @@ const num = +("123");
 test("-", () => {
 	const num = evaluate(
 		`
-const num = -("123");
+var num = -("123");
 
  num;
   `
@@ -100,7 +100,7 @@ const num = -("123");
 test("~", () => {
 	const num = evaluate(
 		`
-const num = ~("123");
+var num = ~("123");
 
  num;
   `

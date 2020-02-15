@@ -8,7 +8,7 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
-const version = "1.2.0";
+const version = "1.3.0";
 
 function defineFunctionName<T>(func: T, name: string) {
 	Object.defineProperty(func, "name", {
@@ -64,7 +64,10 @@ class ContinueLabel {
 	}
 }
 
+type ECMA_VERSION = 3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
+
 interface Options {
+	ecmaVersion?: ECMA_VERSION;
 	timeout?: number;
 	initEnv?: (inst: Interpreter) => void;
 }
@@ -186,12 +189,14 @@ export class Interpreter {
 
 	protected lastExecNode: Node | null = null;
 
+	protected isRunning: boolean = false;
 	protected execStartTime: number;
 	protected execEndTime: number;
 
 	static readonly version = version;
 	static readonly eval = IEval;
 	static readonly Function = IFunction;
+	static ecmaVersion: ECMA_VERSION = 5;
 	// alert.call(rootContext, 1);
 	// But alert({}, 1); // Illegal invocation
 	static rootContext = void 0;
@@ -199,6 +204,7 @@ export class Interpreter {
 
 	constructor(context: Context | Scope = Interpreter.global, options: Options = {}) {
 		this.options = {
+			ecmaVersion: options.ecmaVersion || Interpreter.ecmaVersion,
 			timeout: options.timeout || 0,
 			initEnv: options.initEnv,
 		};
@@ -336,6 +342,7 @@ export class Interpreter {
 		node = parse(code, {
 			ranges: true,
 			locations: true,
+			ecmaVersion: this.options.ecmaVersion || Interpreter.ecmaVersion,
 		});
 
 		return this.evaluateNode(node as ESTree.Program, code);
@@ -348,6 +355,8 @@ export class Interpreter {
 	evaluateNode(node: ESTree.Program, source: string = "") {
 		this.source = source;
 		this.sourceList.push(source);
+
+		this.isRunning = true;
 
 		const bodyClosure = this.createClosure(node);
 
@@ -370,6 +379,8 @@ export class Interpreter {
 			this.execEndTime = Date.now();
 		}
 
+		this.isRunning = false;
+
 		return this.getValue();
 	}
 
@@ -377,10 +388,12 @@ export class Interpreter {
 		return this.execEndTime - this.execStartTime;
 	}
 
-	createErrorMessage(msg: MessageItem, value: string | number, node?: Node): string {
+	createErrorMessage(msg: MessageItem, value: string | number, node?: Node | null): string {
 		let message = msg[1].replace("%0", String(value));
 
-		message += this.getNodePosition(node || this.lastExecNode);
+		if (node !== null) {
+			message += this.getNodePosition(node || this.lastExecNode);
+		}
 
 		return message;
 	}
@@ -393,7 +406,11 @@ export class Interpreter {
 		return this.createError(message, error);
 	}
 
-	createInternalThrowError<T extends MessageItem>(msg: T, value: string | number, node?: Node) {
+	createInternalThrowError<T extends MessageItem>(
+		msg: T,
+		value: string | number,
+		node?: Node | null
+	) {
 		return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
 	}
 
@@ -402,6 +419,8 @@ export class Interpreter {
 	}
 
 	protected checkTimeout() {
+		if (!this.isRunning) return false;
+
 		const timeout = this.options.timeout || 0;
 
 		const now = Date.now();
@@ -539,7 +558,7 @@ export class Interpreter {
 			const timeout = this.options.timeout;
 
 			if (timeout && timeout > 0 && this.checkTimeout()) {
-				throw this.createInternalThrowError(Messages.ExecutionTimeOutError, timeout, node);
+				throw this.createInternalThrowError(Messages.ExecutionTimeOutError, timeout, null);
 			}
 
 			this.lastExecNode = node;

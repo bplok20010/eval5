@@ -7,8 +7,8 @@ function deepEqual(a, b) {
 test("ForStatement-1", () => {
 	const obj = evaluate(
 		`
-const obj = {num: 0};
-for (let i = 0; i < 3; i++) {
+var obj = {num: 0};
+for (var i = 0; i < 3; i++) {
   obj.num++;
 }
 
@@ -23,7 +23,7 @@ for (let i = 0; i < 3; i++) {
 test("ForStatement-2", () => {
 	const obj = evaluate(
 		`
-const obj = {num: 0};
+var obj = {num: 0};
 for (;;) {
   obj.num++;
   if (obj.num >= 3) {

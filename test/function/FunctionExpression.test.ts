@@ -76,7 +76,8 @@ func;
 });
 
 test("FunctionDeclaration-name", () => {
-	const person = evaluate(
+	const inst = new Interpreter({}, { ecmaVersion: 6 });
+	const person = inst.evaluate(
 		`
 var person = {
   sayName() {
@@ -176,10 +177,11 @@ var d = {
 });
 
 test("object function scope -3", () => {
-	const a = evaluate(
+	const inst = new Interpreter({}, { ecmaVersion: 6 });
+	const a = inst.evaluate(
 		`
 var d = {
-     fy() {
+    fy() {
         return typeof fy
     }
 };

@@ -52,7 +52,7 @@ for (var attr in obj) {
   }
 }
 
- d = {attr, index};
+ d = {attr: attr, index: index};
   `
 	);
 
@@ -86,7 +86,7 @@ for (var attr in obj) {
   }
 }
 
- d = {attr, index,m};
+ d = {attr: attr, index:index,m: m};
   `
 	);
 

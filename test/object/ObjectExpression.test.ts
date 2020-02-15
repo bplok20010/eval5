@@ -1,4 +1,4 @@
-import { evaluate } from "../../src";
+import { evaluate, Interpreter } from "../../src";
 
 function deepEqual(a, b) {
 	expect(a).toEqual(b);
@@ -7,7 +7,7 @@ function deepEqual(a, b) {
 test("basic", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   i: 0
 };
 
@@ -19,10 +19,28 @@ const obj = {
 	deepEqual(obj.i, 0);
 });
 
-test("object with method", () => {
+test("object with method -1", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
+  i: 0,
+  get: function(){
+    return this.i;
+  }
+};
+
+ obj;
+  `
+	);
+	deepEqual(obj.i, 0);
+	deepEqual(obj.get(), obj.i);
+});
+
+test("object with method -2", () => {
+	const inst = new Interpreter({}, { ecmaVersion: 6 });
+	const obj = inst.evaluate(
+		`
+var obj = {
   i: 0,
   get(){
     return this.i;
@@ -39,7 +57,7 @@ const obj = {
 test("object with getter method", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   i: 0,
   get value(){
     return this.i;
@@ -56,7 +74,7 @@ const obj = {
 test("object with setter method", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   i: 0,
   set value(val){
     this.i = val;
@@ -72,9 +90,10 @@ const obj = {
 });
 
 test("object function name", () => {
-	const a = evaluate(
+	const inst = new Interpreter({}, { ecmaVersion: 6 });
+	const a = inst.evaluate(
 		`
-const obj = {
+var obj = {
    v1(){
   },
   

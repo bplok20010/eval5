@@ -3,7 +3,7 @@ import { evaluate } from "../../src";
 test("ArrayExpression-1", () => {
 	const arr = evaluate(
 		`
-const arr = [1, 2, 3];
+var arr = [1, 2, 3];
 arr.push(4);
 arr;
   `
@@ -17,7 +17,7 @@ arr;
 test("ArrayExpression-2", () => {
 	const arr = evaluate(
 		`
-const arr = [,,1,2,3,,,];
+var arr = [,,1,2,3,,,];
 arr.push(4);
 arr;
   `
@@ -34,7 +34,7 @@ function _t(){
     return 1 
 }
 var a = 1;
-const arr = [a++, _t() + 2, 3  + 3, undefined];
+var arr = [a++, _t() + 2, 3  + 3, undefined];
 arr.push(4);
 arr;
   `
@@ -52,7 +52,7 @@ function _t(){
     return 1 
 }
 var a = 1;
-const arr = [1,2,null,undefined];
+var arr = [1,2,null,undefined];
 arr.push(4);
 arr;
   `

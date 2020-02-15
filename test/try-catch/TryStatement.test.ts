@@ -7,7 +7,7 @@ function deepEqual(a, b) {
 test("TryStatement", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   runTry: false,
   runError: false
 };
@@ -29,7 +29,7 @@ try {
 test("TryStatement-with-throw", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   runTry: false,
   runError: false
 };
@@ -52,7 +52,7 @@ try {
 test("TryStatement with finally", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   runTry: false,
   runError: false,
   runFinally: false
@@ -78,8 +78,8 @@ try {
 test("continue in try block nest loop", () => {
 	const arr = evaluate(
 		`
-const result = [];
-let i = 0;
+var result = [];
+var i = 0;
 
 while(i<5){
   i++;
@@ -102,8 +102,8 @@ while(i<5){
 test("continue in catch block nest loop", () => {
 	const arr = evaluate(
 		`
-const result = [];
-let i = 0;
+var result = [];
+var i = 0;
 
 while(i<5){
   i++;
@@ -127,8 +127,8 @@ while(i<5){
 test("continue in finally block nest loop", () => {
 	const arr = evaluate(
 		`
-const result = [];
-let i = 0;
+var result = [];
+var i = 0;
 
 while(i<5){
   i++;
@@ -210,4 +210,68 @@ test("try-catch value returns -1", () => {
         } catch(e){}
     `);
 	expect(a).toEqual(undefined);
+});
+
+test("try-catch returns sequence -1", () => {
+	const a = evaluate(`
+        function test(){
+            try {
+                throw 1
+            } catch(e){
+                return 2
+            }
+        }
+        test();
+    `);
+
+	expect(a).toEqual(2);
+});
+
+test("try-catch returns sequence -2", () => {
+	const a = evaluate(`
+        function test(){
+            try {
+                throw 1
+            } catch(e){
+                return 2
+            } finally {
+                return 3
+            }
+        }
+        test();
+    `);
+
+	expect(a).toEqual(3);
+});
+
+test("try-catch returns sequence -3", () => {
+	const a = evaluate(`
+        function test(){
+            try {
+                return 1
+            } catch(e){
+                return 2
+            } finally {
+                return 3
+            }
+        }
+        test();
+    `);
+
+	expect(a).toEqual(3);
+});
+
+test("try-catch returns sequence -4", () => {
+	const a = evaluate(`
+        function test(){
+            try {
+                return 1
+            } catch(e){
+                return 2
+            }
+        }
+        test();
+    `);
+
+	expect(a).toEqual(1);
 });

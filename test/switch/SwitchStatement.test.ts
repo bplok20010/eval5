@@ -56,8 +56,8 @@ test("SwitchStatement with continue", () => {
 	const func = evaluate(
 		`
 function t3(type) {
-  const result = [];
-  let i = 0;
+  var result = [];
+  var i = 0;
   while (i < 5) {
     i++;
     switch (type + "") {

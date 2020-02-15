@@ -7,7 +7,7 @@ function deepEqual(a, b) {
 test("basic", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   i: 0
 };
 do {
@@ -15,18 +15,17 @@ do {
 } while (obj.i < 3);
 
  obj;
-  `,
-		
+  `
 	);
 
-	deepEqual(true,typeof obj.i === "number");
+	deepEqual(true, typeof obj.i === "number");
 	deepEqual(obj.i, 3);
 });
 
 test("break in do block", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   i: 0
 };
 do {
@@ -35,8 +34,7 @@ do {
 } while (obj.i < 3);
 
  obj;
-  `,
-		
+  `
 	);
 	deepEqual(obj.i, 1);
 });
@@ -45,7 +43,7 @@ test("do-while in function with return, it should cross block scope", () => {
 	const get = evaluate(
 		`
 function get() {
-  const obj = {
+  var obj = {
     i: 0
   };
   do {
@@ -55,8 +53,7 @@ function get() {
 }
 
   get;
-  `,
-		
+  `
 	);
 	deepEqual(get(), { i: 1 });
 });

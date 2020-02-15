@@ -1,7 +1,8 @@
 import { Interpreter } from "./interpreter/main";
 import { VMContext, CompileOptions, ScriptOptions } from "./types";
 
-// class Context {}
+// TODO:
+// add tests
 
 export function createContext(ctx: VMContext = Object.create(null)): VMContext {
 	return ctx;
@@ -22,20 +23,17 @@ export function compileFunction(
     `;
 
 	const interpreter = new Interpreter(ctx, {
+		ecmaVersion: options.ecmaVersion,
 		timeout,
 	});
 
-	interpreter.evaluate(wrapCode);
-
-	return interpreter.getValue();
+	return interpreter.evaluate(wrapCode);
 }
 
 export function runInContext(code: string, ctx?: VMContext, options?: ScriptOptions): any {
 	const interpreter = new Interpreter(ctx, options);
 
-	interpreter.evaluate(code);
-
-	return interpreter.getValue();
+	return interpreter.evaluate(code);
 }
 
 export const runInNewContext = runInContext;

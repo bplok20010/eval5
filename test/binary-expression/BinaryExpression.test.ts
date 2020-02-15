@@ -1,4 +1,4 @@
-import { evaluate } from "../../src";
+import { evaluate, Interpreter } from "../../src";
 
 function deepEqual(a, b) {
 	expect(a).toEqual(b);
@@ -56,7 +56,8 @@ test("*", () => {
 });
 
 test("**", () => {
-	const num = evaluate(
+	const inst = new Interpreter({}, { ecmaVersion: 10 });
+	const num = inst.evaluate(
 		`
  2 ** 3;
   `
@@ -77,7 +78,8 @@ a *= 2;
 });
 
 test("**=", () => {
-	const num = evaluate(
+	const inst = new Interpreter({}, { ecmaVersion: 10 });
+	const num = inst.evaluate(
 		`
 var a = 2;
 var b = 3;

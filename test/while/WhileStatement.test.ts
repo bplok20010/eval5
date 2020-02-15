@@ -7,7 +7,7 @@ function deepEqual(a, b) {
 test("WhileStatement-1", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   i: 0
 };
 
@@ -19,14 +19,14 @@ while (obj.i < 3) {
   `
 	);
 
-	deepEqual(true,typeof obj.i === "number");
+	deepEqual(true, typeof obj.i === "number");
 	deepEqual(obj.i, 3);
 });
 
 test("WhileStatement-2", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   i: 0
 };
 
@@ -41,6 +41,6 @@ while (true) {
   `
 	);
 
-	deepEqual(true,typeof obj.i === "number");
+	deepEqual(true, typeof obj.i === "number");
 	deepEqual(obj.i, 3);
 });

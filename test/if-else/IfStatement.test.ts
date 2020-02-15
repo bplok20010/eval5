@@ -7,7 +7,7 @@ function deepEqual(a, b) {
 test("if", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   isTrue: false
 };
 
@@ -26,7 +26,7 @@ if (true){
 test("if-else", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   isTrue: false
 };
 
@@ -47,7 +47,7 @@ if (false){
 test("if else-else if", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   block: ''
 };
 
@@ -67,7 +67,7 @@ if (false){
 test("if-else-else if-else", () => {
 	const obj = evaluate(
 		`
-const obj = {
+var obj = {
   block: ''
 };
 

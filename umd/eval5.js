@@ -5421,8 +5421,8 @@ exports.default = void 0;
 
 var _vm = __webpack_require__(/*! ./vm */ "./src/vm.ts");
 
-var _default = function _default(code, ctx) {
-  return (0, _vm.runInContext)(code, ctx);
+var _default = function _default(code, ctx, options) {
+  return (0, _vm.runInContext)(code, ctx, options);
 };
 
 exports.default = _default;
@@ -5501,7 +5501,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.2.0";
+var version = "1.3.0";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5638,7 +5638,9 @@ function () {
     this.collectDeclFuncs = Object.create(null);
     this.isVarDeclMode = false;
     this.lastExecNode = null;
+    this.isRunning = false;
     this.options = {
+      ecmaVersion: options.ecmaVersion || Interpreter.ecmaVersion,
       timeout: options.timeout || 0,
       initEnv: options.initEnv
     };
@@ -5771,7 +5773,8 @@ function () {
     if (!code) return;
     node = (0, _acorn.parse)(code, {
       ranges: true,
-      locations: true
+      locations: true,
+      ecmaVersion: this.options.ecmaVersion || Interpreter.ecmaVersion
     });
     return this.evaluateNode(node, code);
   };
@@ -5787,6 +5790,7 @@ function () {
 
     this.source = source;
     this.sourceList.push(source);
+    this.isRunning = true;
     var bodyClosure = this.createClosure(node); // add declares to data
 
     this.addDeclarationsToScope(this.collectDeclVars, this.collectDeclFuncs, this.getCurrentScope()); // reset
@@ -5802,6 +5806,7 @@ function () {
       this.execEndTime = Date.now();
     }
 
+    this.isRunning = false;
     return this.getValue();
   };
 
@@ -5811,7 +5816,11 @@ function () {
 
   _proto.createErrorMessage = function createErrorMessage(msg, value, node) {
     var message = msg[1].replace("%0", String(value));
-    message += this.getNodePosition(node || this.lastExecNode);
+
+    if (node !== null) {
+      message += this.getNodePosition(node || this.lastExecNode);
+    }
+
     return message;
   };
 
@@ -5836,6 +5845,7 @@ function () {
   };
 
   _proto.checkTimeout = function checkTimeout() {
+    if (!this.isRunning) return false;
     var timeout = this.options.timeout || 0;
     var now = Date.now();
 
@@ -6011,7 +6021,7 @@ function () {
       var timeout = _this2.options.timeout;
 
       if (timeout && timeout > 0 && _this2.checkTimeout()) {
-        throw _this2.createInternalThrowError(_messages.Messages.ExecutionTimeOutError, timeout, node);
+        throw _this2.createInternalThrowError(_messages.Messages.ExecutionTimeOutError, timeout, null);
       }
 
       _this2.lastExecNode = node;
@@ -7380,7 +7390,8 @@ function () {
 exports.Interpreter = Interpreter;
 Interpreter.version = version;
 Interpreter.eval = IEval;
-Interpreter.Function = IFunction; // alert.call(rootContext, 1);
+Interpreter.Function = IFunction;
+Interpreter.ecmaVersion = 5; // alert.call(rootContext, 1);
 // But alert({}, 1); // Illegal invocation
 
 Interpreter.rootContext = void 0;
@@ -7547,7 +7558,8 @@ exports.Script = exports.runInNewContext = void 0;
 
 var _main = __webpack_require__(/*! ./interpreter/main */ "./src/interpreter/main.ts");
 
-// class Context {}
+// TODO:
+// add tests
 function createContext(ctx) {
   if (ctx === void 0) {
     ctx = Object.create(null);
@@ -7569,16 +7581,15 @@ function compileFunction(code, params, options) {
   var timeout = options.timeout === undefined ? 0 : options.timeout;
   var wrapCode = "\n    (function anonymous(" + params.join(",") + "){\n         " + code + "\n    });\n    ";
   var interpreter = new _main.Interpreter(ctx, {
+    ecmaVersion: options.ecmaVersion,
     timeout: timeout
   });
-  interpreter.evaluate(wrapCode);
-  return interpreter.getValue();
+  return interpreter.evaluate(wrapCode);
 }
 
 function _runInContext(code, ctx, options) {
   var interpreter = new _main.Interpreter(ctx, options);
-  interpreter.evaluate(code);
-  return interpreter.getValue();
+  return interpreter.evaluate(code);
 }
 
 var runInNewContext = _runInContext;

@@ -35,7 +35,7 @@ while(i > 0){
   i--;  
 }
 
- d = {i, arr};
+ d = {i:i, arr:arr};
   `
 	);
 	deepEqual(i, 0);
