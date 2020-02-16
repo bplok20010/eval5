@@ -56,6 +56,11 @@
 				padding: 15px 0;
 				color: red;
 			}
+
+			#version {
+				margin-left: 10px;
+				font-size: 12px;
+			}
 		</style>
 	</head>
 	<body>
@@ -82,9 +87,7 @@
 						></path></svg
 				></a>
 			</div>
-			<div class="tools">
-				<button onclick="run()">Run</button>
-			</div>
+			<div class="tools"><button onclick="run()">Run</button> <span id="version"></span></div>
 			<textarea id="code">
 var result = [];
 
@@ -107,6 +110,7 @@ alert(result.join(', '));
 		<div id="root"></div>
 		<div id="log"></div>
 		<script>
+			version.innerHTML = "版本：" + eval5.Interpreter.version;
 			eval5.Interpreter.rootContext = window;
 			var interpreter = new eval5.Interpreter(window);
 			function run() {
