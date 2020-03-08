@@ -6,6 +6,8 @@
 
 基于 JavaScript 编写的 JavaScript 解释器;A JavaScript interpreter, written completely in JavaScript;
 
+支持es5语法
+
 > 解决在不支持`eval`或`Function`的执行环境下执行 JavaScript 代码。例如：微信小程序 [示例](https://github.com/bplok20010/eval5-wx-demo)。
 
 ## Usage
