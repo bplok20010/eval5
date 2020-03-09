@@ -5501,7 +5501,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.3.0";
+var version = "1.3.1";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5788,6 +5788,7 @@ function () {
       source = "";
     }
 
+    this.value = undefined;
     this.source = source;
     this.sourceList.push(source);
     this.isRunning = true;

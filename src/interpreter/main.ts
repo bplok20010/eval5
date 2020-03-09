@@ -8,7 +8,7 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
-const version = "1.3.0";
+const version = "1.3.1";
 
 function defineFunctionName<T>(func: T, name: string) {
 	Object.defineProperty(func, "name", {
@@ -353,6 +353,7 @@ export class Interpreter {
 	}
 
 	evaluateNode(node: ESTree.Program, source: string = "") {
+		this.value = undefined;
 		this.source = source;
 		this.sourceList.push(source);
 
