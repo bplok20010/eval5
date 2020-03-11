@@ -6,7 +6,7 @@
 
 基于 JavaScript 编写的 JavaScript 解释器;A JavaScript interpreter, written completely in JavaScript;
 
-支持es5语法
+支持 es5 语法
 
 > 解决在不支持`eval`或`Function`的执行环境下执行 JavaScript 代码。例如：微信小程序 [示例](https://github.com/bplok20010/eval5-wx-demo)。
 
@@ -20,13 +20,13 @@ import { evaluate, Function, vm, Interpreter } from "eval5";
 // 设置默认作用域
 Interpreter.global = window;
 
-//或 evaluate("1+1", Object.create(window));
 evaluate("1+1", window); // 2
 
 const func = new Function("a", "b", "return a+b;");
 
 console.log(func(1, 1)); // 2
 
+const ctx = window;
 const interpreter = new Interpreter(ctx, {
 	timeout: 1000,
 });
@@ -56,6 +56,8 @@ VERSION
 例如:
 
 ```javascript
+import { Interpreter } from "eval5";
+
 Interpreter.global = window;
 ```
 
@@ -68,6 +70,8 @@ Interpreter.global = window;
 > 如果执行环境支持 eval 函数建议使用原生的 eval，除非 eval 需要使用局部变量时，如下情况：
 
 ```javascript
+import { Interpreter } from "eval5";
+
 const ctx = Object.create(window);
 
 ctx.eval = Interpreter.eval;
@@ -118,11 +122,13 @@ for(let i = 0; i < 10; i++) {
 
 **原因在于解释器会忽略`const` `let`类型，都当作`var`处理。**
 
-### `constructor`(ctx: {}, options?: { timeout?: number})
+### `constructor`(ctx: {} = Interpreter.global, options?: { timeout?: number})
 
 构造函数
 
 ```javascript
+import { Interpreter } from "eval5";
+
 var interpreter = new Interpreter(window);
 ```
 
@@ -131,6 +137,8 @@ var interpreter = new Interpreter(window);
 返回脚本中执行的最后一个表达式结果
 
 ```javascript
+import { Interpreter } from "eval5";
+
 var interpreter = new Interpreter(window);
 interpreter.evaluate("alert(1+1)");
 ```
@@ -150,14 +158,16 @@ interpreter.evaluate("alert(1+1)");
 执行给定的字符串脚本,返回脚本中执行的最后一个表达式结果
 
 ```javascript
+import { evaluate } from "eval5";
+
 evaluate("console.log(1+1)", { console: console });
 ```
 
 ## Function
 
-同 js 原生的 Function
-
 ```javascript
+import { Function } from "eval5";
+
 const func = new Function("a", "b", "return a+b;");
 console.log(func(1, 2));
 ```
@@ -173,6 +183,32 @@ console.log(func(1, 2));
 -   vm.runInContext
 -   vm.runInNewContext
 -   vm.Script
+
+## Tips
+
+`eval5`不支持`use strict`模式，但在函数的调用中`this`默认值是`undefined`，可通过设置`Interpreter.rootContext`来设置`this`的默认值，如：
+
+```
+const code = `
+function test(){
+   return this;// undefined
+}
+test();
+`
+evaluate(code)
+```
+
+```
+Interpreter.rootContext = 1;
+
+const code = `function test(){
+    return this;// 1
+}
+test();
+`
+evaluate(code)
+
+```
 
 ## License
 

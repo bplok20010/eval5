@@ -198,7 +198,7 @@ export class Interpreter {
 	static readonly Function = IFunction;
 	static ecmaVersion: ECMA_VERSION = 5;
 	// alert.call(rootContext, 1);
-	// But alert({}, 1); // Illegal invocation
+	// fix: alert.call({}, 1); // Illegal invocation
 	static rootContext = void 0;
 	static global = Object.create(null);
 
@@ -870,10 +870,16 @@ export class Interpreter {
 					}
 
 					// method call
+					// eg：obj.say(...)
+					// eg: obj.say.call(...)
+					// eg: obj.say.apply(...)
+					// ======================
+					// obj.func(...)
+					// func = func.bind(obj)
 					// tips:
-					// test.call(ctx, ...) === test.call.bind(test)(ctx, ...)
-					// test.apply(ctx, ...) === test.apply.bind(test)(ctx, ...)
-					// test.f(...) === test.f.bind(test)(...)
+					// func(...) -> func.bind(obj)(...)
+					// func.call(...) -> obj.func.call.bind(obj.func)(...)
+					// func.apply(...) -> obj.func.apply.bind(obj.func)(...)
 					// ...others
 					return func.bind(obj);
 				};
@@ -912,6 +918,7 @@ export class Interpreter {
 					// this = undefined
 					// tips:
 					// test(...) === test.call(undefined, ...)
+					// fix: alert.call({}, ...) Illegal invocation
 					return func.bind(Interpreter.rootContext);
 				};
 		}
