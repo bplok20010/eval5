@@ -1,19 +1,20 @@
 {
 	"name": "eval5",
-	"version": "1.3.1",
+	"version": "1.4.0-alpha",
 	"description": "A JavaScript interpreter, written completely in JavaScript",
 	"main": "./dist/cjs/index.js",
 	"module": "./dist/esm/index.js",
 	"types": "./lib/index.d.ts",
 	"scripts": {
 		"start": "tsc -w",
-		"build": "run-s clear build:* bundle bundle:min",
+		"build": "run-s clear build:* bundle:dev bundle:prod bundle:banner",
 		"build:lib": "tsc",
 		"build:cjs": "babel lib --config-file=./babel.config.js  --out-dir dist/cjs",
 		"build:esm": "babel lib --config-file=./babel.config.esm.js  --out-dir dist/esm",
 		"clear": "rimraf lib dist umd",
-		"bundle": "packez bundle ./src/index.ts -d umd -c",
-		"bundle:min": "packez bundle ./src/index.ts -d umd --state min",
+		"bundle:dev": "packez bundle ./src/index.ts -d umd -c",
+		"bundle:prod": "packez bundle ./src/index.ts -d umd --state prod",
+		"bundle:banner": "node scripts/banner.js",
 		"test": "jest"
 	},
 	"repository": {
@@ -42,8 +43,12 @@
 	"homepage": "https://github.com/bplok20010/eval5#readme",
 	"devDependencies": {
 		"@babel/cli": "^7.8.4",
+		"@types/fs-extra": "^8.1.0",
 		"@types/jest": "^24.0.25",
+		"babel-plugin-search-and-replace": "^1.0.1",
+		"babel-plugin-transform-string-literal-replace": "^1.0.2",
 		"babel-preset-packez": "^1.0.0",
+		"fs-extra": "^8.1.0",
 		"jest": "^24.9.0",
 		"npm-run-all": "^4.1.5",
 		"packez": "^3.1.0",

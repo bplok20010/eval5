@@ -1,5 +1,10 @@
+const webpack = require("webpack");
+const pkg = require("./package.json");
+const { getBannerTemplate } = require("./scripts/banner");
+
 module.exports = function(opts) {
-	const isProd = opts.program.state === "min";
+	const isProd = opts.program.state === "prod";
+
 	return {
 		mode: isProd ? "production" : "development",
 		clean: isProd ? false : true,
@@ -25,6 +30,25 @@ module.exports = function(opts) {
 		babel: {
 			useBuiltIns: false,
 			modules: "cjs",
+			plugins: [
+				[
+					"search-and-replace",
+					{
+						rules: [
+							{
+								search: "%VERSION%",
+								replace: pkg.version,
+							},
+						],
+					},
+				],
+			],
 		},
+		pluginExtra: [
+			new webpack.BannerPlugin({
+				banner: getBannerTemplate(),
+				raw: true,
+			}),
+		],
 	};
 };

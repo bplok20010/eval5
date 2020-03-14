@@ -1,3 +1,5 @@
+const pkg = require("./package.json");
+
 module.exports = api => {
 	const isTest = api.env("test"); //jest
 
@@ -8,6 +10,19 @@ module.exports = api => {
 				{
 					modules: false,
 					loose: true,
+				},
+			],
+		],
+		plugins: [
+			[
+				"search-and-replace",
+				{
+					rules: [
+						{
+							search: "%VERSION%",
+							replace: pkg.version,
+						},
+					],
 				},
 			],
 		],
