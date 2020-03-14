@@ -4,30 +4,33 @@
 [![npm](https://img.shields.io/npm/v/eval5)](https://www.npmjs.com/package/eval5)
 [![npm bundle size](https://img.shields.io/bundlephobia/min/eval5)](https://raw.githubusercontent.com/bplok20010/eval5/master/umd/eval5.min.js)
 
-基于 JavaScript 编写的 JavaScript 解释器;A JavaScript interpreter, written completely in JavaScript;
+A JavaScript interpreter written in JavaScript.
 
-支持 es5 语法
+[Try it out](https://bplok20010.github.io/eval5/)
 
-> 解决在不支持`eval`或`Function`的执行环境下执行 JavaScript 代码。例如：微信小程序 [示例](https://github.com/bplok20010/eval5-wx-demo)。
+## You may not need it unless
+
+-   Need to execute code in the browser with a sandbox environment
+-   Controlling execution time
+-   JavaScript runtime environment that does not support `eval` and `Function`. for example: WeChat Mini Program
+-   Be interested or Be curious
+
+## Support
+
+ECMA5
+
+## Install
+
+```
+npm install --save eval5
+```
 
 ## Usage
 
-`npm install --save eval5`
-
 ```javascript
-import { evaluate, Function, vm, Interpreter } from "eval5";
+import { Interpreter } from "eval5";
 
-// 设置默认作用域
-Interpreter.global = window;
-
-evaluate("1+1", window); // 2
-
-const func = new Function("a", "b", "return a+b;");
-
-console.log(func(1, 1)); // 2
-
-const ctx = window;
-const interpreter = new Interpreter(ctx, {
+const interpreter = new Interpreter(window, {
 	timeout: 1000,
 });
 
@@ -35,148 +38,156 @@ let result;
 
 try {
 	result = interpreter.evaluate("1+1");
-	console.log(result); //2
+	console.log(result);
+
+	interpreter.evaluate("var a=100");
+	interpreter.evaluate("var b=200");
+	result = interpreter.evaluate("a+b");
+
+	console.log(result);
 } catch (e) {
-	//..
+	console.log(e);
+}
+```
+
+## Options
+
+```ts
+interface Options {
+	timeout?: number;
+	rootContext?: {} | null;
 }
 ```
 
 ## Interpreter
 
-### static `version`
+**`version`**
 
-VERSION
+current version
 
-### static `global`
+**`global`**
 
-`object` 默认：`Object.create(null)`
+default: `{}`
 
-设置默认作用域对象
+global context
 
-例如:
-
-```javascript
-import { Interpreter } from "eval5";
-
+```js
 Interpreter.global = window;
+const interpreter = new Interpreter();
 ```
 
-### static `eval`
+**`globalContextInFunction`**
 
-`readonly`
+default: `undefined`
 
-替代原有的`eval`占位符
+`eval5` does not support `use strict` mode, but the default value of `this` in function calls is `undefined`, you can set this property as the default.
 
-> 如果执行环境支持 eval 函数建议使用原生的 eval，除非 eval 需要使用局部变量时，如下情况：
+```js
+import { Interpreter } from "Interpreter";
 
-```javascript
-import { Interpreter } from "eval5";
-
-const ctx = Object.create(window);
-
-ctx.eval = Interpreter.eval;
-
+const ctx = {};
 const interpreter = new Interpreter(ctx);
-
 interpreter.evaluate(`
-    function test(){
-        var a = 1;
-        return eval('a+1')
-    }
-    test();
-`); // output 2
-```
-
-### static `Function`
-
-`readonly`
-
-替代原有的`Function`占位符
-
-作用同`Interpreter.eval`
-
-> 除非不支持`Function`的环境，否则不建议使用
-
-### static `ecmaVersion`
-
-可选值： `3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020`
-
-默认： `5`
-
-> 注：eval5 只支持 es5 语法，如果将 ecmaVersion 设为高版本尽管能编译通过，但解释时可能会报错或得到错误结果。
-
-例如，如果设`ecmaVersion=6`或更高，以下代码可以正常解析执行，但结果非预期：
-
-```
-const a = [];
-for(let i = 0; i < 10; i++) {
-    a.push(function(){
-        console.log(i);
-    })
+this; // ctx
+function func(){
+    return this; // undefined
 }
-
-...
-
-// output: 10 10 10...
+func();
+`);
 ```
 
-**原因在于解释器会忽略`const` `let`类型，都当作`var`处理。**
+```js
+import { Interpreter } from "Interpreter";
 
-### `constructor`(ctx: {} = Interpreter.global, options?: { timeout?: number})
-
-构造函数
-
-```javascript
-import { Interpreter } from "eval5";
-
-var interpreter = new Interpreter(window);
+Interpreter.globalContextInFunction = window;
+const ctx = {};
+const interpreter = new Interpreter({});
+interpreter.evaluate(`
+this; // ctx
+function func(){
+    return this; // window
+}
+func();
+`);
 ```
 
-### `evaluate`(code: string): any
+**`constructor(context?: {}: options: Options = Interpreter.global)`**
 
-返回脚本中执行的最后一个表达式结果
+## Instance methods
 
-```javascript
-import { Interpreter } from "eval5";
+**`evaluate(code: string): any`**
 
-var interpreter = new Interpreter(window);
-interpreter.evaluate("alert(1+1)");
+executes string code and returns the value of the last expression
+
+```js
+import { Interpreter } from "Interpreter";
+
+const interpreter = new Interpreter(window);
+
+const result = interpreter.evaluate(`
+var a = 100;
+var b = 200;
+
+a+b;
+
+`);
+
+console.log(result); // 300
 ```
 
-### appendCode(code: string): any
+**`appendCode(code: string): any`**
 
-作用同`evaluate`
+alias of `evaluate`
 
-### setExecTimeout(timeout: number)
+**`getExecutionTime(): number`**
 
-单位：ms
+get the last execution time
 
-获取`evaluate`的执行时间
+**`setExecTimeout(): number`**
 
-## evaluate(code: string, ctx?: {})
+set the timeout for each execution
 
-执行给定的字符串脚本,返回脚本中执行的最后一个表达式结果
+**`getOptions(): Readonly<Options>`**
 
-```javascript
+get interpreter options
+
+## evaluate(code: string, ctx?: {}, options?: Options)
+
+executes string code and returns the value of the last expression
+
+> note: a new interpreter is created with every execution
+
+```js
 import { evaluate } from "eval5";
 
-evaluate("console.log(1+1)", { console: console });
+evaluate(
+	`
+var a = 100;
+var b = 100;
+console.log(a+b);
+`,
+	{ console: console }
+); // 200
+
+evaluate(`
+    a;
+`); // a is not defined
 ```
 
 ## Function
 
-```javascript
+use `Interpreter.global` as the default context, `Interpreter.globalContextInFunction` also
+
+```js
 import { Function } from "eval5";
 
 const func = new Function("a", "b", "return a+b;");
-console.log(func(1, 2));
+console.log(func(100, 200)); // 300
 ```
 
 ## vm
 
-参考 `node.js vm`
-
-支持 api 列表:
+see [vm](https://nodejs.org/dist/latest-v13.x/docs/api/vm.html)
 
 -   vm.createContext
 -   vm.compileFunction
@@ -184,44 +195,14 @@ console.log(func(1, 2));
 -   vm.runInNewContext
 -   vm.Script
 
-## Tips
-
-`eval5`不支持`use strict`模式，但在函数的调用中`this`默认值是`undefined`，可通过设置`Interpreter.rootContext`来设置`this`的默认值，如：
-
-```
-const code = `
-function test(){
-   return this;// undefined
-}
-test();
-`
-evaluate(code)
-```
-
-```
-Interpreter.rootContext = 1;
-
-const code = `function test(){
-    return this;// 1
-}
-test();
-`
-evaluate(code)
-
-```
-
 ## License
 
 MIT
 
-## Support
-
--   ECMA5
-
 ## Related
 
-[evaljs][]
-[closure-interpreter][]
+-   [evaljs][]
+-   [closure-interpreter][]
 
 [evaljs]: https://github.com/marten-de-vries/evaljs
 [closure-interpreter]: https://github.com/int3/closure-interpreter
