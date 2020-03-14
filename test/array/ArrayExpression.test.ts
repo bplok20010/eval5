@@ -62,3 +62,13 @@ arr;
 	expect(arr.length).toBe(5);
 	expect(arr).toEqual([1, 2, null, undefined, 4]);
 });
+
+test("ArrayExpression-5", () => {
+	const arr = evaluate(
+		`
+[1,2]
+  `
+	);
+
+	expect(arr).toEqual([1, 2]);
+});

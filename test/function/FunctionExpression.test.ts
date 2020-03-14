@@ -236,7 +236,7 @@ test("function call non context", () => {
 });
 
 test("function call default context", () => {
-	Interpreter.rootContext = "eval5";
+	Interpreter.globalContextInFunction = "eval5";
 
 	const a = evaluate(
 		`
@@ -247,7 +247,7 @@ test("function call default context", () => {
     `
 	);
 
-	Interpreter.rootContext = void 0;
+	Interpreter.globalContextInFunction = void 0;
 
 	deepEqual(a, "eval5");
 });

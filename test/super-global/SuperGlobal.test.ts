@@ -1,4 +1,4 @@
-const { evaluate, Interpreter } = require("../../lib");
+const { evaluate, Interpreter } = require("../../src");
 
 test("eval basic-1", () => {
 	const ctx = Object.create(null);
@@ -11,6 +11,25 @@ test("eval basic-1", () => {
 		ctx
 	);
 	expect(a).toEqual(300);
+});
+
+test("eval basic-2", () => {
+	const ctx = Object.create(null);
+	const a = evaluate(
+		`
+    var x = 10, y = 20;
+    var xeval = eval;
+    function test() {
+            var x = 2,
+                y = 4;
+            var geval = eval;
+            return [xeval("x + y"), eval("x + y"), geval("x + y"), (0, eval)("x + y")];
+    }
+    test();
+    `,
+		ctx
+	);
+	expect(a).toEqual([30, 6, 30, 30]);
 });
 
 test("eval alias name", () => {
@@ -101,7 +120,21 @@ test("eval basic-2", () => {
 	expect(a).toEqual(600);
 });
 
-test("Function basic", () => {
+test("eval basic-3", () => {
+	let message = "";
+	try {
+		evaluate(
+			`
+        new eval('1+1')
+        `
+		);
+	} catch (e) {
+		message = e.message;
+	}
+	expect(message).toEqual("eval is not a constructor [2:8]");
+});
+
+test("Function basic -1", () => {
 	const ctx = Object.create(null);
 	const a = evaluate(
 		`
@@ -115,11 +148,25 @@ test("Function basic", () => {
 	expect(a[1](200, 300)).toEqual(500);
 });
 
+test("Function basic -2", () => {
+	const ctx = Object.create(null);
+	const a = evaluate(
+		`
+    var func = Function('a', 'b', 'return a+b');
+    
+    [func(100,200), func];
+    `,
+		ctx
+	);
+	expect(a[0]).toEqual(300);
+	expect(a[1](200, 300)).toEqual(500);
+});
+
 test("global object", () => {
 	const ctx = Object.create(null);
 	const a = evaluate(
 		`
-    [ typeof eval, typeof Function,
+    [  eval,  Function,
         NaN,
         Infinity,
         undefined,
@@ -149,8 +196,8 @@ test("global object", () => {
 		ctx
 	);
 	expect(a).toEqual([
-		"function",
-		"function",
+		Interpreter.eval,
+		Interpreter.Function,
 		NaN,
 		Infinity,
 		undefined,
@@ -215,7 +262,14 @@ test("replace super scope prop", () => {
 	});
 	ctx.Set = 2;
 	ctx.Promise = 3;
-	const a = evaluate(`delete Map;delete Promise;[Map, Set, typeof Promise]`, ctx);
+	const a = evaluate(
+		`
+    delete Map;
+    delete Promise;
+    [Map, Set, typeof Promise]
+    `,
+		ctx
+	);
 	expect(a).toEqual([1, 2, "undefined"]);
 });
 
@@ -223,4 +277,26 @@ test("replace super scope prop", () => {
 	const ctx = Object.create(null);
 	evaluate(`d = 1`, ctx);
 	expect(ctx).toEqual({ d: 1 });
+});
+
+test("call Interpreter.eval", () => {
+	let msg = "";
+	try {
+		Interpreter.eval("1+1");
+	} catch (e) {
+		msg = e.message;
+	}
+
+	expect(msg).toEqual("Illegal call");
+});
+
+test("call Interpreter.Function", () => {
+	let msg = "";
+	try {
+		Interpreter.Function("a", "b", "c");
+	} catch (e) {
+		msg = e.message;
+	}
+
+	expect(msg).toEqual("Illegal call");
 });

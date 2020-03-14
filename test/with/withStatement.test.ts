@@ -31,3 +31,24 @@ test("with2", () => {
 
 	deepEqual(a, 100);
 });
+
+test("with3", () => {
+	var ctx: Record<string, any> = {};
+	const result = evaluate(
+		`
+
+    var obj = {}
+
+    with(obj) {
+        a = 10
+    }
+
+    obj.a
+
+    `,
+		ctx
+	);
+
+	expect(result).toEqual(undefined);
+	expect(ctx.a).toEqual(10);
+});
