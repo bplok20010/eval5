@@ -25,6 +25,7 @@ export function compileFunction(
 	const interpreter = new Interpreter(ctx, {
 		ecmaVersion: options.ecmaVersion,
 		timeout,
+		rootContext: options.rootContext,
 	});
 
 	return interpreter.evaluate(wrapCode);
