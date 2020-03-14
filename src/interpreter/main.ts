@@ -8,7 +8,38 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
-const version = "1.3.1";
+const version = "%VERSION%";
+
+/////////types/////////
+type Getter = () => any;
+interface BaseClosure {
+	(pNode?: Node): any;
+	isFunctionDeclareClosure?: boolean;
+}
+type CaseItem = {
+	testClosure: BaseClosure;
+	bodyClosure: BaseClosure;
+};
+type SwitchCaseClosure = () => CaseItem;
+type ReturnStringClosure = () => string;
+type ECMA_VERSION = 3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
+interface Options {
+	ecmaVersion?: ECMA_VERSION;
+	timeout?: number;
+	rootContext?: Context | null;
+	initEnv?: (inst: Interpreter) => void;
+}
+interface CollectDeclarations {
+	[key: string]: undefined | BaseClosure;
+}
+type ScopeData = {
+	[prop: string]: any;
+	[prop: number]: any;
+};
+type Context = {
+	[prop: string]: any;
+	[prop: number]: any;
+};
 
 function defineFunctionName<T>(func: T, name: string) {
 	Object.defineProperty(func, "name", {
@@ -24,24 +55,119 @@ const Break = Symbol("Break");
 const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
 const EmptyStatementReturn = Symbol("EmptyStatementReturn");
-const IEval = Symbol("IEval");
-const IFunction = Symbol("IFunction");
-
-type Getter = () => any;
-interface BaseClosure {
-	(pNode?: Node): any;
-	isFunctionDeclareClosure?: boolean;
-}
-type CaseItem = {
-	testClosure: BaseClosure;
-	bodyClosure: BaseClosure;
-};
-type SwitchCaseClosure = () => CaseItem;
-type ReturnStringClosure = () => string;
 
 function isFunction<T>(func: T): boolean {
 	return typeof func === "function";
 }
+
+interface GeneratorReflection {
+	getOptions(): Readonly<Options>;
+	getCurrentScope(): Scope;
+	getGlobalScope(): Scope;
+	getCurrentContext(): Context;
+	getExecStartTime(): number;
+}
+
+class InternalInternalReflection {
+	protected interpreter: Interpreter;
+	constructor(interpreter: Interpreter) {
+		this.interpreter = interpreter;
+	}
+
+	generator(): GeneratorReflection {
+		const interpreter = this.interpreter;
+
+		function getCurrentScope(this: Interpreter) {
+			return this.getCurrentScope();
+		}
+
+		function getGlobalScope(this: Interpreter) {
+			return this.getGlobalScope();
+		}
+
+		function getCurrentContext(this: Interpreter) {
+			return this.getCurrentContext();
+		}
+
+		return {
+			getOptions: interpreter.getOptions.bind(interpreter),
+			getCurrentScope: getCurrentScope.bind(interpreter),
+			getGlobalScope: getGlobalScope.bind(interpreter),
+			getCurrentContext: getCurrentContext.bind(interpreter),
+			getExecStartTime: interpreter.getExecStartTime.bind(interpreter),
+		};
+	}
+}
+
+function internalEval(
+	reflection: InternalInternalReflection,
+	code?: string,
+	useGlobalScope: boolean = true
+): any {
+	if (!(reflection instanceof InternalInternalReflection)) {
+		throw new Error("Illegal call");
+	}
+
+	if (typeof code !== "string") return code;
+	if (!code) return void 0;
+
+	const instance = reflection.generator();
+
+	const opts = instance.getOptions();
+
+	const options: Options = {
+		timeout: opts.timeout,
+		initEnv: function(this: Interpreter) {
+			// set caller context
+			if (!useGlobalScope) {
+				this.setCurrentContext(instance.getCurrentContext());
+			}
+			// share timeout
+			this.execStartTime = instance.getExecStartTime();
+			this.execEndTime = this.execStartTime;
+		},
+	};
+
+	const currentScope = useGlobalScope ? instance.getGlobalScope() : instance.getCurrentScope();
+	const interpreter = new Interpreter(currentScope, options);
+
+	return interpreter.evaluate(code);
+}
+Object.defineProperty(internalEval, "__IS_EVAL_FUNC", {
+	value: true,
+	writable: false,
+	enumerable: false,
+	configurable: false,
+});
+
+function internalFunction(
+	reflection: InternalInternalReflection,
+	...params: string[]
+): (...args: any[]) => any {
+	if (!(reflection instanceof InternalInternalReflection)) {
+		throw new Error("Illegal call");
+	}
+
+	const instance = reflection.generator();
+
+	const code = params.pop();
+
+	const interpreter = new Interpreter(instance.getGlobalScope(), instance.getOptions());
+
+	const wrapCode = `
+		    (function anonymous(${params.join(",")}){
+		        ${code}
+		    });
+		    `;
+
+	return interpreter.evaluate(wrapCode);
+}
+Object.defineProperty(internalFunction, "__IS_FUNCTION_FUNC", {
+	value: true,
+	writable: false,
+	enumerable: false,
+	configurable: false,
+});
 
 class Return {
 	value: any;
@@ -63,30 +189,22 @@ class ContinueLabel {
 		this.value = value;
 	}
 }
-
-type ECMA_VERSION = 3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
-
-interface Options {
-	ecmaVersion?: ECMA_VERSION;
-	timeout?: number;
-	initEnv?: (inst: Interpreter) => void;
-}
-
-interface CollectDeclarations {
-	[key: string]: undefined | BaseClosure;
-}
-
-type ScopeData = {
-	[prop: string]: any;
-	[prop: number]: any;
-	[IEval]?: (code: string, useGlobalScope: boolean) => any;
-	[IFunction]?: (...params: string[]) => (...args: any[]) => any;
-};
-
+/**
+ * scope chain
+ *
+ * superScope
+ *     ↓
+ * rootScope
+ *     ↓
+ * globalScope
+ *     ↓
+ * functionScope
+ *
+ */
 class Scope {
-	name: string | undefined;
-	parent: Scope | null;
-	data: ScopeData;
+	readonly name: string | undefined;
+	readonly parent: Scope | null;
+	readonly data: ScopeData;
 	labelStack: string[];
 	constructor(data: ScopeData, parent: Scope | null = null, name?: string) {
 		this.name = name;
@@ -95,11 +213,6 @@ class Scope {
 		this.labelStack = [];
 	}
 }
-
-type Context = {
-	[prop: string]: any;
-	[prop: number]: any;
-};
 
 function noop() {}
 
@@ -132,6 +245,8 @@ const BuildInObjects: ScopeData = {
 	encodeURIComponent,
 	escape,
 	unescape,
+	eval: internalEval,
+	Function: internalFunction,
 };
 // ES5 Object
 if (typeof JSON !== "undefined") {
@@ -172,14 +287,27 @@ if (typeof Reflect !== "undefined") {
 }
 
 export class Interpreter {
+	static readonly version = version;
+	static readonly eval = internalEval;
+	static readonly Function = internalFunction;
+	static ecmaVersion: ECMA_VERSION = 5;
+	// alert.call(rootContext, 1);
+	// fix: alert.call({}, 1); // Illegal invocation
+	// function func(){
+	//     this;// Interpreter.globalContextInFunction
+	// }
+	// func()
+	static globalContextInFunction = void 0;
+	static global = Object.create(null);
+
 	// last expression value
-	value: any;
+	protected value: any;
 	protected context: Context | Scope;
 	protected rootContext: Context;
 	protected source: string;
 	protected sourceList: string[] = [];
 	protected currentScope: Scope;
-	protected rootScope: Scope;
+	protected globalScope: Scope;
 	protected currentContext: Context;
 	protected options: Options;
 	protected callStack: string[];
@@ -193,26 +321,18 @@ export class Interpreter {
 	protected execStartTime: number;
 	protected execEndTime: number;
 
-	static readonly version = version;
-	static readonly eval = IEval;
-	static readonly Function = IFunction;
-	static ecmaVersion: ECMA_VERSION = 5;
-	// alert.call(rootContext, 1);
-	// fix: alert.call({}, 1); // Illegal invocation
-	static rootContext = void 0;
-	static global = Object.create(null);
-
 	constructor(context: Context | Scope = Interpreter.global, options: Options = {}) {
 		this.options = {
 			ecmaVersion: options.ecmaVersion || Interpreter.ecmaVersion,
 			timeout: options.timeout || 0,
+			rootContext: options.rootContext,
 			initEnv: options.initEnv,
 		};
 
-		this.context = context;
+		this.context = context || Object.create(null);
 		this.callStack = [];
 
-		this.initEnvironment(context);
+		this.initEnvironment(this.context);
 	}
 
 	protected initEnvironment(ctx: Context | Scope) {
@@ -221,21 +341,18 @@ export class Interpreter {
 		if (ctx instanceof Scope) {
 			scope = ctx;
 		} else {
-			const superScope = this.getSuperScope(ctx);
-			// replace Interpreter.eval and Interpreter.Function
-			Object.keys(ctx).forEach(key => {
-				if (ctx[key] === IEval) {
-					ctx[key] = superScope.data[IEval];
-				}
-				if (ctx[key] === IFunction) {
-					ctx[key] = superScope.data[IFunction];
-				}
-			});
-			scope = new Scope(ctx, superScope, "root");
+			let rootScope: Scope | null = null;
+			const superScope = this.createSuperScope(ctx);
+
+			if (this.options.rootContext) {
+				rootScope = new Scope(this.options.rootContext, superScope, "rootScope");
+			}
+
+			scope = new Scope(ctx, rootScope || superScope, "globalScope");
 		}
 
-		this.rootScope = scope;
-		this.currentScope = this.rootScope;
+		this.globalScope = scope;
+		this.currentScope = this.globalScope;
 		//init global context == this
 		this.rootContext = scope.data;
 		this.currentContext = scope.data;
@@ -248,11 +365,39 @@ export class Interpreter {
 
 		const initEnv = this.options.initEnv;
 		if (initEnv) {
-			initEnv(this);
+			initEnv.call(this);
 		}
 	}
 
-	isInterruptThrow<T>(err: T): boolean {
+	getExecStartTime() {
+		return this.execStartTime;
+	}
+
+	getExecutionTime(): number {
+		return this.execEndTime - this.execStartTime;
+	}
+
+	setExecTimeout(timeout: number = 0) {
+		this.options.timeout = timeout;
+	}
+
+	getOptions(): Readonly<Options> {
+		return this.options;
+	}
+
+	protected getGlobalScope() {
+		return this.globalScope;
+	}
+
+	protected getCurrentScope() {
+		return this.currentScope;
+	}
+
+	protected getCurrentContext() {
+		return this.currentContext;
+	}
+
+	protected isInterruptThrow<T>(err: T): boolean {
 		return (
 			err instanceof InterruptThrowError ||
 			err instanceof InterruptThrowReferenceError ||
@@ -260,62 +405,12 @@ export class Interpreter {
 		);
 	}
 
-	getSuperScope(ctx: Context): Scope {
+	protected createSuperScope(ctx: Context): Scope {
 		let data: ScopeData = {
 			...BuildInObjects,
 		};
 
-		data.eval = (code: string, useGlobalScope: boolean = true): any => {
-			if (typeof code !== "string") return code;
-			if (!code) return void 0;
-
-			const options: Options = {
-				timeout: this.options.timeout,
-				initEnv: inst => {
-					// set caller context
-					if (!useGlobalScope) {
-						inst.setCurrentContext(this.getCurrentContext());
-					}
-					inst.execStartTime = this.execStartTime;
-					inst.execEndTime = inst.execStartTime;
-				},
-			};
-
-			const currentScope = useGlobalScope ? this.rootScope : this.getCurrentScope();
-			const interpreter = new Interpreter(currentScope, options);
-
-			return interpreter.evaluate(code);
-		};
-		Object.defineProperty(data.eval, "__IS_EVAL_FUNC", {
-			value: true,
-			writable: false,
-			enumerable: false,
-			configurable: false,
-		});
-
-		data.Function = (...params: string[]): ((...args: any[]) => any) => {
-			const code = params.pop();
-			const interpreter = new Interpreter(this.rootScope, this.options);
-
-			const wrapCode = `
-		    (function anonymous(${params.join(",")}){
-		        ${code}
-		    });
-		    `;
-
-			return interpreter.evaluate(wrapCode);
-		};
-		Object.defineProperty(data.Function, "__IS_FUNCTION_FUNC", {
-			value: true,
-			writable: false,
-			enumerable: false,
-			configurable: false,
-		});
-
 		const buildInObjectKeys = Object.keys(data);
-
-		data[IEval] = data.eval;
-		data[IFunction] = data.Function;
 
 		buildInObjectKeys.forEach(key => {
 			if (key in ctx) {
@@ -323,7 +418,7 @@ export class Interpreter {
 			}
 		});
 
-		return new Scope(data, null, "superRoot");
+		return new Scope(data, null, "superScope");
 	}
 
 	protected setCurrentContext(ctx: Context) {
@@ -352,7 +447,7 @@ export class Interpreter {
 		return this.evaluate(code);
 	}
 
-	evaluateNode(node: ESTree.Program, source: string = "") {
+	protected evaluateNode(node: ESTree.Program, source: string = "") {
 		this.value = undefined;
 		this.source = source;
 		this.sourceList.push(source);
@@ -385,11 +480,11 @@ export class Interpreter {
 		return this.getValue();
 	}
 
-	getExecutionTime(): number {
-		return this.execEndTime - this.execStartTime;
-	}
-
-	createErrorMessage(msg: MessageItem, value: string | number, node?: Node | null): string {
+	protected createErrorMessage(
+		msg: MessageItem,
+		value: string | number,
+		node?: Node | null
+	): string {
 		let message = msg[1].replace("%0", String(value));
 
 		if (node !== null) {
@@ -399,24 +494,20 @@ export class Interpreter {
 		return message;
 	}
 
-	createError<T>(message: string, error: { new (msg: string): T }): T {
+	protected createError<T>(message: string, error: { new (msg: string): T }): T {
 		return new error(message);
 	}
 
-	createThrowError<T>(message: string, error: { new (msg: string): T }): T {
+	protected createThrowError<T>(message: string, error: { new (msg: string): T }): T {
 		return this.createError(message, error);
 	}
 
-	createInternalThrowError<T extends MessageItem>(
+	protected createInternalThrowError<T extends MessageItem>(
 		msg: T,
 		value: string | number,
 		node?: Node | null
 	) {
 		return this.createError(this.createErrorMessage(msg, value, node), msg[2]);
-	}
-
-	setExecTimeout(timeout: number = 0) {
-		this.options.timeout = timeout;
 	}
 
 	protected checkTimeout() {
@@ -432,7 +523,7 @@ export class Interpreter {
 		return false;
 	}
 
-	getNodePosition(node: (Node & { start?: number; end?: number }) | null) {
+	protected getNodePosition(node: (Node & { start?: number; end?: number }) | null) {
 		if (node) {
 			const errorCode = ""; //this.source.slice(node.start, node.end);
 			return node.loc ? ` [${node.loc.start.line}:${node.loc.start.column}]${errorCode}` : "";
@@ -441,7 +532,7 @@ export class Interpreter {
 		return "";
 	}
 
-	createClosure(node: Node): BaseClosure {
+	protected createClosure(node: Node): BaseClosure {
 		let closure: BaseClosure;
 
 		switch (node.type) {
@@ -569,7 +660,7 @@ export class Interpreter {
 	}
 
 	// a==b a/b
-	binaryExpressionHandler(node: ESTree.BinaryExpression): BaseClosure {
+	protected binaryExpressionHandler(node: ESTree.BinaryExpression): BaseClosure {
 		const leftExpression = this.createClosure(node.left);
 		const rightExpression = this.createClosure(node.right);
 
@@ -633,7 +724,7 @@ export class Interpreter {
 	}
 
 	// a && b
-	logicalExpressionHandler(node: ESTree.LogicalExpression): BaseClosure {
+	protected logicalExpressionHandler(node: ESTree.LogicalExpression): BaseClosure {
 		const leftExpression = this.createClosure(node.left);
 		const rightExpression = this.createClosure(node.right);
 
@@ -653,14 +744,28 @@ export class Interpreter {
 		};
 	}
 
+	protected isRootScope(node: ESTree.Expression | ESTree.Pattern): boolean {
+		if (node.type === "Identifier") {
+			const scope = this.getScopeFromName(node.name, this.getCurrentScope());
+			return scope.name === "rootScope";
+		}
+
+		return false;
+	}
+
 	// typeof a !a()
-	unaryExpressionHandler(node: ESTree.UnaryExpression): BaseClosure {
+	protected unaryExpressionHandler(node: ESTree.UnaryExpression): BaseClosure {
 		switch (node.operator) {
 			case "delete":
 				const objectGetter = this.createObjectGetter(node.argument);
 				const nameGetter = this.createNameGetter(node.argument);
 
 				return () => {
+					// not allowed to delete root scope property
+					if (this.isRootScope(node.argument)) {
+						return false;
+					}
+
 					let obj = objectGetter();
 					const name = nameGetter();
 
@@ -707,7 +812,7 @@ export class Interpreter {
 	}
 
 	// ++a --a
-	updateExpressionHandler(node: ESTree.UpdateExpression): BaseClosure {
+	protected updateExpressionHandler(node: ESTree.UpdateExpression): BaseClosure {
 		const objectGetter = this.createObjectGetter(node.argument);
 		const nameGetter = this.createNameGetter(node.argument);
 		return () => {
@@ -732,7 +837,7 @@ export class Interpreter {
 	}
 
 	// var o = {a: 1, b: 's', get name(){}, set name(){}  ...}
-	objectExpressionHandler(node: ESTree.ObjectExpression) {
+	protected objectExpressionHandler(node: ESTree.ObjectExpression) {
 		const items: {
 			key: string;
 			property: ESTree.Property;
@@ -818,7 +923,7 @@ export class Interpreter {
 	}
 
 	// [1,2,3]
-	arrayExpressionHandler(node: ESTree.ArrayExpression) {
+	protected arrayExpressionHandler(node: ESTree.ArrayExpression) {
 		//fix: [,,,1,2]
 		const items: Array<BaseClosure> = node.elements.map(element =>
 			element ? this.createClosure(element) : element
@@ -838,11 +943,11 @@ export class Interpreter {
 		};
 	}
 
-	safeObjectGet(obj: any, key: any, node: Node) {
+	protected safeObjectGet(obj: any, key: any, node: Node) {
 		return obj[key];
 	}
 
-	createCallFunctionGetter(node: Node & { start?: number; end?: number }) {
+	protected createCallFunctionGetter(node: Node & { start?: number; end?: number }) {
 		switch (node.type) {
 			case "MemberExpression":
 				const objectGetter = this.createClosure(node.object);
@@ -863,9 +968,26 @@ export class Interpreter {
 						);
 					}
 
+					// obj.eval = eval
+					// obj.eval(...)
 					if (func.__IS_EVAL_FUNC) {
-						return (code: string) => {
-							return func(code, true);
+						return (code?: string) => {
+							return (func as typeof internalEval)(
+								new InternalInternalReflection(this),
+								code,
+								true
+							);
+						};
+					}
+
+					// obj.func = Function
+					// obj.func(...)
+					if (func.__IS_FUNCTION_FUNC) {
+						return (...args: string[]) => {
+							return (func as typeof internalFunction)(
+								new InternalInternalReflection(this),
+								...args
+							);
 						};
 					}
 
@@ -884,7 +1006,7 @@ export class Interpreter {
 					return func.bind(obj);
 				};
 			default:
-				// test() or (0.test)() or a[1]() ...
+				// test() or (0,test)() or a[1]() ...
 				const closure = this.createClosure(node);
 				return () => {
 					let name: string = "";
@@ -903,29 +1025,61 @@ export class Interpreter {
 					}
 
 					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
-					// calling eval scope check
-					// var geval = eval;
-					// geval("a+1");
-					if (node.type === "Identifier" && func.__IS_EVAL_FUNC) {
-						return (code: string) => {
+					// var eval = eval;
+					// function test(){
+					//    eval(...); //note: use local scope in eval5，but in Browser is use global scope
+					// }
+					if (node.type === "Identifier" && func.__IS_EVAL_FUNC && name === "eval") {
+						return (code?: string) => {
 							const scope = this.getScopeFromName(name, this.getCurrentScope());
-							const isSuperScope = !scope.parent || this.rootScope === scope;
+							const useGlobalScope =
+								!scope.parent ||
+								this.globalScope === scope ||
+								scope.name === "rootScope";
 							// use local scope if calling eval in super scope
-							return func(code, !isSuperScope);
+							return (func as typeof internalEval)(
+								new InternalInternalReflection(this),
+								code,
+								!useGlobalScope
+							);
 						};
 					}
+					// use global scope
+					// var g_eval = eval;
+					// g_eval("a+1");
+					//(0,eval)(...) ...eval alias
+					if (func.__IS_EVAL_FUNC) {
+						return (code?: string) => {
+							return (func as typeof internalEval)(
+								new InternalInternalReflection(this),
+								code,
+								true
+							);
+						};
+					}
+
+					// Function('a', 'b', 'return a+b')
+					if (func.__IS_FUNCTION_FUNC) {
+						return (...args: string[]) => {
+							return (func as typeof internalFunction)(
+								new InternalInternalReflection(this),
+								...args
+							);
+						};
+					}
+
 					// function call
 					// this = undefined
 					// tips:
 					// test(...) === test.call(undefined, ...)
 					// fix: alert.call({}, ...) Illegal invocation
-					return func.bind(Interpreter.rootContext);
+					return func.bind(Interpreter.globalContextInFunction);
 				};
 		}
 	}
 
 	// func()
-	callExpressionHandler(node: ESTree.CallExpression): BaseClosure {
+	protected callExpressionHandler(node: ESTree.CallExpression): BaseClosure {
 		const funcGetter = this.createCallFunctionGetter(node.callee);
 		const argsGetter = node.arguments.map(arg => this.createClosure(arg));
 		return () => {
@@ -934,7 +1088,7 @@ export class Interpreter {
 	}
 
 	// var f = function() {...}
-	functionExpressionHandler(
+	protected functionExpressionHandler(
 		node:
 			| (ESTree.FunctionExpression & { start?: number; end?: number })
 			| (ESTree.FunctionDeclaration & { start?: number; end?: number })
@@ -1035,7 +1189,7 @@ export class Interpreter {
 	}
 
 	// new Ctrl()
-	newExpressionHandler(node: ESTree.NewExpression): BaseClosure {
+	protected newExpressionHandler(node: ESTree.NewExpression): BaseClosure {
 		const source = this.source;
 		const expression = this.createClosure(node.callee);
 		const args = node.arguments.map(arg => this.createClosure(arg));
@@ -1043,11 +1197,19 @@ export class Interpreter {
 		return () => {
 			const construct = expression();
 
-			if (!isFunction(construct)) {
+			if (!isFunction(construct) || construct.__IS_EVAL_FUNC) {
 				const callee = <ESTree.Expression & { start?: number; end?: number }>node.callee;
 				const name = source.slice(callee.start, callee.end);
 
 				throw this.createInternalThrowError(Messages.IsNotConstructor, name, node);
+			}
+
+			// new Function(...)
+			if (construct.__IS_FUNCTION_FUNC) {
+				return (construct as typeof internalFunction)(
+					new InternalInternalReflection(this),
+					...args.map(arg => arg())
+				);
 			}
 
 			return new construct(...args.map(arg => arg()));
@@ -1055,7 +1217,7 @@ export class Interpreter {
 	}
 
 	// a.b a['b']
-	memberExpressionHandler(node: ESTree.MemberExpression): BaseClosure {
+	protected memberExpressionHandler(node: ESTree.MemberExpression): BaseClosure {
 		const objectGetter = this.createClosure(node.object);
 		const keyGetter = this.createMemberKeyGetter(node);
 		return () => {
@@ -1067,12 +1229,12 @@ export class Interpreter {
 	}
 
 	//this
-	thisExpressionHandler(node: ESTree.ThisExpression): BaseClosure {
+	protected thisExpressionHandler(node: ESTree.ThisExpression): BaseClosure {
 		return () => this.getCurrentContext();
 	}
 
 	// var1,var2,...
-	sequenceExpressionHandler(node: ESTree.SequenceExpression): BaseClosure {
+	protected sequenceExpressionHandler(node: ESTree.SequenceExpression): BaseClosure {
 		const expressions = node.expressions.map(item => this.createClosure(item));
 
 		return () => {
@@ -1089,7 +1251,7 @@ export class Interpreter {
 	}
 
 	// 1 'name'
-	literalHandler(
+	protected literalHandler(
 		node: ESTree.Literal & { regex?: { pattern: string; flags: string } }
 	): BaseClosure {
 		return () => {
@@ -1102,7 +1264,7 @@ export class Interpreter {
 	}
 
 	// var1 ...
-	identifierHandler(node: ESTree.Identifier): BaseClosure {
+	protected identifierHandler(node: ESTree.Identifier): BaseClosure {
 		return () => {
 			const currentScope = this.getCurrentScope();
 			const data = this.getScopeDataFromName(node.name, currentScope);
@@ -1114,7 +1276,7 @@ export class Interpreter {
 	}
 
 	// a=1 a+=2
-	assignmentExpressionHandler(node: ESTree.AssignmentExpression): BaseClosure {
+	protected assignmentExpressionHandler(node: ESTree.AssignmentExpression): BaseClosure {
 		// var s = function(){}
 		// s.name === s
 		if (
@@ -1199,7 +1361,7 @@ export class Interpreter {
 	}
 
 	// function test(){}
-	functionDeclarationHandler(node: ESTree.FunctionDeclaration): BaseClosure {
+	protected functionDeclarationHandler(node: ESTree.FunctionDeclaration): BaseClosure {
 		if (node.id) {
 			const functionClosure = this.functionExpressionHandler(node);
 			Object.defineProperty(functionClosure, "isFunctionDeclareClosure", {
@@ -1215,7 +1377,7 @@ export class Interpreter {
 		};
 	}
 
-	getVariableName(node: ESTree.Pattern): never | string {
+	protected getVariableName(node: ESTree.Pattern): never | string {
 		if (node.type === "Identifier") {
 			return node.name;
 		} else {
@@ -1225,7 +1387,7 @@ export class Interpreter {
 
 	// var i;
 	// var i=1;
-	variableDeclarationHandler(node: ESTree.VariableDeclaration): BaseClosure {
+	protected variableDeclarationHandler(node: ESTree.VariableDeclaration): BaseClosure {
 		let assignmentsClosure: BaseClosure;
 		const assignments: Array<ESTree.AssignmentExpression> = [];
 		for (let i = 0; i < node.declarations.length; i++) {
@@ -1259,8 +1421,8 @@ export class Interpreter {
 		};
 	}
 
-	assertVariable(data: ScopeData, name: string, node: Node): void | never {
-		if (data === this.rootScope.data && !(name in data)) {
+	protected assertVariable(data: ScopeData, name: string, node: Node): void | never {
+		if (data === this.globalScope.data && !(name in data)) {
 			throw this.createInternalThrowError(
 				Messages.VariableUndefinedReferenceError,
 				name,
@@ -1270,7 +1432,7 @@ export class Interpreter {
 	}
 
 	// {...}
-	programHandler(node: ESTree.Program | ESTree.BlockStatement): BaseClosure {
+	protected programHandler(node: ESTree.Program | ESTree.BlockStatement): BaseClosure {
 		// const currentScope = this.getCurrentScope();
 		const stmtClosures: Array<BaseClosure> = (node.body as Node[]).map((stmt: Node) => {
 			// if (stmt.type === "EmptyStatement") return null;
@@ -1309,22 +1471,24 @@ export class Interpreter {
 		};
 	}
 	// all expression: a+1 a&&b a() a.b ...
-	expressionStatementHandler(node: ESTree.ExpressionStatement): BaseClosure {
+	protected expressionStatementHandler(node: ESTree.ExpressionStatement): BaseClosure {
 		return this.createClosure(node.expression);
 	}
-	emptyStatementHandler(node: Node): BaseClosure {
+	protected emptyStatementHandler(node: Node): BaseClosure {
 		return () => EmptyStatementReturn;
 	}
 
 	// return xx;
-	returnStatementHandler(node: ESTree.ReturnStatement): BaseClosure {
+	protected returnStatementHandler(node: ESTree.ReturnStatement): BaseClosure {
 		const argumentClosure = node.argument ? this.createClosure(node.argument) : noop;
 
 		return () => new Return(argumentClosure());
 	}
 
 	// if else
-	ifStatementHandler(node: ESTree.IfStatement | ESTree.ConditionalExpression): BaseClosure {
+	protected ifStatementHandler(
+		node: ESTree.IfStatement | ESTree.ConditionalExpression
+	): BaseClosure {
 		const testClosure = this.createClosure(node.test);
 		const consequentClosure = this.createClosure(node.consequent);
 		const alternateClosure = node.alternate
@@ -1335,11 +1499,11 @@ export class Interpreter {
 		};
 	}
 	// test() ? true : false
-	conditionalExpressionHandler(node: ESTree.ConditionalExpression): BaseClosure {
+	protected conditionalExpressionHandler(node: ESTree.ConditionalExpression): BaseClosure {
 		return this.ifStatementHandler(node);
 	}
 	// for(var i = 0; i < 10; i++) {...}
-	forStatementHandler(
+	protected forStatementHandler(
 		node: ESTree.ForStatement | ESTree.WhileStatement | ESTree.DoWhileStatement
 	): BaseClosure {
 		let initClosure = noop;
@@ -1395,13 +1559,13 @@ export class Interpreter {
 	}
 
 	// while(1) {...}
-	whileStatementHandler(node: ESTree.WhileStatement): BaseClosure {
+	protected whileStatementHandler(node: ESTree.WhileStatement): BaseClosure {
 		return this.forStatementHandler(node);
 	}
-	doWhileStatementHandler(node: ESTree.DoWhileStatement): BaseClosure {
+	protected doWhileStatementHandler(node: ESTree.DoWhileStatement): BaseClosure {
 		return this.forStatementHandler(node);
 	}
-	forInStatementHandler(node: ESTree.ForInStatement): BaseClosure {
+	protected forInStatementHandler(node: ESTree.ForInStatement): BaseClosure {
 		// for( k in obj) or for(o.k in obj) ...
 		let left = node.left;
 		const rightClosure = this.createClosure(node.right);
@@ -1469,7 +1633,7 @@ export class Interpreter {
 			return result;
 		};
 	}
-	withStatementHandler(node: ESTree.WithStatement): BaseClosure {
+	protected withStatementHandler(node: ESTree.WithStatement): BaseClosure {
 		const objectClosure = this.createClosure(node.object);
 		const bodyClosure = this.createClosure(node.body);
 
@@ -1480,7 +1644,7 @@ export class Interpreter {
 			const data = objectClosure();
 
 			// newScope.data = data;
-			// copy all property
+			// copy all properties
 			for (let k in data) {
 				newScope.data[k] = data[k];
 			}
@@ -1496,7 +1660,7 @@ export class Interpreter {
 		};
 	}
 
-	throwStatementHandler(node: ESTree.ThrowStatement): BaseClosure {
+	protected throwStatementHandler(node: ESTree.ThrowStatement): BaseClosure {
 		const argumentClosure = this.createClosure(node.argument);
 
 		return () => {
@@ -1506,7 +1670,7 @@ export class Interpreter {
 	}
 
 	// try{...}catch(e){...}finally{}
-	tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
+	protected tryStatementHandler(node: ESTree.TryStatement): BaseClosure {
 		const blockClosure = this.createClosure(node.block);
 		const handlerClosure = node.handler ? this.catchClauseHandler(node.handler) : null;
 		const finalizerClosure = node.finalizer ? this.createClosure(node.finalizer) : null;
@@ -1604,7 +1768,7 @@ export class Interpreter {
 		};
 	}
 	// ... catch(e){...}
-	catchClauseHandler(node: ESTree.CatchClause): (e: Error) => any {
+	protected catchClauseHandler(node: ESTree.CatchClause): (e: Error) => any {
 		const paramNameGetter = this.createParamNameGetter(node.param);
 		const bodyClosure = this.createClosure(node.body);
 
@@ -1633,13 +1797,13 @@ export class Interpreter {
 			return result;
 		};
 	}
-	continueStatementHandler(node: ESTree.ContinueStatement): BaseClosure {
+	protected continueStatementHandler(node: ESTree.ContinueStatement): BaseClosure {
 		return () => (node.label ? new ContinueLabel(node.label.name) : Continue);
 	}
-	breakStatementHandler(node: ESTree.BreakStatement): BaseClosure {
+	protected breakStatementHandler(node: ESTree.BreakStatement): BaseClosure {
 		return () => (node.label ? new BreakLabel(node.label.name) : Break);
 	}
-	switchStatementHandler(node: ESTree.SwitchStatement): BaseClosure {
+	protected switchStatementHandler(node: ESTree.SwitchStatement): BaseClosure {
 		const discriminantClosure = this.createClosure(node.discriminant);
 		const caseClosures = node.cases.map(item => this.switchCaseHandler(item));
 		return () => {
@@ -1695,7 +1859,7 @@ export class Interpreter {
 		};
 	}
 
-	switchCaseHandler(node: ESTree.SwitchCase): SwitchCaseClosure {
+	protected switchCaseHandler(node: ESTree.SwitchCase): SwitchCaseClosure {
 		const testClosure = node.test ? this.createClosure(node.test) : () => DefaultCase;
 		const bodyClosure = this.createClosure({
 			type: "BlockStatement",
@@ -1709,7 +1873,7 @@ export class Interpreter {
 	}
 
 	// label: xxx
-	labeledStatementHandler(node: ESTree.LabeledStatement): BaseClosure {
+	protected labeledStatementHandler(node: ESTree.LabeledStatement): BaseClosure {
 		const labelName = node.label.name;
 		const bodyClosure = this.createClosure(node.body);
 
@@ -1731,7 +1895,7 @@ export class Interpreter {
 		};
 	}
 
-	debuggerStatementHandler(node: ESTree.DebuggerStatement): BaseClosure {
+	protected debuggerStatementHandler(node: ESTree.DebuggerStatement): BaseClosure {
 		return () => {
 			debugger;
 			return EmptyStatementReturn;
@@ -1739,7 +1903,7 @@ export class Interpreter {
 	}
 
 	// get es3/5 param name
-	createParamNameGetter(node: ESTree.Pattern): ReturnStringClosure {
+	protected createParamNameGetter(node: ESTree.Pattern): ReturnStringClosure {
 		if (node.type === "Identifier") {
 			return () => node.name;
 		} else {
@@ -1747,7 +1911,7 @@ export class Interpreter {
 		}
 	}
 
-	createObjectKeyGetter(node: ESTree.Expression): Getter {
+	protected createObjectKeyGetter(node: ESTree.Expression): Getter {
 		let getter: Getter;
 		// var obj = { title: "" }
 		if (node.type === "Identifier") {
@@ -1763,7 +1927,7 @@ export class Interpreter {
 		};
 	}
 
-	createMemberKeyGetter(node: ESTree.MemberExpression): Getter {
+	protected createMemberKeyGetter(node: ESTree.MemberExpression): Getter {
 		// s['a'];  node.computed = true
 		// s.foo;  node.computed = false
 		return node.computed
@@ -1772,7 +1936,7 @@ export class Interpreter {
 	}
 
 	// for UnaryExpression UpdateExpression AssignmentExpression
-	createObjectGetter(node: ESTree.Expression | ESTree.Pattern): Getter {
+	protected createObjectGetter(node: ESTree.Expression | ESTree.Pattern): Getter {
 		switch (node.type) {
 			case "Identifier":
 				return () => this.getScopeDataFromName(node.name, this.getCurrentScope());
@@ -1788,7 +1952,7 @@ export class Interpreter {
 	}
 
 	// for UnaryExpression UpdateExpression AssignmentExpression
-	createNameGetter(node: ESTree.Expression | ESTree.Pattern): Getter {
+	protected createNameGetter(node: ESTree.Expression | ESTree.Pattern): Getter {
 		switch (node.type) {
 			case "Identifier":
 				return () => node.name;
@@ -1803,17 +1967,17 @@ export class Interpreter {
 		}
 	}
 
-	varDeclaration(name: string): void {
+	protected varDeclaration(name: string): void {
 		const context = this.collectDeclVars;
 		context[name] = undefined;
 	}
 
-	funcDeclaration(name: string, func: () => any): void {
+	protected funcDeclaration(name: string, func: () => any): void {
 		const context = this.collectDeclFuncs;
 		context[name] = func;
 	}
 
-	addDeclarationsToScope(
+	protected addDeclarationsToScope(
 		declVars: CollectDeclarations,
 		declFuncs: CollectDeclarations,
 		scope: Scope
@@ -1832,16 +1996,16 @@ export class Interpreter {
 		}
 	}
 
-	getScopeValue(name: string, startScope: Scope): any {
+	protected getScopeValue(name: string, startScope: Scope): any {
 		const scope = this.getScopeFromName(name, startScope);
 		return scope.data[name];
 	}
 
-	getScopeDataFromName(name: string, startScope: Scope) {
+	protected getScopeDataFromName(name: string, startScope: Scope) {
 		return this.getScopeFromName(name, startScope).data;
 	}
 
-	getScopeFromName(name: string, startScope: Scope) {
+	protected getScopeFromName(name: string, startScope: Scope) {
 		let scope: Scope | null = startScope;
 
 		do {
@@ -1851,18 +2015,10 @@ export class Interpreter {
 			}
 		} while ((scope = scope.parent));
 
-		return this.rootScope;
+		return this.globalScope;
 	}
 
-	getCurrentScope() {
-		return this.currentScope;
-	}
-
-	getCurrentContext() {
-		return this.currentContext;
-	}
-
-	setValue(value: any) {
+	protected setValue(value: any) {
 		const isFunctionCall = this.callStack.length;
 
 		if (
