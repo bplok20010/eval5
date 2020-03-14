@@ -4,7 +4,7 @@
 	"endOfLine": "auto",
 	"htmlWhitespaceSensitivity": "css",
 	"insertPragma": false,
-	"jsxBracketSameLine": false,
+	"jsxBracketSameLine": true,
 	"jsxSingleQuote": false,
 	"printWidth": 100,
 	"proseWrap": "preserve",

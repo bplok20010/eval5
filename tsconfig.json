@@ -3,7 +3,7 @@
 		"outDir": "lib",
 		"declaration": true,
 		"module": "esnext",
-		"target": "es2016",
+		"target": "esnext",
 		"lib": ["es6", "dom"],
 		"jsx": "react",
 		"allowSyntheticDefaultImports": true,
