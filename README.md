@@ -111,6 +111,22 @@ func();
 `);
 ```
 
+**Note: be careful of the following**
+
+```
+import { Interpreter } from "Interpreter";
+
+Interpreter.globalContextInFunction = {};
+
+const ctx = {alert: alert};
+
+const interpreter = new Interpreter(ctx);
+
+interpreter.evaluate(`
+alert('Hello eval5'); // Illegal invocation
+`);
+```
+
 **`constructor(context?: {}: options: Options = Interpreter.global)`**
 
 ## Instance methods
