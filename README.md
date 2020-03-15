@@ -103,7 +103,7 @@ import { Interpreter } from "Interpreter";
 
 Interpreter.globalContextInFunction = window;
 const ctx = {};
-const interpreter = new Interpreter({});
+const interpreter = new Interpreter(ctx);
 interpreter.evaluate(`
 this; // ctx
 function func(){
