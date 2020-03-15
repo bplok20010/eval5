@@ -54,6 +54,7 @@ try {
 
 ```ts
 interface Options {
+	// default: 0 not limited
 	timeout?: number;
 	rootContext?: {} | null;
 	globalContextInFunction?: any;
@@ -164,7 +165,7 @@ alias of `evaluate`
 
 get the last execution time
 
-**`setExecTimeout(): number`**
+**`setExecTimeout(timeout: number = 0): void`**
 
 set the timeout for each execution
 
