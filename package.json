@@ -1,7 +1,7 @@
 {
 	"name": "eval5",
-	"version": "1.4.0-alpha",
-	"description": "A JavaScript interpreter, written completely in JavaScript",
+	"version": "1.4.0",
+	"description": "A JavaScript interpreter written in JavaScript",
 	"main": "./dist/cjs/index.js",
 	"module": "./dist/esm/index.js",
 	"types": "./lib/index.d.ts",
@@ -46,7 +46,6 @@
 		"@types/fs-extra": "^8.1.0",
 		"@types/jest": "^24.0.25",
 		"babel-plugin-search-and-replace": "^1.0.1",
-		"babel-plugin-transform-string-literal-replace": "^1.0.2",
 		"babel-preset-packez": "^1.0.0",
 		"fs-extra": "^8.1.0",
 		"jest": "^24.9.0",

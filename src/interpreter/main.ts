@@ -28,7 +28,7 @@ interface Options {
 	timeout?: number;
 	rootContext?: Context | null;
 	globalContextInFunction?: any;
-	initEnv?: (inst: Interpreter) => void;
+	_initEnv?: (this: Interpreter) => void;
 }
 interface CollectDeclarations {
 	[key: string]: undefined | BaseClosure;
@@ -118,7 +118,7 @@ function internalEval(
 
 	const options: Options = {
 		timeout: opts.timeout,
-		initEnv: function(this: Interpreter) {
+		_initEnv: function(this: Interpreter) {
 			// set caller context
 			if (!useGlobalScope) {
 				this.setCurrentContext(instance.getCurrentContext());
@@ -331,7 +331,7 @@ export class Interpreter {
 				options.globalContextInFunction === undefined
 					? Interpreter.globalContextInFunction
 					: options.globalContextInFunction,
-			initEnv: options.initEnv,
+			_initEnv: options._initEnv,
 		};
 
 		this.context = context || Object.create(null);
@@ -368,9 +368,9 @@ export class Interpreter {
 		this.execStartTime = Date.now();
 		this.execEndTime = this.execStartTime;
 
-		const initEnv = this.options.initEnv;
-		if (initEnv) {
-			initEnv.call(this);
+		const _initEnv = this.options._initEnv;
+		if (_initEnv) {
+			_initEnv.call(this);
 		}
 	}
 

@@ -3,10 +3,10 @@
 	<head>
 		<title>eval5</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-		<script type="text/javascript" src="./umd/eval5.js"></script>
+		<script type="text/javascript" src="./umd/eval5.min.js"></script>
 		<style type="text/css">
 			* {
-				font-family: 微软雅黑;
+				font-family: "Segoe UI", Arial, "Microsoft Yahei", sans-serif;
 				margin: 0;
 				padding: 0;
 			}
@@ -29,15 +29,14 @@
 				background-color: #007acc;
 				cursor: pointer;
 				border: none;
-				padding: 10px;
+				padding: 8px 25px;
+				border-radius: 3px;
 				color: #fff;
-				border-radius: 5px;
-				width: 130px;
 			}
 
 			textarea {
 				display: block;
-				border: 1px solid #ccc;
+				border: 1px solid #dfe2e5;
 				width: 100%;
 				height: 400px;
 				box-sizing: border-box;
@@ -50,6 +49,10 @@
 				top: 0;
 			}
 
+			.error {
+				color: red;
+			}
+
 			#log {
 				width: 60%;
 				margin: 0 auto;
@@ -59,7 +62,23 @@
 
 			#version {
 				margin-left: 10px;
-				font-size: 12px;
+				font-size: 14px;
+			}
+
+			.results-contaner {
+				position: relative;
+				padding: 5px;
+				border: 1px solid #dfe2e5;
+				margin-top: -1px;
+			}
+			.results-label {
+				font-size: 14px;
+				margin-bottom: 5px;
+			}
+
+			#results {
+				font-size: 14px;
+				min-height: 18px;
 			}
 		</style>
 	</head>
@@ -88,6 +107,7 @@
 				></a>
 			</div>
 			<div class="tools"><button onclick="run()">Run</button> <span id="version"></span></div>
+
 			<textarea id="code">
 var result = [];
 
@@ -103,25 +123,31 @@ function fibonacci(n, res) {
     }
 }
 fibonacci(12, result);
-alert(result.join(', '));
+result.join(', ');
         </textarea
 			>
+
+			<div class="results-contaner">
+				<div class="results-label">Console:</div>
+				<div id="results"></div>
+			</div>
 		</div>
+
 		<div id="root"></div>
 		<div id="log"></div>
 		<script>
-			version.innerHTML = "版本：" + eval5.Interpreter.version;
-			eval5.Interpreter.rootContext = window;
+			version.innerHTML = "version: " + eval5.Interpreter.version;
 			var interpreter = new eval5.Interpreter(window);
 			function run() {
 				var source = code.value;
 
 				try {
-					interpreter.evaluate(source);
-					log.innerHTML = "";
+					var result = interpreter.evaluate(source);
+					results.innerHTML = result;
+					console.log(result);
 				} catch (e) {
 					console.log(e);
-					log.innerHTML = e.message;
+					results.innerHTML = '<div class="error">' + e.message + "</div>";
 				}
 			}
 		</script>

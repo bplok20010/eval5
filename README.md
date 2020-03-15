@@ -12,7 +12,7 @@ A JavaScript interpreter written in JavaScript.
 
 -   Need to execute code in the browser with a sandbox environment
 -   Controlling execution time
--   JavaScript runtime environment that does not support `eval` and `Function`. for example: WeChat Mini Program
+-   JavaScript runtime environment that does not support `eval` and `Function`. for example: WeChat Mini Program [demo](https://github.com/bplok20010/eval5-wx-demo)
 -   Be interested or Be curious
 
 ## Support
@@ -56,6 +56,7 @@ try {
 interface Options {
 	timeout?: number;
 	rootContext?: {} | null;
+	globalContextInFunction?: any;
 }
 ```
 
@@ -111,7 +112,9 @@ func();
 `);
 ```
 
-**Note: be careful of the following**
+**Note: Illegal invocation**
+
+e.g.
 
 ```
 import { Interpreter } from "Interpreter";
@@ -123,7 +126,9 @@ const ctx = {alert: alert};
 const interpreter = new Interpreter(ctx);
 
 interpreter.evaluate(`
-alert('Hello eval5'); // Illegal invocation
+// alert.call({}, 'Hello eval5')
+// Illegal invocation
+alert('Hello eval5');
 `);
 ```
 
@@ -217,8 +222,5 @@ MIT
 
 ## Related
 
--   [evaljs][]
--   [closure-interpreter][]
-
-[evaljs]: https://github.com/marten-de-vries/evaljs
-[closure-interpreter]: https://github.com/int3/closure-interpreter
+-   [evaljs](https://github.com/marten-de-vries/evaljs)
+-   [closure-interpreter](https://github.com/int3/closure-interpreter)
