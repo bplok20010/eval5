@@ -26,6 +26,7 @@ export function compileFunction(
 		ecmaVersion: options.ecmaVersion,
 		timeout,
 		rootContext: options.rootContext,
+		globalContextInFunction: options.globalContextInFunction,
 	});
 
 	return interpreter.evaluate(wrapCode);

@@ -27,6 +27,7 @@ interface Options {
 	ecmaVersion?: ECMA_VERSION;
 	timeout?: number;
 	rootContext?: Context | null;
+	globalContextInFunction?: any;
 	initEnv?: (inst: Interpreter) => void;
 }
 interface CollectDeclarations {
@@ -287,23 +288,23 @@ if (typeof Reflect !== "undefined") {
 }
 
 export class Interpreter {
-	static readonly version = version;
+	static readonly version: string = version;
 	static readonly eval = internalEval;
 	static readonly Function = internalFunction;
 	static ecmaVersion: ECMA_VERSION = 5;
-	// alert.call(rootContext, 1);
+	// alert.call(globalContextInFunction, 1);
 	// fix: alert.call({}, 1); // Illegal invocation
 	// function func(){
 	//     this;// Interpreter.globalContextInFunction
 	// }
 	// func()
-	static globalContextInFunction = void 0;
-	static global = Object.create(null);
+	static globalContextInFunction: any = void 0;
+	static global: Context = Object.create(null);
 
 	// last expression value
 	protected value: any;
 	protected context: Context | Scope;
-	protected rootContext: Context;
+	protected globalContext: Context;
 	protected source: string;
 	protected sourceList: string[] = [];
 	protected currentScope: Scope;
@@ -326,6 +327,10 @@ export class Interpreter {
 			ecmaVersion: options.ecmaVersion || Interpreter.ecmaVersion,
 			timeout: options.timeout || 0,
 			rootContext: options.rootContext,
+			globalContextInFunction:
+				options.globalContextInFunction === undefined
+					? Interpreter.globalContextInFunction
+					: options.globalContextInFunction,
 			initEnv: options.initEnv,
 		};
 
@@ -353,8 +358,8 @@ export class Interpreter {
 
 		this.globalScope = scope;
 		this.currentScope = this.globalScope;
-		//init global context == this
-		this.rootContext = scope.data;
+		//init global context to this
+		this.globalContext = scope.data;
 		this.currentContext = scope.data;
 		// collect var/function declare
 		this.collectDeclVars = Object.create(null);
@@ -1073,7 +1078,7 @@ export class Interpreter {
 					// tips:
 					// test(...) === test.call(undefined, ...)
 					// fix: alert.call({}, ...) Illegal invocation
-					return func.bind(Interpreter.globalContextInFunction);
+					return func.bind(this.options.globalContextInFunction);
 				};
 		}
 	}
