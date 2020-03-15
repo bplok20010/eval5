@@ -252,6 +252,27 @@ test("function call default context", () => {
 	deepEqual(a, "eval5");
 });
 
+test("function call context", () => {
+	Interpreter.globalContextInFunction = "eval5";
+
+	const a = evaluate(
+		`
+        function call_2(){
+            return this;
+        }
+        call_2();
+    `,
+		undefined,
+		{
+			globalContextInFunction: "eval5 context",
+		}
+	);
+
+	Interpreter.globalContextInFunction = void 0;
+
+	deepEqual(a, "eval5 context");
+});
+
 test("function overlap1", () => {
 	const ctx: { [x: string]: any } = {};
 	ctx.overlap1 = function() {
