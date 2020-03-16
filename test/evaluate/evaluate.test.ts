@@ -42,3 +42,16 @@ test("evaluate result -3", () => {
 	expect(ret1).toEqual(1);
 	expect(ret2).toEqual(undefined);
 });
+
+test("evaluate result -4", () => {
+	const interpreter = new Interpreter({});
+
+	const ret1 = interpreter.evaluate(`
+        var a = (function () {
+            var b = 1;
+            return 2;
+        })();
+    `);
+
+	expect(ret1).toEqual(undefined);
+});

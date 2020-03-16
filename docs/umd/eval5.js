@@ -1,5 +1,5 @@
 /*!
- * @license eval5 v1.4.0
+ * @license eval5 v1.4.1
  * Copyright (c) 2019-2020 nobo (MIT Licensed)
  * https://github.com/bplok20010/eval5
  */
@@ -5537,7 +5537,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.4.0";
+var version = "1.4.1";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5558,14 +5558,14 @@ function isFunction(func) {
   return typeof func === "function";
 }
 
-var InternalInternalReflection =
+var InternalInterpreterReflection =
 /*#__PURE__*/
 function () {
-  function InternalInternalReflection(interpreter) {
+  function InternalInterpreterReflection(interpreter) {
     this.interpreter = interpreter;
   }
 
-  var _proto = InternalInternalReflection.prototype;
+  var _proto = InternalInterpreterReflection.prototype;
 
   _proto.generator = function generator() {
     var interpreter = this.interpreter;
@@ -5591,7 +5591,7 @@ function () {
     };
   };
 
-  return InternalInternalReflection;
+  return InternalInterpreterReflection;
 }();
 
 function internalEval(reflection, code, useGlobalScope) {
@@ -5599,7 +5599,7 @@ function internalEval(reflection, code, useGlobalScope) {
     useGlobalScope = true;
   }
 
-  if (!(reflection instanceof InternalInternalReflection)) {
+  if (!(reflection instanceof InternalInterpreterReflection)) {
     throw new Error("Illegal call");
   }
 
@@ -5633,7 +5633,7 @@ Object.defineProperty(internalEval, "__IS_EVAL_FUNC", {
 });
 
 function internalFunction(reflection) {
-  if (!(reflection instanceof InternalInternalReflection)) {
+  if (!(reflection instanceof InternalInterpreterReflection)) {
     throw new Error("Illegal call");
   }
 
@@ -6466,7 +6466,7 @@ function () {
 
           if (func.__IS_EVAL_FUNC) {
             return function (code) {
-              return func(new InternalInternalReflection(_this8), code, true);
+              return func(new InternalInterpreterReflection(_this8), code, true);
             };
           } // obj.func = Function
           // obj.func(...)
@@ -6478,7 +6478,7 @@ function () {
                 args[_key2] = arguments[_key2];
               }
 
-              return func.apply(void 0, [new InternalInternalReflection(_this8)].concat(args));
+              return func.apply(void 0, [new InternalInterpreterReflection(_this8)].concat(args));
             };
           } // method call
           // eg：obj.say(...)
@@ -6525,7 +6525,7 @@ function () {
 
               var useGlobalScope = !scope.parent || _this8.globalScope === scope || scope.name === "rootScope"; // use local scope if calling eval in super scope
 
-              return func(new InternalInternalReflection(_this8), code, !useGlobalScope);
+              return func(new InternalInterpreterReflection(_this8), code, !useGlobalScope);
             };
           } // use global scope
           // var g_eval = eval;
@@ -6535,7 +6535,7 @@ function () {
 
           if (func.__IS_EVAL_FUNC) {
             return function (code) {
-              return func(new InternalInternalReflection(_this8), code, true);
+              return func(new InternalInterpreterReflection(_this8), code, true);
             };
           } // Function('a', 'b', 'return a+b')
 
@@ -6546,7 +6546,7 @@ function () {
                 args[_key3] = arguments[_key3];
               }
 
-              return func.apply(void 0, [new InternalInternalReflection(_this8)].concat(args));
+              return func.apply(void 0, [new InternalInterpreterReflection(_this8)].concat(args));
             };
           } // function call
           // this = undefined
@@ -6688,7 +6688,7 @@ function () {
 
 
       if (construct.__IS_FUNCTION_FUNC) {
-        return construct.apply(void 0, [new InternalInternalReflection(_this11)].concat(args.map(function (arg) {
+        return construct.apply(void 0, [new InternalInterpreterReflection(_this11)].concat(args.map(function (arg) {
           return arg();
         })));
       }
@@ -6912,9 +6912,10 @@ function () {
 
     return function () {
       if (assignmentsClosure) {
+        var oldValue = _this16.isVarDeclMode;
         _this16.isVarDeclMode = true;
         assignmentsClosure();
-        _this16.isVarDeclMode = false;
+        _this16.isVarDeclMode = oldValue;
       }
 
       return EmptyStatementReturn;
