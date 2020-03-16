@@ -69,7 +69,7 @@ interface GeneratorReflection {
 	getExecStartTime(): number;
 }
 
-class InternalInternalReflection {
+class InternalInterpreterReflection {
 	protected interpreter: Interpreter;
 	constructor(interpreter: Interpreter) {
 		this.interpreter = interpreter;
@@ -101,11 +101,11 @@ class InternalInternalReflection {
 }
 
 function internalEval(
-	reflection: InternalInternalReflection,
+	reflection: InternalInterpreterReflection,
 	code?: string,
 	useGlobalScope: boolean = true
 ): any {
-	if (!(reflection instanceof InternalInternalReflection)) {
+	if (!(reflection instanceof InternalInterpreterReflection)) {
 		throw new Error("Illegal call");
 	}
 
@@ -142,10 +142,10 @@ Object.defineProperty(internalEval, "__IS_EVAL_FUNC", {
 });
 
 function internalFunction(
-	reflection: InternalInternalReflection,
+	reflection: InternalInterpreterReflection,
 	...params: string[]
 ): (...args: any[]) => any {
-	if (!(reflection instanceof InternalInternalReflection)) {
+	if (!(reflection instanceof InternalInterpreterReflection)) {
 		throw new Error("Illegal call");
 	}
 
@@ -978,7 +978,7 @@ export class Interpreter {
 					if (func.__IS_EVAL_FUNC) {
 						return (code?: string) => {
 							return (func as typeof internalEval)(
-								new InternalInternalReflection(this),
+								new InternalInterpreterReflection(this),
 								code,
 								true
 							);
@@ -990,7 +990,7 @@ export class Interpreter {
 					if (func.__IS_FUNCTION_FUNC) {
 						return (...args: string[]) => {
 							return (func as typeof internalFunction)(
-								new InternalInternalReflection(this),
+								new InternalInterpreterReflection(this),
 								...args
 							);
 						};
@@ -1043,7 +1043,7 @@ export class Interpreter {
 								scope.name === "rootScope";
 							// use local scope if calling eval in super scope
 							return (func as typeof internalEval)(
-								new InternalInternalReflection(this),
+								new InternalInterpreterReflection(this),
 								code,
 								!useGlobalScope
 							);
@@ -1056,7 +1056,7 @@ export class Interpreter {
 					if (func.__IS_EVAL_FUNC) {
 						return (code?: string) => {
 							return (func as typeof internalEval)(
-								new InternalInternalReflection(this),
+								new InternalInterpreterReflection(this),
 								code,
 								true
 							);
@@ -1067,7 +1067,7 @@ export class Interpreter {
 					if (func.__IS_FUNCTION_FUNC) {
 						return (...args: string[]) => {
 							return (func as typeof internalFunction)(
-								new InternalInternalReflection(this),
+								new InternalInterpreterReflection(this),
 								...args
 							);
 						};
@@ -1212,7 +1212,7 @@ export class Interpreter {
 			// new Function(...)
 			if (construct.__IS_FUNCTION_FUNC) {
 				return (construct as typeof internalFunction)(
-					new InternalInternalReflection(this),
+					new InternalInterpreterReflection(this),
 					...args.map(arg => arg())
 				);
 			}
@@ -1417,9 +1417,10 @@ export class Interpreter {
 
 		return () => {
 			if (assignmentsClosure) {
+				const oldValue = this.isVarDeclMode;
 				this.isVarDeclMode = true;
 				assignmentsClosure();
-				this.isVarDeclMode = false;
+				this.isVarDeclMode = oldValue;
 			}
 
 			return EmptyStatementReturn;
