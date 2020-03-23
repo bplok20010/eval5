@@ -11,43 +11,10 @@
 				padding: 0;
 			}
 
-			#root {
-				width: 60%;
-				margin: 0 auto;
-				padding: 15px 0;
-			}
-
 			.container {
 				width: 60%;
 				margin: 0 auto;
 				padding: 15px 0;
-			}
-			@media screen and (max-width: 760px) {
-				.container {
-					width: 90%;
-				}
-			}
-
-			.tools {
-				margin-bottom: 15px;
-			}
-
-			button {
-				background-color: #007acc;
-				cursor: pointer;
-				border: none;
-				padding: 8px 25px;
-				border-radius: 3px;
-				color: #fff;
-			}
-
-			textarea {
-				display: block;
-				border: 1px solid #dfe2e5;
-				width: 100%;
-				height: 400px;
-				box-sizing: border-box;
-				padding: 5px;
 			}
 
 			.github {
@@ -56,41 +23,19 @@
 				top: 0;
 			}
 
-			.error {
-				color: red;
-			}
-
-			#log {
-				width: 60%;
-				margin: 0 auto;
-				padding: 15px 0;
-				color: red;
-			}
-
-			#version {
-				margin-left: 10px;
-				font-size: 14px;
-			}
-
-			.results-container {
-				position: relative;
-				padding: 5px;
-				border: 1px solid #dfe2e5;
-				margin-top: -1px;
-			}
-			.results-label {
-				font-size: 14px;
-				margin-bottom: 5px;
-			}
-
-			#results {
-				font-size: 14px;
-				min-height: 18px;
+			@media screen and (max-width: 760px) {
+				.container {
+					width: 90%;
+				}
 			}
 		</style>
 	</head>
+
 	<body>
 		<div class="container">
+			<ol>
+				<li><a href="./examples/echarts.html">Echarts: Execute the echarts Library</a></li>
+			</ol>
 			<div class="github">
 				<a target="_blank" href="https://github.com/bplok20010/eval5"
 					><svg
@@ -113,38 +58,6 @@
 						></path></svg
 				></a>
 			</div>
-			<div class="tools">
-				<button onclick="run()">Run</button> <span id="version"></span>
-				<a style="margin-left: 8px;" href="examples.html">more examples</a>
-			</div>
-
-			<textarea id="code">
-var result = [];
-
-function fibonacci(n, res) {
-    var a = 1,
-        b = 1,
-        sum;
-    for (var i = 0; i < n; i++) {
-        res.push(a);
-        sum = a + b;
-        a = b;
-        b = sum;
-    }
-}
-fibonacci(12, result);
-result.join(', ');
-        </textarea
-			>
-
-			<div class="results-container">
-				<div class="results-label">Console:</div>
-				<div id="results"></div>
-			</div>
 		</div>
-
-		<div id="root"></div>
-		<div id="log"></div>
-		<script type="text/javascript" src="./index.js"></script>
 	</body>
 </html>

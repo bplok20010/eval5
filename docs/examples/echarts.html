@@ -3,7 +3,7 @@
 	<head>
 		<title>eval5</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-		<script type="text/javascript" src="./umd/eval5.min.js"></script>
+		<script type="text/javascript" src="../umd/eval5.min.js"></script>
 		<style type="text/css">
 			* {
 				font-family: "Segoe UI", Arial, "Microsoft Yahei", sans-serif;
@@ -11,10 +11,10 @@
 				padding: 0;
 			}
 
-			#root {
+			.example {
 				width: 60%;
 				margin: 0 auto;
-				padding: 15px 0;
+				height: 300px;
 			}
 
 			.container {
@@ -22,6 +22,7 @@
 				margin: 0 auto;
 				padding: 15px 0;
 			}
+
 			@media screen and (max-width: 760px) {
 				.container {
 					width: 90%;
@@ -78,6 +79,7 @@
 				border: 1px solid #dfe2e5;
 				margin-top: -1px;
 			}
+
 			.results-label {
 				font-size: 14px;
 				margin-bottom: 5px;
@@ -87,8 +89,17 @@
 				font-size: 14px;
 				min-height: 18px;
 			}
+
+			#lib {
+				height: 100px;
+			}
+
+			#code {
+				height: 200px;
+			}
 		</style>
 	</head>
+
 	<body>
 		<div class="container">
 			<div class="github">
@@ -114,28 +125,12 @@
 				></a>
 			</div>
 			<div class="tools">
-				<button onclick="run()">Run</button> <span id="version"></span>
-				<a style="margin-left: 8px;" href="examples.html">more examples</a>
+				<button onclick="startRun()">Run</button> <span id="version"></span>
+				<a style="margin-left: 8px;" href="../examples.html">more examples</a>
 			</div>
 
-			<textarea id="code">
-var result = [];
-
-function fibonacci(n, res) {
-    var a = 1,
-        b = 1,
-        sum;
-    for (var i = 0; i < n; i++) {
-        res.push(a);
-        sum = a + b;
-        a = b;
-        b = sum;
-    }
-}
-fibonacci(12, result);
-result.join(', ');
-        </textarea
-			>
+			<textarea id="lib" readonly></textarea>
+			<textarea id="code"> </textarea>
 
 			<div class="results-container">
 				<div class="results-label">Console:</div>
@@ -143,8 +138,8 @@ result.join(', ');
 			</div>
 		</div>
 
-		<div id="root"></div>
+		<div id="example" class="example"></div>
 		<div id="log"></div>
-		<script type="text/javascript" src="./index.js"></script>
+		<script type="text/javascript" src="echarts.js"></script>
 	</body>
 </html>
