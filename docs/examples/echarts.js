@@ -15,14 +15,18 @@ function run() {
 
 function startRun() {
 	results.innerHTML = "parsing...";
-	setTimeout(run);
+	setTimeout(run, 10);
 }
 main();
 function main() {
 	results.innerHTML = "loading...";
+	runBtn.disabled = true;
+
 	fetch(libUrl)
 		.then(res => res.text())
 		.then(s => {
+			runBtn.disabled = false;
+
 			lib.value = s;
 			code.value = `
 var hours = ['12a', '1a', '2a', '3a', '4a', '5a', '6a',
