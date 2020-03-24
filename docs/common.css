@@ -1,0 +1,103 @@
+* {
+    font-family: "Segoe UI", Arial, "Microsoft Yahei", sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.container {
+    width: 60%;
+    margin: 0 auto;
+    padding: 15px 0;
+}
+
+@media screen and (max-width: 760px) {
+    .container {
+        width: 90%;
+    }
+
+    .github {
+        display: none;
+    }
+}
+
+.tools {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.btn-run {
+    background-color: #007acc;
+    cursor: pointer;
+    border: none;
+    padding: 8px 25px;
+    border-radius: 3px;
+    color: #fff;
+}
+
+.github {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.star {
+    position: absolute;
+    right: 0;
+    top: 8px;
+}
+
+.error {
+    color: red;
+}
+
+textarea {
+    display: block;
+    border: 1px solid #dfe2e5;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px;
+}
+
+.code {
+    height: 400px;
+}
+
+.code-lib {
+    height: 100px;
+}
+
+.version {
+    margin-left: 10px;
+    font-size: 14px;
+}
+
+.results-container {
+    position: relative;
+    padding: 5px;
+    border: 1px solid #dfe2e5;
+    margin-top: -1px;
+}
+
+.results-label {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.results {
+    font-size: 14px;
+    min-height: 18px;
+}
+
+.example-item {
+    padding: 10px 0;
+}
