@@ -24,8 +24,10 @@ function startRun() {
 main();
 function main() {
 	code.value = `
-hello();
-              `;
+// eval without window
+// console is not defined
+// console.log('hello eval5');
+hello();`;
 
 	startRun();
 }
