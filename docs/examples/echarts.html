@@ -4,98 +4,10 @@
 		<title>eval5</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 		<script type="text/javascript" src="../umd/eval5.min.js"></script>
+		<link href="../common.css" rel="stylesheet" />
 		<style type="text/css">
-			* {
-				font-family: "Segoe UI", Arial, "Microsoft Yahei", sans-serif;
-				margin: 0;
-				padding: 0;
-			}
-
-			.example {
-				width: 60%;
-				margin: 0 auto;
+			.code {
 				height: 300px;
-			}
-
-			.container {
-				width: 60%;
-				margin: 0 auto;
-				padding: 15px 0;
-			}
-
-			@media screen and (max-width: 760px) {
-				.container {
-					width: 90%;
-				}
-			}
-
-			.tools {
-				margin-bottom: 15px;
-			}
-
-			button {
-				background-color: #007acc;
-				cursor: pointer;
-				border: none;
-				padding: 8px 25px;
-				border-radius: 3px;
-				color: #fff;
-			}
-
-			textarea {
-				display: block;
-				border: 1px solid #dfe2e5;
-				width: 100%;
-				height: 400px;
-				box-sizing: border-box;
-				padding: 5px;
-			}
-
-			.github {
-				position: absolute;
-				right: 0;
-				top: 0;
-			}
-
-			.error {
-				color: red;
-			}
-
-			#log {
-				width: 60%;
-				margin: 0 auto;
-				padding: 15px 0;
-				color: red;
-			}
-
-			#version {
-				margin-left: 10px;
-				font-size: 14px;
-			}
-
-			.results-container {
-				position: relative;
-				padding: 5px;
-				border: 1px solid #dfe2e5;
-				margin-top: -1px;
-			}
-
-			.results-label {
-				font-size: 14px;
-				margin-bottom: 5px;
-			}
-
-			#results {
-				font-size: 14px;
-				min-height: 18px;
-			}
-
-			#lib {
-				height: 100px;
-			}
-
-			#code {
-				height: 200px;
 			}
 		</style>
 	</head>
@@ -125,21 +37,27 @@
 				></a>
 			</div>
 			<div class="tools">
-				<button onclick="startRun()" id="runBtn">Run</button> <span id="version"></span>
-				<a style="margin-left: 8px;" href="../examples.html">more examples</a>
+				<button onclick="startRun()" id="runBtn" class="btn-run">Run</button>
+				<a
+					style="margin-left: 8px; font-size: 0;"
+					href="https://github.com/bplok20010/eval5"
+					><img
+						alt="GitHub stars"
+						src="https://img.shields.io/github/stars/bplok20010/eval5?style=social"
+				/></a>
+				<span id="version" class="version"></span>
+				<a style="margin-left: 8px;" href="../examples.html">Examples</a>
 			</div>
 
-			<textarea id="lib" readonly></textarea>
-			<textarea id="code"> </textarea>
+			<textarea id="lib" readonly class="code-lib"></textarea>
+			<textarea id="code" class="code"> </textarea>
 
 			<div class="results-container">
 				<div class="results-label">Console:</div>
 				<div id="results"></div>
 			</div>
+			<div id="example" class="example" style="height: 300px;"></div>
 		</div>
-
-		<div id="example" class="example"></div>
-		<div id="log"></div>
 		<script type="text/javascript" src="echarts.js"></script>
 	</body>
 </html>

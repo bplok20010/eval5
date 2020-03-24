@@ -1,4 +1,4 @@
-version.innerHTML = "version: " + eval5.Interpreter.version;
+version.innerHTML = "eval5: " + eval5.Interpreter.version;
 var interpreter = new eval5.Interpreter(window);
 function run() {
 	var source = code.value;
@@ -12,3 +12,4 @@ function run() {
 		results.innerHTML = `<div class="error">${e.message}</div>`;
 	}
 }
+run();
