@@ -32,6 +32,29 @@ test();
 
 	expect(msg).toEqual("Script execution timed out after 500ms");
 	expect(hasError).toEqual(true);
+
+	//again
+	var _s = Date.now();
+	var _e = Date.now();
+	try {
+		interpreter.evaluate(
+			`
+function test(){
+    var t = 0;
+    for(;;) { 
+        t++;
+    }
+}
+
+test();
+
+  `
+		);
+	} catch (e) {
+		_e = Date.now();
+	}
+
+	expect(_e - _s > 400).toBe(true);
 });
 
 test("timeout -2", () => {
