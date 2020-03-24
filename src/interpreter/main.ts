@@ -461,6 +461,10 @@ export class Interpreter {
 
 		const bodyClosure = this.createClosure(node);
 
+		//reset timeout
+		this.execStartTime = Date.now();
+		this.execEndTime = this.execStartTime;
+
 		// add declares to data
 		this.addDeclarationsToScope(
 			this.collectDeclVars,

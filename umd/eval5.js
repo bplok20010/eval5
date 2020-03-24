@@ -1,5 +1,5 @@
 /*!
- * @license eval5 v1.4.1
+ * @license eval5 v1.4.2
  * Copyright (c) 2019-2020 nobo (MIT Licensed)
  * https://github.com/bplok20010/eval5
  */
@@ -5537,7 +5537,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.4.1";
+var version = "1.4.2";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5916,7 +5916,10 @@ function () {
     this.source = source;
     this.sourceList.push(source);
     this.isRunning = true;
-    var bodyClosure = this.createClosure(node); // add declares to data
+    var bodyClosure = this.createClosure(node); //reset timeout
+
+    this.execStartTime = Date.now();
+    this.execEndTime = this.execStartTime; // add declares to data
 
     this.addDeclarationsToScope(this.collectDeclVars, this.collectDeclFuncs, this.getCurrentScope()); // reset
 
