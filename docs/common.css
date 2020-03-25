@@ -13,6 +13,22 @@ a:hover {
     text-decoration: underline;
 }
 
+.repo-link {
+    margin-left: 8px;
+    font-size: 0;
+    padding: 5px;
+}
+
+.repo-link:hover {
+    background: #f5f5f5;
+    border-radius: 3px;
+}
+
+.repo-link img {
+    width: 20px;
+    height: 20px;
+}
+
 .container {
     width: 60%;
     margin: 0 auto;
