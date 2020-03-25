@@ -1309,52 +1309,39 @@ export class Interpreter {
 			const rightValue = rightValueGetter();
 
 			if (node.operator !== "=") {
-				// var1(undefined) += 1
+				// if a is undefined
+				// a += 1
 				this.assertVariable(data, name, node);
 			}
 
-			let value = data[name];
-
 			switch (node.operator) {
 				case "=":
-					value = rightValue;
-					break;
+					return (data[name] = rightValue);
 				case "+=":
-					value += rightValue;
-					break;
+					return (data[name] += rightValue);
 				case "-=":
-					value -= rightValue;
-					break;
+					return (data[name] -= rightValue);
 				case "*=":
-					value *= rightValue;
-					break;
-				case "**=":
-					value = Math.pow(value, rightValue);
-					break;
+					return (data[name] *= rightValue);
+				// case "**=":
+				// data[name]: Getter may be triggered
+				// 	return (data[name] = Math.pow(data[name], rightValue));
 				case "/=":
-					value /= rightValue;
-					break;
+					return (data[name] /= rightValue);
 				case "%=":
-					value %= rightValue;
-					break;
+					return (data[name] %= rightValue);
 				case "<<=":
-					value <<= rightValue;
-					break;
+					return (data[name] <<= rightValue);
 				case ">>=":
-					value >>= rightValue;
-					break;
+					return (data[name] >>= rightValue);
 				case ">>>=":
-					value >>>= rightValue;
-					break;
+					return (data[name] >>>= rightValue);
 				case "&=":
-					value &= rightValue;
-					break;
+					return (data[name] &= rightValue);
 				case "^=":
-					value ^= rightValue;
-					break;
+					return (data[name] ^= rightValue);
 				case "|=":
-					value |= rightValue;
-					break;
+					return (data[name] |= rightValue);
 				default:
 					throw this.createInternalThrowError(
 						Messages.AssignmentExpressionSyntaxError,
@@ -1362,10 +1349,6 @@ export class Interpreter {
 						node
 					);
 			}
-
-			data[name] = value;
-
-			return value;
 		};
 	}
 
