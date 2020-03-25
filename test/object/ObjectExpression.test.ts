@@ -71,11 +71,16 @@ var obj = {
 	deepEqual(obj.value, obj.i);
 });
 
-test("object with setter method", () => {
+test("object with setter method -1", () => {
 	const obj = evaluate(
 		`
 var obj = {
+    getCounter: 0,
   i: 0,
+  get value(){
+    this.getCounter++;
+    return this.i
+  },
   set value(val){
     this.i = val;
   }
@@ -87,6 +92,34 @@ var obj = {
 	deepEqual(obj.i, 0);
 	obj.value = 123;
 	deepEqual(obj.i, 123);
+	expect(obj.getCounter).toBe(0);
+});
+
+test("object with setter method -2", () => {
+	const r = evaluate(
+		`
+var obj = {
+    getCounter: 0,
+  i: 0,
+  get value(){
+    this.getCounter++;
+    return this.i
+  },
+  set value(val){
+    this.i = val;
+  }
+};
+
+ obj;
+ var result = [obj.i];
+ obj.value = 123;
+ result.push(obj.i);
+ result.push(obj.getCounter);
+ result
+  `
+	);
+
+	expect(r).toEqual([0, 123, 0]);
 });
 
 test("object function name", () => {

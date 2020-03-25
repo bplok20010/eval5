@@ -107,3 +107,34 @@ var num = ~("123");
 	);
 	deepEqual(num, -124);
 });
+
+test("getter trigger", () => {
+	const v = evaluate(
+		`
+var triggerCount = 0;
+var data = {
+    get value(){
+        triggerCount++
+        return 1;
+    }
+};
+
+-data.value;
+
++data.value;
+
+!data.value;
+
+~data.value;
+
+void data.value;
+
+typeof data.value;
+
+delete data.value
+
+triggerCount
+  `
+	);
+	expect(v).toBe(6);
+});
