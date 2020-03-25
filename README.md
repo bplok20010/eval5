@@ -8,6 +8,8 @@ A JavaScript interpreter written in TypeScript.
 
 [Try it out](https://bplok20010.github.io/eval5/)
 
+[Examples](https://bplok20010.github.io/eval5/examples.html)
+
 ## You may not need it unless
 
 -   Need to execute code in the browser with a sandbox environment
