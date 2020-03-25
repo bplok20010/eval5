@@ -5715,7 +5715,11 @@ var BuildInObjects = {
   Date: Date,
   RegExp: RegExp,
   Error: Error,
+  URIError: URIError,
   TypeError: TypeError,
+  RangeError: RangeError,
+  SyntaxError: SyntaxError,
+  ReferenceError: ReferenceError,
   Math: Math,
   parseInt: parseInt,
   parseFloat: parseFloat,
@@ -6790,71 +6794,54 @@ function () {
       var rightValue = rightValueGetter();
 
       if (node.operator !== "=") {
-        // var1(undefined) += 1
+        // if a is undefined
+        // a += 1
         _this15.assertVariable(data, name, node);
       }
 
-      var value = data[name];
-
       switch (node.operator) {
         case "=":
-          value = rightValue;
-          break;
+          return data[name] = rightValue;
 
         case "+=":
-          value += rightValue;
-          break;
+          return data[name] += rightValue;
 
         case "-=":
-          value -= rightValue;
-          break;
+          return data[name] -= rightValue;
 
         case "*=":
-          value *= rightValue;
-          break;
-
-        case "**=":
-          value = Math.pow(value, rightValue);
-          break;
+          return data[name] *= rightValue;
+        // case "**=":
+        // data[name]: Getter may be triggered
+        // 	return (data[name] = Math.pow(data[name], rightValue));
 
         case "/=":
-          value /= rightValue;
-          break;
+          return data[name] /= rightValue;
 
         case "%=":
-          value %= rightValue;
-          break;
+          return data[name] %= rightValue;
 
         case "<<=":
-          value <<= rightValue;
-          break;
+          return data[name] <<= rightValue;
 
         case ">>=":
-          value >>= rightValue;
-          break;
+          return data[name] >>= rightValue;
 
         case ">>>=":
-          value >>>= rightValue;
-          break;
+          return data[name] >>>= rightValue;
 
         case "&=":
-          value &= rightValue;
-          break;
+          return data[name] &= rightValue;
 
         case "^=":
-          value ^= rightValue;
-          break;
+          return data[name] ^= rightValue;
 
         case "|=":
-          value |= rightValue;
-          break;
+          return data[name] |= rightValue;
 
         default:
           throw _this15.createInternalThrowError(_messages.Messages.AssignmentExpressionSyntaxError, node.type, node);
       }
-
-      data[name] = value;
-      return value;
     };
   } // function test(){}
   ;

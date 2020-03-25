@@ -1,5 +1,4 @@
-var vueLibUrl = "https://cdn.jsdelivr.net/npm/vue@2.6.11";
-var demoCode = "./vue-demo-code.js";
+var libUrl = "https://cdn.jsdelivr.net/npm/jquery@latest";
 version.innerHTML = "version: " + eval5.Interpreter.version;
 var interpreter = new eval5.Interpreter(window);
 var _init = false;
@@ -26,19 +25,22 @@ function main() {
 	results.innerHTML = "loading...";
 	runBtn.disabled = true;
 
-	var p1 = fetch(vueLibUrl).then(res => res.text());
-	var p2 = fetch(demoCode).then(res => res.text());
+	fetch(libUrl)
+		.then(res => res.text())
+		.then(s => {
+			runBtn.disabled = false;
 
-	Promise.all([p1, p2]).then(([Vue, demoCode]) => {
-		var s = `
-${Vue}
-        `;
+			lib.value = s;
+			code.value = `
+$('#example')
+    .css({
+        height: 50,
+        padding: 10,
+        border: '1px solid blue'
+    })
+    .html('<h3>Hello eval5</h3>')
+            `;
 
-		runBtn.disabled = false;
-
-		lib.value = s;
-		code.value = demoCode;
-
-		startRun();
-	});
+			startRun();
+		});
 }

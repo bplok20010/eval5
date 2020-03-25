@@ -77,7 +77,7 @@ var demo = new Vue({
 	el: "#example",
 	template:
 		"<div>" +
-		// '<form id="search">Search <input name="query" v-model="searchQuery" /></form>' +
+		'<form id="search">Search <input name="query" v-model="searchQuery" /></form>' +
 		'<demo-grid :heroes="gridData" :columns="gridColumns" :filter-key="searchQuery"></demo-grid>' +
 		"</div>",
 	data: {

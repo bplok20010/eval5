@@ -1,9 +1,12 @@
 var libUrl = "https://cdn.jsdelivr.net/npm/echarts@4.6.0/dist/echarts.min.js";
 version.innerHTML = "version: " + eval5.Interpreter.version;
 var interpreter = new eval5.Interpreter(window);
+var _init = false;
 function run() {
 	try {
-		interpreter.evaluate(lib.value);
+		!_init && interpreter.evaluate(lib.value);
+		_init = true;
+
 		var result = interpreter.evaluate(code.value);
 		results.innerHTML = "complete";
 		console.log(result);
