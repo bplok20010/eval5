@@ -52,3 +52,69 @@ test("with3", () => {
 	expect(result).toEqual(undefined);
 	expect(ctx.a).toEqual(10);
 });
+
+test("with4", () => {
+	var ctx: Record<string, any> = {};
+	const result = evaluate(
+		`
+
+    var obj = {
+        a: 10
+    }
+
+    with(obj) {
+        a = 20
+    }
+
+    obj.a
+
+    `,
+		ctx
+	);
+
+	expect(result).toEqual(20);
+});
+
+test("with5", () => {
+	var ctx: Record<string, any> = {};
+	const result = evaluate(
+		`
+
+    var obj = {
+        a: 10
+    }
+
+    with(obj) {
+        var a = 20
+    }
+
+    obj.a
+
+    `,
+		ctx
+	);
+
+	expect(result).toEqual(20);
+});
+
+test("with6", () => {
+	var ctx: Record<string, any> = {};
+	const result = evaluate(
+		`
+
+    var obj = {
+        a: 10
+    }
+
+    with(obj) {
+        var b = 20
+    }
+
+    b
+
+    `,
+		ctx
+	);
+
+	expect(result).toEqual(20);
+});

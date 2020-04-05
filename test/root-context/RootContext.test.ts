@@ -65,3 +65,19 @@ test("rootContext -4", () => {
 	);
 	expect(result).toEqual([1, 1, undefined, "undefined"]);
 });
+
+test("rootContext -5", () => {
+	const rootContext: Record<string, any> = { a: 1, b: 1, c: 1, data: { z: 1 } };
+	const ctx: Record<string, any> = { a: 2 };
+	const interpreter = new Interpreter(ctx, {
+		rootContext: rootContext,
+	});
+	const result = interpreter.evaluate(
+		`
+        c = 2;
+        c;
+    `
+	);
+	expect(result).toEqual(2);
+	expect(rootContext.c).toEqual(1);
+});
