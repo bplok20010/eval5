@@ -118,7 +118,7 @@ function internalEval(
 
 	const options: Options = {
 		timeout: opts.timeout,
-		_initEnv: function(this: Interpreter) {
+		_initEnv: function (this: Interpreter) {
 			// set caller context
 			if (!useGlobalScope) {
 				this.setCurrentContext(instance.getCurrentContext());
@@ -219,6 +219,10 @@ function noop() {}
 
 function createScope(parent: Scope | null = null, name?: string): Scope {
 	return new Scope(Object.create(null), parent, name);
+}
+
+function createRootContext(data: Context): Context {
+	return Object.create(data);
 }
 
 const BuildInObjects: ScopeData = {
@@ -354,7 +358,11 @@ export class Interpreter {
 			const superScope = this.createSuperScope(ctx);
 
 			if (this.options.rootContext) {
-				rootScope = new Scope(this.options.rootContext, superScope, "rootScope");
+				rootScope = new Scope(
+					createRootContext(this.options.rootContext),
+					superScope,
+					"rootScope"
+				);
 			}
 
 			scope = new Scope(ctx, rootScope || superScope, "globalScope");
@@ -757,14 +765,14 @@ export class Interpreter {
 		};
 	}
 
-	protected isRootScope(node: ESTree.Expression | ESTree.Pattern): boolean {
-		if (node.type === "Identifier") {
-			const scope = this.getScopeFromName(node.name, this.getCurrentScope());
-			return scope.name === "rootScope";
-		}
+	// protected isRootScope(node: ESTree.Expression | ESTree.Pattern): boolean {
+	// 	if (node.type === "Identifier") {
+	// 		const scope = this.getScopeFromName(node.name, this.getCurrentScope());
+	// 		return scope.name === "rootScope";
+	// 	}
 
-		return false;
-	}
+	// 	return false;
+	// }
 
 	// typeof a !a()
 	protected unaryExpressionHandler(node: ESTree.UnaryExpression): BaseClosure {
@@ -775,9 +783,10 @@ export class Interpreter {
 
 				return () => {
 					// not allowed to delete root scope property
-					if (this.isRootScope(node.argument)) {
-						return false;
-					}
+					// rootContext has move to prototype chai, so no judgment required
+					// if (this.isRootScope(node.argument)) {
+					// 	return false;
+					// }
 
 					let obj = objectGetter();
 					const name = nameGetter();
@@ -901,8 +910,8 @@ export class Interpreter {
 				const key = item.key;
 				const kinds = properties[key];
 				const value = kinds.init ? kinds.init() : undefined;
-				const getter = kinds.get ? kinds.get() : function() {};
-				const setter = kinds.set ? kinds.set() : function(a: any) {};
+				const getter = kinds.get ? kinds.get() : function () {};
+				const setter = kinds.set ? kinds.set() : function (a: any) {};
 
 				if ("set" in kinds || "get" in kinds) {
 					const descriptor = {
@@ -1112,7 +1121,7 @@ export class Interpreter {
 		const oldDeclFuncs = this.collectDeclFuncs;
 		this.collectDeclVars = Object.create(null);
 		this.collectDeclFuncs = Object.create(null);
-		const name = node.id ? node.id.name : "" /**anonymous*/;
+		const name = node.id ? node.id.name : ""; /**anonymous*/
 		const paramLength = node.params.length;
 
 		const paramsGetter = node.params.map(param => this.createParamNameGetter(param));
@@ -1129,7 +1138,7 @@ export class Interpreter {
 			// bind current scope
 			const runtimeScope = self.getCurrentScope();
 
-			const func = function(...args: any[]) {
+			const func = function (...args: any[]) {
 				self.callStack.push(`${name}`);
 
 				const prevScope = self.getCurrentScope();
@@ -1635,16 +1644,15 @@ export class Interpreter {
 		const bodyClosure = this.createClosure(node.body);
 
 		return () => {
+			const data = objectClosure() as ScopeData;
 			const currentScope = this.getCurrentScope();
-			const newScope = createScope(currentScope, "with");
+			const newScope = new Scope(data, currentScope, "with");
 
-			const data = objectClosure();
-
-			// newScope.data = data;
+			// const data = objectClosure();
 			// copy all properties
-			for (let k in data) {
-				newScope.data[k] = data[k];
-			}
+			// for (let k in data) {
+			// 	newScope.data[k] = data[k];
+			// }
 
 			this.setCurrentScope(newScope);
 
@@ -1679,7 +1687,7 @@ export class Interpreter {
 			const callStack: string[] = this.callStack.concat([]);
 			let result: any = EmptyStatementReturn;
 			let finalReturn: any;
-			let throwError;
+			let throwError: any;
 
 			const reset = () => {
 				this.setCurrentScope(currentScope); //reset scope
@@ -1919,7 +1927,7 @@ export class Interpreter {
 			getter = this.createClosure(node);
 		}
 
-		return function() {
+		return function () {
 			return getter();
 		};
 	}
