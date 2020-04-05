@@ -1,5 +1,5 @@
 /*!
- * @license eval5 v1.4.2
+ * @license eval5 v1.4.3
  * Copyright (c) 2019-2020 nobo (MIT Licensed)
  * https://github.com/bplok20010/eval5
  */
@@ -5537,7 +5537,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.4.2";
+var version = "1.4.3";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5702,6 +5702,10 @@ function createScope(parent, name) {
   return new Scope(Object.create(null), parent, name);
 }
 
+function createRootContext(data) {
+  return Object.create(data);
+}
+
 var BuildInObjects = {
   NaN: NaN,
   Infinity: Infinity,
@@ -5814,7 +5818,7 @@ function () {
       var superScope = this.createSuperScope(ctx);
 
       if (this.options.rootContext) {
-        rootScope = new Scope(this.options.rootContext, superScope, "rootScope");
+        rootScope = new Scope(createRootContext(this.options.rootContext), superScope, "rootScope");
       }
 
       scope = new Scope(ctx, rootScope || superScope, "globalScope");
@@ -6250,16 +6254,14 @@ function () {
           throw _this3.createInternalThrowError(_messages.Messages.LogicalOperatorSyntaxError, node.operator, node);
       }
     };
-  };
-
-  _proto2.isRootScope = function isRootScope(node) {
-    if (node.type === "Identifier") {
-      var scope = this.getScopeFromName(node.name, this.getCurrentScope());
-      return scope.name === "rootScope";
-    }
-
-    return false;
-  } // typeof a !a()
+  } // protected isRootScope(node: ESTree.Expression | ESTree.Pattern): boolean {
+  // 	if (node.type === "Identifier") {
+  // 		const scope = this.getScopeFromName(node.name, this.getCurrentScope());
+  // 		return scope.name === "rootScope";
+  // 	}
+  // 	return false;
+  // }
+  // typeof a !a()
   ;
 
   _proto2.unaryExpressionHandler = function unaryExpressionHandler(node) {
@@ -6271,10 +6273,10 @@ function () {
         var nameGetter = this.createNameGetter(node.argument);
         return function () {
           // not allowed to delete root scope property
-          if (_this4.isRootScope(node.argument)) {
-            return false;
-          }
-
+          // rootContext has move to prototype chai, so no judgment required
+          // if (this.isRootScope(node.argument)) {
+          // 	return false;
+          // }
           var obj = objectGetter();
           var name = nameGetter();
           return delete obj[name];
@@ -6592,9 +6594,9 @@ function () {
     var oldDeclFuncs = this.collectDeclFuncs;
     this.collectDeclVars = Object.create(null);
     this.collectDeclFuncs = Object.create(null);
-    var name = node.id ? node.id.name : ""
+    var name = node.id ? node.id.name : "";
     /**anonymous*/
-    ;
+
     var paramLength = node.params.length;
     var paramsGetter = node.params.map(function (param) {
       return _this10.createParamNameGetter(param);
@@ -7124,15 +7126,15 @@ function () {
     var objectClosure = this.createClosure(node.object);
     var bodyClosure = this.createClosure(node.body);
     return function () {
+      var data = objectClosure();
+
       var currentScope = _this20.getCurrentScope();
 
-      var newScope = createScope(currentScope, "with");
-      var data = objectClosure(); // newScope.data = data;
+      var newScope = new Scope(data, currentScope, "with"); // const data = objectClosure();
       // copy all properties
-
-      for (var k in data) {
-        newScope.data[k] = data[k];
-      }
+      // for (let k in data) {
+      // 	newScope.data[k] = data[k];
+      // }
 
       _this20.setCurrentScope(newScope); // save last value
 
