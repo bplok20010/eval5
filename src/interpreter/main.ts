@@ -471,28 +471,41 @@ export class Interpreter {
 
 		this.isRunning = true;
 
-		const bodyClosure = this.createClosure(node);
-
 		//reset timeout
 		this.execStartTime = Date.now();
 		this.execEndTime = this.execStartTime;
 
-		// add declares to data
-		this.addDeclarationsToScope(
-			this.collectDeclVars,
-			this.collectDeclFuncs,
-			this.getCurrentScope()
-		);
-
 		// reset
 		this.collectDeclVars = Object.create(null);
 		this.collectDeclFuncs = Object.create(null);
+
+		const currentScope = this.getCurrentScope();
+		const currentContext = this.getCurrentContext();
+		const labelStack = currentScope.labelStack.concat([]);
+		const callStack: string[] = this.callStack.concat([]);
+		const reset = () => {
+			this.setCurrentScope(currentScope); //reset scope
+			this.setCurrentContext(currentContext); //reset context
+			currentScope.labelStack = labelStack; //reset label stack
+			this.callStack = callStack; //reset call stack
+		};
+
 		// start run
 		try {
+			const bodyClosure = this.createClosure(node);
+
+			// add declares to data
+			this.addDeclarationsToScope(
+				this.collectDeclVars,
+				this.collectDeclFuncs,
+				this.getCurrentScope()
+			);
+
 			bodyClosure();
 		} catch (e) {
 			throw e;
 		} finally {
+			reset();
 			this.execEndTime = Date.now();
 		}
 
