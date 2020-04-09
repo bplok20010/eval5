@@ -1,10 +1,10 @@
 const fs = require("fs-extra");
 const pkg = require("../package.json");
 
-exports.getBannerTemplate = function() {
+exports.getBannerTemplate = function () {
 	return `/*!
  * @license ${pkg.name} v${pkg.version}
- * Copyright (c) 2019-2020 nobo (MIT Licensed)
+ * Copyright (c) 2019-2020 (MIT Licensed)
  * https://github.com/bplok20010/eval5
  */`;
 };
