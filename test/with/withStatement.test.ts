@@ -1,4 +1,4 @@
-import { evaluate } from "../../src";
+import { evaluate, Interpreter } from "../../src";
 
 function deepEqual(a, b) {
 	expect(a).toEqual(b);
@@ -117,4 +117,65 @@ test("with6", () => {
 	);
 
 	expect(result).toEqual(20);
+});
+
+test("with7", () => {
+	var ctx: Record<string, any> = {};
+	const interpreter = new Interpreter(ctx);
+	try {
+		interpreter.evaluate(
+			`
+    var obj = {
+        a: 10
+    }
+    with(obj) {
+        //throw error
+        u.a = 1;
+    }
+
+    obj
+
+    `
+		);
+	} catch (e) {}
+
+	const result = interpreter.evaluate(`
+    var b = 1;
+    obj;
+    `);
+
+	expect(ctx.obj.a).toEqual(10);
+	expect(result.b).toEqual(undefined);
+	expect(ctx.b).toEqual(1);
+});
+
+test("with8", () => {
+	var ctx: Record<string, any> = {};
+	const interpreter = new Interpreter(ctx);
+	try {
+		interpreter.evaluate(
+			`
+    var obj = {
+        a: 10
+    }
+    function abc() {
+        //throw error
+        u.a = 1;
+    }
+
+    abc.call(obj);
+
+    `
+		);
+	} catch (e) {}
+
+	const result = interpreter.evaluate(`
+    var b = 1;
+    obj;
+    `);
+
+	expect(ctx.obj.a).toEqual(10);
+	expect(ctx.b).toEqual(1);
+	expect(result.b).toEqual(undefined);
+	expect(result.a).toEqual(10);
 });
