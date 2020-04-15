@@ -179,3 +179,30 @@ test("with8", () => {
 	expect(result.b).toEqual(undefined);
 	expect(result.a).toEqual(10);
 });
+
+// TODO:
+// test("with9", () => {
+// 	var ctx: Record<string, any> = {};
+// 	const result = evaluate(
+// 		`
+//     var obj = {
+//         a: 10,
+//         f1: function(){
+//             return this;
+//         },
+//         f2: function(){
+//             return this.a;
+//         }
+//     }
+
+//     with(obj) {
+//         var f = f1;
+//         [f(),f2()]
+//     }
+
+//     `,
+// 		ctx
+// 	);
+
+// 	expect(result).toEqual([undefined, 10]);
+// });
