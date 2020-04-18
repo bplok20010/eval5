@@ -56,6 +56,7 @@ const Break = Symbol("Break");
 const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
 const EmptyStatementReturn = Symbol("EmptyStatementReturn");
+const WithScope = Symbol("WithScope");
 
 function isFunction<T>(func: T): boolean {
 	return typeof func === "function";
@@ -203,11 +204,11 @@ class ContinueLabel {
  *
  */
 class Scope {
-	readonly name: string | undefined;
+	readonly name: string | undefined | Symbol;
 	readonly parent: Scope | null;
 	readonly data: ScopeData;
 	labelStack: string[];
-	constructor(data: ScopeData, parent: Scope | null = null, name?: string) {
+	constructor(data: ScopeData, parent: Scope | null = null, name?: string | Symbol) {
 		this.name = name;
 		this.parent = parent;
 		this.data = data;
@@ -1103,12 +1104,23 @@ export class Interpreter {
 						};
 					}
 
+					let ctx = this.options.globalContextInFunction;
+					// with(obj) {
+					//     test() // test.call(obj, ...)
+					// }
+					if (node.type === "Identifier") {
+						const scope = this.getIdentifierScope(node);
+						if (scope.name === WithScope) {
+							ctx = scope.data;
+						}
+					}
+
 					// function call
 					// this = undefined
 					// tips:
 					// test(...) === test.call(undefined, ...)
 					// fix: alert.call({}, ...) Illegal invocation
-					return func.bind(this.options.globalContextInFunction);
+					return func.bind(ctx);
 				};
 		}
 	}
@@ -1308,6 +1320,14 @@ export class Interpreter {
 
 			return data[node.name];
 		};
+	}
+
+	protected getIdentifierScope(node: ESTree.Identifier) {
+		const currentScope = this.getCurrentScope();
+
+		const scope = this.getScopeFromName(node.name, currentScope);
+
+		return scope;
 	}
 
 	// a=1 a+=2
@@ -1659,7 +1679,7 @@ export class Interpreter {
 		return () => {
 			const data = objectClosure() as ScopeData;
 			const currentScope = this.getCurrentScope();
-			const newScope = new Scope(data, currentScope, "with");
+			const newScope = new Scope(data, currentScope, WithScope);
 
 			// const data = objectClosure();
 			// copy all properties
