@@ -1072,9 +1072,11 @@ export class Interpreter {
 						return (code?: string) => {
 							const scope = this.getScopeFromName(name, this.getCurrentScope());
 							const useGlobalScope =
-								!scope.parent ||
-								this.globalScope === scope ||
-								scope.name === SuperScopeName;
+								scope.name === SuperScopeName ||
+								// !scope.parent || // super scope
+								scope.name === GlobalScopeName ||
+								// this.globalScope === scope ||
+								scope.name === RootScopeName;
 							// use local scope if calling eval in super scope
 							return (func as typeof internalEval)(
 								new InternalInterpreterReflection(this),
