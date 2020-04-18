@@ -180,29 +180,64 @@ test("with8", () => {
 	expect(result.a).toEqual(10);
 });
 
-// TODO:
-// test("with9", () => {
-// 	var ctx: Record<string, any> = {};
-// 	const result = evaluate(
-// 		`
-//     var obj = {
-//         a: 10,
-//         f1: function(){
-//             return this;
-//         },
-//         f2: function(){
-//             return this.a;
-//         }
-//     }
+test("with9", () => {
+	var ctx: Record<string, any> = {};
+	const result = evaluate(
+		`
+    var obj = {
+        a: 10,
+        f1: function(){
+            return this;
+        },
+        f2: function(){
+            return this.a;
+        }
+    }
 
-//     with(obj) {
-//         var f = f1;
-//         [f(),f2()]
-//     }
+    with(obj) {
+        var f = f1;
+        [f(),(0,f1)(),f2()]
+    }
+    `,
+		ctx
+	);
 
-//     `,
-// 		ctx
-// 	);
+	expect(result).toEqual([undefined, undefined, 10]);
+});
 
-// 	expect(result).toEqual([undefined, 10]);
-// });
+test("with10", () => {
+	var ctx: Record<string, any> = {};
+	const result = evaluate(
+		`
+    var obj = {
+        a: 10,
+        f1: function(){
+            return this;
+        },
+        f2: function(){
+            return this.a;
+        }
+    }
+    var obj2 = {
+        a: 11,
+        f3: function(){
+            return this;
+        },
+        f4: function(){
+            return this.a;
+        }
+    }
+
+
+    with(obj) {
+        with(obj2) {
+            var f = f1;
+            [f(),(0,f1)(),f2(), f4(), (0,f3)()]
+        }
+    }
+    `,
+		ctx
+	);
+
+	expect(result).toEqual([undefined, undefined, 10, 11, undefined]);
+});
