@@ -1,6 +1,6 @@
 /*!
- * @license eval5 v1.4.4
- * Copyright (c) 2019-2020 (MIT Licensed)
+ * @license eval5 v1.4.5
+ * Copyright (c) 2019-2020 nobo (MIT Licensed)
  * https://github.com/bplok20010/eval5
  */
 (function webpackUniversalModuleDefinition(root, factory) {
@@ -5537,7 +5537,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.4.4";
+var version = "1.4.5";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5553,6 +5553,7 @@ var Break = Symbol("Break");
 var Continue = Symbol("Continue");
 var DefaultCase = Symbol("DefaultCase");
 var EmptyStatementReturn = Symbol("EmptyStatementReturn");
+var WithScope = Symbol("WithScope");
 
 function isFunction(func) {
   return typeof func === "function";
@@ -6577,6 +6578,18 @@ function () {
 
               return func.apply(void 0, [new InternalInterpreterReflection(_this9)].concat(args));
             };
+          }
+
+          var ctx = _this9.options.globalContextInFunction; // with(obj) {
+          //     test() // test.call(obj, ...)
+          // }
+
+          if (node.type === "Identifier") {
+            var scope = _this9.getIdentifierScope(node);
+
+            if (scope.name === WithScope) {
+              ctx = scope.data;
+            }
           } // function call
           // this = undefined
           // tips:
@@ -6584,7 +6597,7 @@ function () {
           // fix: alert.call({}, ...) Illegal invocation
 
 
-          return func.bind(_this9.options.globalContextInFunction);
+          return func.bind(ctx);
         };
     }
   } // func()
@@ -6792,6 +6805,12 @@ function () {
 
       return data[node.name];
     };
+  };
+
+  _proto2.getIdentifierScope = function getIdentifierScope(node) {
+    var currentScope = this.getCurrentScope();
+    var scope = this.getScopeFromName(node.name, currentScope);
+    return scope;
   } // a=1 a+=2
   ;
 
@@ -7150,7 +7169,7 @@ function () {
 
       var currentScope = _this21.getCurrentScope();
 
-      var newScope = new Scope(data, currentScope, "with"); // const data = objectClosure();
+      var newScope = new Scope(data, currentScope, WithScope); // const data = objectClosure();
       // copy all properties
       // for (let k in data) {
       // 	newScope.data[k] = data[k];
