@@ -56,7 +56,10 @@ const Break = Symbol("Break");
 const Continue = Symbol("Continue");
 const DefaultCase = Symbol("DefaultCase");
 const EmptyStatementReturn = Symbol("EmptyStatementReturn");
-const WithScope = Symbol("WithScope");
+const WithScopeName = Symbol("WithScopeName");
+const SuperScopeName = Symbol("SuperScopeName");
+const RootScopeName = Symbol("RootScopeName");
+const GlobalScopeName = Symbol("GlobalScopeName");
 
 function isFunction<T>(func: T): boolean {
 	return typeof func === "function";
@@ -362,11 +365,11 @@ export class Interpreter {
 				rootScope = new Scope(
 					createRootContext(this.options.rootContext),
 					superScope,
-					"rootScope"
+					RootScopeName
 				);
 			}
 
-			scope = new Scope(ctx, rootScope || superScope, "globalScope");
+			scope = new Scope(ctx, rootScope || superScope, GlobalScopeName);
 		}
 
 		this.globalScope = scope;
@@ -436,7 +439,7 @@ export class Interpreter {
 			}
 		});
 
-		return new Scope(data, null, "superScope");
+		return new Scope(data, null, SuperScopeName);
 	}
 
 	protected setCurrentContext(ctx: Context) {
@@ -1071,7 +1074,7 @@ export class Interpreter {
 							const useGlobalScope =
 								!scope.parent ||
 								this.globalScope === scope ||
-								scope.name === "rootScope";
+								scope.name === SuperScopeName;
 							// use local scope if calling eval in super scope
 							return (func as typeof internalEval)(
 								new InternalInterpreterReflection(this),
@@ -1110,7 +1113,7 @@ export class Interpreter {
 					// }
 					if (node.type === "Identifier") {
 						const scope = this.getIdentifierScope(node);
-						if (scope.name === WithScope) {
+						if (scope.name === WithScopeName) {
 							ctx = scope.data;
 						}
 					}
@@ -1167,7 +1170,7 @@ export class Interpreter {
 				self.callStack.push(`${name}`);
 
 				const prevScope = self.getCurrentScope();
-				const currentScope = createScope(runtimeScope, name);
+				const currentScope = createScope(runtimeScope, `FunctionScope(${name})`);
 				self.setCurrentScope(currentScope);
 
 				self.addDeclarationsToScope(declVars, declFuncs, currentScope);
@@ -1679,7 +1682,7 @@ export class Interpreter {
 		return () => {
 			const data = objectClosure() as ScopeData;
 			const currentScope = this.getCurrentScope();
-			const newScope = new Scope(data, currentScope, WithScope);
+			const newScope = new Scope(data, currentScope, WithScopeName);
 
 			// const data = objectClosure();
 			// copy all properties
