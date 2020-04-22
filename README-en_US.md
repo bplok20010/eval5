@@ -1,37 +1,37 @@
 # eval5
 
-[English](./README.md) | 中文
+[中文](./README.md) | English
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bplok20010/eval5/blob/master/LICENSE)
 [![npm](https://img.shields.io/npm/v/eval5)](https://www.npmjs.com/package/eval5)
 [![npm bundle size](https://img.shields.io/bundlephobia/min/eval5)](https://raw.githubusercontent.com/bplok20010/eval5/master/umd/eval5.min.js)
 
-基于 TypeScript 编写的 JavaScript 解释器
+A JavaScript interpreter written in TypeScript.
 
-> 支持浏览器、node.js、小程序等 JavaScript 运行环境
+> Support JavaScript running environment such as browser, node.js, WeChat Mini Program, etc
 
-[在线体验](https://bplok20010.github.io/eval5/)
+[Try it out](https://bplok20010.github.io/eval5/)
 
-[更多示例](https://bplok20010.github.io/eval5/examples.html)
+[Examples](https://bplok20010.github.io/eval5/examples.html)
 
-## 使用场景
+## You may not need it unless
 
--   浏览器环境中需要使用沙盒环境执行 JavaScript 脚本
--   控制执行时长
--   不支持`eval` `Function`的 JavaScript 运行环境：如 微信小程序 [demo](https://github.com/bplok20010/eval5-wx-demo)
--   研究/学习用
+-   Need to execute code in the browser with a sandbox environment
+-   Controlling execution time
+-   JavaScript runtime environment that does not support `eval` and `Function`. for example: WeChat Mini Program [demo](https://github.com/bplok20010/eval5-wx-demo)
+-   Be interested or Be curious
 
-## 支持 ECMAScript 版本
+## ECMAScript version supported
 
 ES5
 
-## 安装
+## Install
 
 ```
 npm install --save eval5
 ```
 
-## 使用
+## Usage
 
 ```javascript
 import { Interpreter } from "eval5";
@@ -56,13 +56,13 @@ try {
 }
 ```
 
-## 参数
+## Options
 
 ```ts
 interface Options {
-	// 默认为：0，不限制
+	// default: 0 not limited
 	timeout?: number;
-	// 根作用域，只读
+	// readonly
 	rootContext?: {} | null;
 	globalContextInFunction?: any;
 }
@@ -92,13 +92,13 @@ window.a;//undefined
 
 **`version`**
 
-当前版本
+current version
 
 **`global`**
 
-默认值: `{}`
+default: `{}`
 
-设置默认的全局作用域
+global context
 
 ```js
 Interpreter.global = window;
@@ -108,9 +108,9 @@ interpreter.evaluate('alert("hello eval5")');
 
 **`globalContextInFunction`**
 
-默认值: `undefined`
+default: `undefined`
 
-`eval5` 不支持 `use strict` 严格模式, 在非严格下的函数中`this`默认指向的是全局作用域，但在`eval5`中是`undefined`， 你可以通过`globalContextInFunction`来设置默认指向。
+`eval5` does not support `use strict` mode, but the default value of `this` in function calls is `undefined`, you can set this property as the default.
 
 ```js
 import { Interpreter } from "Interpreter";
@@ -131,7 +131,7 @@ import { Interpreter } from "Interpreter";
 
 Interpreter.globalContextInFunction = window;
 const ctx = {};
-const interpreter = new Interpreter({});
+const interpreter = new Interpreter(ctx);
 interpreter.evaluate(`
 this; // ctx
 function func(){
@@ -141,11 +141,11 @@ func();
 `);
 ```
 
-再看以下代码：
+Let's take a look at the following example
 
-> **注意: `Illegal invocation` 错误**
+> **Note: Illegal invocation**
 >
-> 这就是`globalContextInFunction`默认设为`undefined`的原因
+> that's why `globalContextInFunction` is set to `undefined`
 
 ```
 import { Interpreter } from "Interpreter";
@@ -165,13 +165,13 @@ alert('Hello eval5');
 
 **`constructor(context?: {}: options: Options = Interpreter.global)`**
 
-构造函数
+---
 
-## Interpreter 的实例方法
+## Instance methods
 
 **`evaluate(code: string): any`**
 
-执行给定的字符串代码，并返回最后一个表达式的值
+executes string code and returns the value of the last expression
 
 ```js
 import { Interpreter } from "Interpreter";
@@ -191,27 +191,25 @@ console.log(result); // 300
 
 **`appendCode(code: string): any`**
 
-`evaluate`的别名
+alias of `evaluate`
 
 **`getExecutionTime(): number`**
 
-获取上一次调用`evaluate`的执行时长
+get the last execution time
 
 **`setExecTimeout(timeout: number = 0): void`**
 
-设置执行时长
+set the timeout for each execution
 
 **`getOptions(): Readonly<Options>`**
 
-获取解释器参数
-
----
+get interpreter options
 
 ## evaluate(code: string, ctx?: {}, options?: Options)
 
-执行给定的字符串代码，并返回最后一个表达式的值
+executes string code and returns the value of the last expression
 
-> 注: 该函数每次执行都会创建一个新的解释器
+> note: a new interpreter is created with every execution
 
 ```js
 import { evaluate } from "eval5";
@@ -232,7 +230,7 @@ evaluate(`
 
 ## Function
 
-该函数会将`Interpreter.global` `Interpreter.globalContextInFunction`当作默认值并创建新的解释器
+use `Interpreter.global` as the default context, `Interpreter.globalContextInFunction` also
 
 ```js
 import { Function } from "eval5";
@@ -243,7 +241,7 @@ console.log(func(100, 200)); // 300
 
 ## vm
 
-查看 [vm](https://nodejs.org/dist/latest-v13.x/docs/api/vm.html)
+see [vm](https://nodejs.org/dist/latest-v13.x/docs/api/vm.html)
 
 -   vm.createContext
 -   vm.compileFunction
@@ -255,7 +253,7 @@ console.log(func(100, 200)); // 300
 
 MIT
 
-## 相关
+## Related
 
 -   [evaljs](https://github.com/marten-de-vries/evaljs)
 -   [closure-interpreter](https://github.com/int3/closure-interpreter)
