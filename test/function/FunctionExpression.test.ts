@@ -275,7 +275,7 @@ test("function call context", () => {
 
 test("function overlap1", () => {
 	const ctx: { [x: string]: any } = {};
-	ctx.overlap1 = function() {
+	ctx.overlap1 = function () {
 		return 1;
 	};
 
@@ -488,4 +488,38 @@ test("function toString -2", () => {
 	);
 
 	expect(a.toString()).toEqual(`function test(a,b,c,d){return  this;}`);
+});
+
+test("function arguments", () => {
+	const interpreter = new Interpreter({});
+
+	const a = interpreter.evaluate(
+		`
+        function test(arguments){
+            return arguments
+        }
+
+        test(1);
+    `
+	);
+
+	expect(a).toEqual(1);
+});
+
+test("function arguments reset without use strict", () => {
+	const interpreter = new Interpreter({});
+
+	const a = interpreter.evaluate(
+		`
+        function test(a,b,c){
+           // Note: eval5 does not support the use strict mode, but the performance here is the same as the use strict mode
+            a=2;
+            return [arguments[0],arguments[1],arguments[2]];
+        }
+
+        test(1,2,3);
+    `
+	);
+
+	expect(a).toEqual([1, 2, 3]);
 });
