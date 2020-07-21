@@ -1374,9 +1374,8 @@ export class Interpreter {
 					return (data[name] -= rightValue);
 				case "*=":
 					return (data[name] *= rightValue);
-				// case "**=":
-				// data[name]: Getter may be triggered
-				// 	return (data[name] = Math.pow(data[name], rightValue));
+				case "**=":
+					return (data[name] = Math.pow(data[name], rightValue));
 				case "/=":
 					return (data[name] /= rightValue);
 				case "%=":
@@ -1740,6 +1739,7 @@ export class Interpreter {
 			 * try throw
 			 * catch stmt (if)
 			 * finally stmt
+			 *
 			 * finally throw or finally return
 			 * catch throw or catch return
 			 * try return
