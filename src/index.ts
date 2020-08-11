@@ -4,3 +4,5 @@ import evaluate from "./evaluate";
 import Function from "./Function";
 
 export { Interpreter, vm, evaluate, Function };
+
+export default evaluate;
