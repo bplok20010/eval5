@@ -77,18 +77,18 @@ a *= 2;
 	deepEqual(num, 2);
 });
 
-// test("**=", () => {
-// 	const inst = new Interpreter({}, { ecmaVersion: 10 });
-// 	const num = inst.evaluate(
-// 		`
-// var a = 2;
-// var b = 3;
-// a **= b;
+test("**=", () => {
+	const inst = new Interpreter({}, { ecmaVersion: 10 });
+	const num = inst.evaluate(
+		`
+var a = 2;
+var b = 3;
+a **= b;
 
-//   `
-// 	);
-// 	deepEqual(num, 8);
-// });
+  `
+	);
+	deepEqual(num, 8);
+});
 
 test("/", () => {
 	const num = evaluate(
