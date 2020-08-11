@@ -6,7 +6,7 @@
 [![npm](https://img.shields.io/npm/v/eval5)](https://www.npmjs.com/package/eval5)
 [![npm bundle size](https://img.shields.io/bundlephobia/min/eval5)](https://raw.githubusercontent.com/bplok20010/eval5/master/umd/eval5.min.js)
 
-A JavaScript interpreter written in TypeScript.
+A JavaScript interpreter written in TypeScript, Supports full ES5 syntax.
 
 > Support JavaScript running environment such as browser, node.js, WeChat Mini Program, etc
 

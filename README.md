@@ -6,7 +6,7 @@
 [![npm](https://img.shields.io/npm/v/eval5)](https://www.npmjs.com/package/eval5)
 [![npm bundle size](https://img.shields.io/bundlephobia/min/eval5)](https://raw.githubusercontent.com/bplok20010/eval5/master/umd/eval5.min.js)
 
-基于 TypeScript 编写的 JavaScript 解释器
+基于 TypeScript 编写的 JavaScript 解释器，支持完整 ES5 语法
 
 > 支持浏览器、node.js、小程序等 JavaScript 运行环境
 
