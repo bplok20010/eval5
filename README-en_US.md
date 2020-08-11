@@ -33,6 +33,8 @@ npm install --save eval5
 
 ## Usage
 
+[![Edit eval5](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/eval5-zxndl?fontsize=14&hidenavigation=1&theme=dark)
+
 ```javascript
 import { Interpreter } from "eval5";
 
