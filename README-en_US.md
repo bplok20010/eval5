@@ -165,7 +165,7 @@ alert('Hello eval5');
 `);
 ```
 
-**`constructor(context?: {}: options: Options = Interpreter.global)`**
+**`constructor(context = Interpreter.global, options?: Options )`**
 
 ---
 
