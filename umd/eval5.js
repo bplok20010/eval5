@@ -1,5 +1,5 @@
 /*!
- * @license eval5 v1.4.5
+ * @license eval5 v1.4.6
  * Copyright (c) 2019-2020 nobo (MIT Licensed)
  * https://github.com/bplok20010/eval5
  */
@@ -5498,7 +5498,7 @@ Object.defineProperty(exports, "Function", {
     return _Function.default;
   }
 });
-exports.vm = void 0;
+exports.vm = exports.default = void 0;
 
 var _main = __webpack_require__(/*! ./interpreter/main */ "./src/interpreter/main.ts");
 
@@ -5509,6 +5509,9 @@ exports.vm = vm;
 var _evaluate = _interopRequireDefault(__webpack_require__(/*! ./evaluate */ "./src/evaluate.ts"));
 
 var _Function = _interopRequireDefault(__webpack_require__(/*! ./Function */ "./src/Function.ts"));
+
+var _default = _evaluate.default;
+exports.default = _default;
 
 /***/ }),
 
@@ -5537,7 +5540,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.4.5";
+var version = "1.4.6";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -5553,7 +5556,10 @@ var Break = Symbol("Break");
 var Continue = Symbol("Continue");
 var DefaultCase = Symbol("DefaultCase");
 var EmptyStatementReturn = Symbol("EmptyStatementReturn");
-var WithScope = Symbol("WithScope");
+var WithScopeName = Symbol("WithScopeName");
+var SuperScopeName = Symbol("SuperScopeName");
+var RootScopeName = Symbol("RootScopeName");
+var GlobalScopeName = Symbol("GlobalScopeName");
 
 function isFunction(func) {
   return typeof func === "function";
@@ -5819,10 +5825,10 @@ function () {
       var superScope = this.createSuperScope(ctx);
 
       if (this.options.rootContext) {
-        rootScope = new Scope(createRootContext(this.options.rootContext), superScope, "rootScope");
+        rootScope = new Scope(createRootContext(this.options.rootContext), superScope, RootScopeName);
       }
 
-      scope = new Scope(ctx, rootScope || superScope, "globalScope");
+      scope = new Scope(ctx, rootScope || superScope, GlobalScopeName);
     }
 
     this.globalScope = scope;
@@ -5886,7 +5892,7 @@ function () {
         delete data[key];
       }
     });
-    return new Scope(data, null, "superScope");
+    return new Scope(data, null, SuperScopeName);
   };
 
   _proto2.setCurrentContext = function setCurrentContext(ctx) {
@@ -6553,7 +6559,9 @@ function () {
             return function (code) {
               var scope = _this9.getScopeFromName(name, _this9.getCurrentScope());
 
-              var useGlobalScope = !scope.parent || _this9.globalScope === scope || scope.name === "rootScope"; // use local scope if calling eval in super scope
+              var useGlobalScope = scope.name === SuperScopeName || // !scope.parent || // super scope
+              scope.name === GlobalScopeName || // this.globalScope === scope ||
+              scope.name === RootScopeName; // use local scope if calling eval in super scope
 
               return func(new InternalInterpreterReflection(_this9), code, !useGlobalScope);
             };
@@ -6587,7 +6595,7 @@ function () {
           if (node.type === "Identifier") {
             var scope = _this9.getIdentifierScope(node);
 
-            if (scope.name === WithScope) {
+            if (scope.name === WithScopeName) {
               ctx = scope.data;
             }
           } // function call
@@ -6651,7 +6659,7 @@ function () {
 
         self.callStack.push("" + name);
         var prevScope = self.getCurrentScope();
-        var currentScope = createScope(runtimeScope, name);
+        var currentScope = createScope(runtimeScope, "FunctionScope(" + name + ")");
         self.setCurrentScope(currentScope);
         self.addDeclarationsToScope(declVars, declFuncs, currentScope); // var t = function(){ typeof t } // function
         // t = function(){ typeof t } // function
@@ -6852,9 +6860,9 @@ function () {
 
         case "*=":
           return data[name] *= rightValue;
-        // case "**=":
-        // data[name]: Getter may be triggered
-        // 	return (data[name] = Math.pow(data[name], rightValue));
+
+        case "**=":
+          return data[name] = Math.pow(data[name], rightValue);
 
         case "/=":
           return data[name] /= rightValue;
@@ -7169,7 +7177,7 @@ function () {
 
       var currentScope = _this21.getCurrentScope();
 
-      var newScope = new Scope(data, currentScope, WithScope); // const data = objectClosure();
+      var newScope = new Scope(data, currentScope, WithScopeName); // const data = objectClosure();
       // copy all properties
       // for (let k in data) {
       // 	newScope.data[k] = data[k];
@@ -7234,6 +7242,7 @@ function () {
        * try throw
        * catch stmt (if)
        * finally stmt
+       *
        * finally throw or finally return
        * catch throw or catch return
        * try return

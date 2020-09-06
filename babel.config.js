@@ -10,6 +10,9 @@ module.exports = api => {
 				{
 					modules: "cjs",
 					loose: true,
+					runtimeOptions: {
+						helpers: false,
+					},
 				},
 			],
 		],

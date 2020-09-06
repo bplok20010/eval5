@@ -10,6 +10,9 @@ module.exports = api => {
 				{
 					modules: false,
 					loose: true,
+					runtimeOptions: {
+						helpers: false,
+					},
 				},
 			],
 		],
