@@ -70,7 +70,7 @@ interface Options {
 }
 ```
 
-Example
+示例
 
 ```
 import { Interpreter } from "eval5";
@@ -112,7 +112,7 @@ interpreter.evaluate('alert("hello eval5")');
 
 默认值: `undefined`
 
-`eval5` 不支持 `use strict` 严格模式, 在非严格下的函数中`this`默认指向的是全局作用域，但在`eval5`中是`undefined`， 你可以通过`globalContextInFunction`来设置默认指向。
+`eval5` 不支持 `use strict` 严格模式, 在非严格下的函数中`this`默认指向的是全局作用域，但在`eval5`中是`undefined`， 可通过`globalContextInFunction`来设置默认指向。
 
 ```js
 import { Interpreter } from "Interpreter";
