@@ -143,11 +143,9 @@ func();
 `);
 ```
 
-再看以下代码：
+原因，示例代码：
 
-> **注意: `Illegal invocation` 错误**
->
-> 这就是`globalContextInFunction`默认设为`undefined`的原因
+> **注意: alert异常**
 
 ```
 import { Interpreter } from "Interpreter";
@@ -159,9 +157,8 @@ const ctx = {alert: alert};
 const interpreter = new Interpreter(ctx);
 
 interpreter.evaluate(`
-// alert.call({}, 'Hello eval5')
-// Illegal invocation
-alert('Hello eval5');
+// throw Illegal invocation
+alert('Hello eval5'); // 同 alert.call({}, 'Hello eval5')
 `);
 ```
 
