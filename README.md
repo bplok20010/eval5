@@ -8,7 +8,7 @@
 
 基于 TypeScript 编写的 JavaScript 解释器，支持完整 ES5 语法
 
-> 支持浏览器、node.js、小程序等 JavaScript 运行环境
+**支持浏览器、node.js、小程序等 JavaScript 运行环境**
 
 [在线体验](https://bplok20010.github.io/eval5/)
 
