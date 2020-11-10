@@ -18,7 +18,7 @@
 
 -   浏览器环境中需要使用沙盒环境执行 JavaScript 脚本
 -   控制执行时长
--   不支持`eval` `Function`的 JavaScript 运行环境：如 微信小程序 [demo](https://github.com/bplok20010/eval5-wx-demo)
+-   不支持`eval` `Function`的 JavaScript 运行环境：如 微信小程序 [demo](https://github.com/bplok20010/eval5-wx-demo) [we-script](https://github.com/bplok20010/we-script) [taro-script](https://github.com/bplok20010/taro-script)
 -   研究/学习用
 
 ## 支持 ECMAScript 版本
