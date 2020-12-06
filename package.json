@@ -15,6 +15,7 @@
 		"bundle:dev": "packez bundle ./src/index.ts -d umd -c",
 		"bundle:prod": "packez bundle ./src/index.ts -d umd --state prod",
 		"bundle:banner": "node scripts/banner.js",
+		"prepublishOnly": "run-s test build",
 		"test": "jest"
 	},
 	"repository": {
