@@ -260,6 +260,7 @@ const BuildInObjects: ScopeData = {
 	unescape,
 	eval: internalEval,
 	Function: internalFunction,
+	Float32Array: Float32Array
 };
 // ES5 Object
 if (typeof JSON !== "undefined") {
