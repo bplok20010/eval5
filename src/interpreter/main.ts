@@ -247,6 +247,8 @@ const BuildInObjects: ScopeData = {
 	RangeError,
 	SyntaxError,
 	ReferenceError,
+	Float32Array,
+	Uint32Array,
 	Math,
 	parseInt,
 	parseFloat,
@@ -259,8 +261,7 @@ const BuildInObjects: ScopeData = {
 	escape,
 	unescape,
 	eval: internalEval,
-	Function: internalFunction,
-	Float32Array: Float32Array
+	Function: internalFunction
 };
 // ES5 Object
 if (typeof JSON !== "undefined") {
