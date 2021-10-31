@@ -1,5 +1,5 @@
 /*!
- * @license eval5 v1.4.6
+ * @license eval5 v1.4.7
  * Copyright (c) 2019-2020 nobo (MIT Licensed)
  * https://github.com/bplok20010/eval5
  */
@@ -5540,7 +5540,7 @@ var _acorn = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.m
 
 var _messages = __webpack_require__(/*! ./messages */ "./src/interpreter/messages.ts");
 
-var version = "1.4.6";
+var version = "1.4.7";
 
 function defineFunctionName(func, name) {
   Object.defineProperty(func, "name", {
@@ -7406,7 +7406,7 @@ function () {
 
       if (!match && defaultCase) {
         ret = _this25.setValue(defaultCase.bodyClosure());
-        var isEBC = ret === EmptyStatementReturn || ret === Break || ret === Continue; // notice: never return Break or Continue!
+        var isEBC = ret === EmptyStatementReturn || ret === Break; // notice: never return Break or Continue!
 
         if (!isEBC) {
           result = ret;
