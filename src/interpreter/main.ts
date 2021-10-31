@@ -1448,7 +1448,7 @@ export class Interpreter {
 		if (assignments.length) {
 			assignmentsClosure = this.createClosure({
 				type: "BlockStatement",
-				body: (assignments as unknown) as ESTree.Statement[],
+				body: assignments as unknown as ESTree.Statement[],
 			});
 		}
 
@@ -1466,11 +1466,7 @@ export class Interpreter {
 
 	protected assertVariable(data: ScopeData, name: string, node: Node): void | never {
 		if (data === this.globalScope.data && !(name in data)) {
-			throw this.createInternalThrowError(
-				Messages.VariableUndefinedReferenceError,
-				name,
-				node
-			);
+			throw this.createInternalThrowError(Messages.VariableUndefinedReferenceError, name, node);
 		}
 	}
 
@@ -1891,7 +1887,7 @@ export class Interpreter {
 			if (!match && defaultCase) {
 				ret = this.setValue(defaultCase.bodyClosure());
 
-				const isEBC = ret === EmptyStatementReturn || ret === Break || ret === Continue;
+				const isEBC = ret === EmptyStatementReturn || ret === Break;
 				// notice: never return Break or Continue!
 				if (!isEBC) {
 					result = ret;
@@ -1986,11 +1982,7 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.createClosure(node.object);
 			default:
-				throw this.createInternalThrowError(
-					Messages.AssignmentTypeSyntaxError,
-					node.type,
-					node
-				);
+				throw this.createInternalThrowError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -2002,11 +1994,7 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.createMemberKeyGetter(node);
 			default:
-				throw this.createInternalThrowError(
-					Messages.AssignmentTypeSyntaxError,
-					node.type,
-					node
-				);
+				throw this.createInternalThrowError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 

@@ -79,3 +79,57 @@ function t3(type) {
 	// the will loop will be continue
 	deepEqual(func(0), []);
 });
+
+test("SwitchStatement with default continue", () => {
+	const func = evaluate(
+		`
+function t3(type) {
+  var result = [];
+  var i = 0;
+  while (i < 5) {
+    i++;
+    switch (type + "") {
+      default:
+        continue;
+    }
+    result.push(i);
+  }
+  return result;
+}
+
+ t3;
+  `
+	);
+
+	deepEqual(func(0), []);
+});
+
+test("SwitchStatement with default break", () => {
+	const func = evaluate(
+		`
+function t3(type) {
+  var result = [];
+  var i = 0;
+  while (i < 5) {
+    i++;
+    switch (type + "") {
+      default:
+        break;
+        result.push(i);
+    }
+  }
+
+  return {
+    result:result ,
+    i:i,
+  };
+}
+
+ t3;
+  `
+	);
+
+	const { result, i } = func(0);
+	deepEqual(result, []);
+	deepEqual(i, 5);
+});
