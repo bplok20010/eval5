@@ -150,3 +150,17 @@ test("VariableDeclaration-var9", () => {
 
 	expect(a).toEqual(undefined);
 });
+
+test("VariableDeclaration-var10", () => {
+	const a = evaluate(
+		`
+        var a = {v:1};
+        a.p = a = {v:2};
+        a.p;
+
+        `,
+		Object.create(null)
+	);
+
+	expect(a).toEqual(undefined);
+});
