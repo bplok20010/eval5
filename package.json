@@ -1,10 +1,10 @@
 {
 	"name": "@huolala-tech/eval5",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "A JavaScript vm written in JavaScript. Forked from eval5",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
-	"browser": "dist/umd/eval5.min.js",
+	"browser": "dist/umd/index.min.js",
   "types": "dist/esm/index.d.ts",
 	"scripts": {
 		"roll": "rollup -c",
@@ -65,5 +65,8 @@
 		"not ios_saf < 10",
 		"not Chrome < 50",
 		"firefox ESR"
-	]
+	],
+	"publishConfig": {
+    "access": "public"
+  }
 }

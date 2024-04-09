@@ -4,10 +4,12 @@
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/HuolalaTech/eval5/blob/master/LICENSE)
 [![npm](https://img.shields.io/npm/v/@huolala-tech/eval5)](https://www.npmjs.com/package/@huolala-tech/eval5)
-[![npm bundle size](https://img.shields.io/bundlephobia/min/eval5)](https://raw.githubusercontent.com/HuolalaTech/eval5/master/dist/umd/eval5.min.js)
+[![npm bundle size](https://img.shields.io/bundlephobia/min/eval5)](https://unpkg.com/browse/@huolala-tech/eval5/dist/umd/index.min.js)
+
+
 A JavaScript interpreter written in TypeScript, Supports full ES5 syntax.
 
->[!INFO]
+> [!INFO]
 > Forked from [eval5](https://github.com/bplok20010/eval5)
 
 ## Features
