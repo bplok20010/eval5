@@ -9,7 +9,7 @@
 
 基于 TypeScript 编写的 JavaScript 解释器，支持完整 ES5 语法
 
-> [!INFO]
+> [!NOTE]
 > Forked from [eval5](https://github.com/bplok20010/eval5)
 
 ## 特性

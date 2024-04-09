@@ -9,7 +9,7 @@
 
 A JavaScript interpreter written in TypeScript, Supports full ES5 syntax.
 
-> [!INFO]
+> [!NOTE]
 > Forked from [eval5](https://github.com/bplok20010/eval5)
 
 ## Features

@@ -23,9 +23,7 @@ const plugins = [
   }),
   terser({
     compress: true,
-    mangle: {
-      keep_fnames: /(getExecStartTime|getExecutionTime|setExecTimeout|getOptions|evaluateNode|getValue)/
-    }
+    mangle: true
   }),
 ];
 
