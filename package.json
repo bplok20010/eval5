@@ -1,26 +1,18 @@
 {
-	"name": "eval5",
-	"version": "1.4.7",
-	"description": "A JavaScript interpreter written in JavaScript",
-	"main": "./dist/cjs/index.js",
-	"module": "./dist/esm/index.js",
-	"types": "./lib/index.d.ts",
+	"name": "@huolala-tech/eval5",
+	"version": "0.0.0",
+	"description": "A JavaScript vm written in JavaScript. Forked from eval5",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"browser": "dist/umd/eval5.min.js",
+  "types": "dist/esm/index.d.ts",
 	"scripts": {
-		"start": "tsc -w",
-		"build": "run-s clear build:* bundle:dev bundle:prod bundle:banner",
-		"build:lib": "tsc",
-		"build:cjs": "babel lib --config-file=./babel.config.js  --out-dir dist/cjs",
-		"build:esm": "babel lib --config-file=./babel.config.esm.js  --out-dir dist/esm",
-		"clear": "rimraf lib dist umd",
-		"bundle:dev": "packez bundle ./src/index.ts -d umd -c",
-		"bundle:prod": "packez bundle ./src/index.ts -d umd --state prod",
-		"bundle:banner": "node scripts/banner.js",
-		"prepublishOnly": "run-s test build",
+		"roll": "rollup -c",
 		"test": "jest"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bplok20010/eval5.git"
+		"url": "git+https://github.com/HuolalaTech/eval5.git"
 	},
 	"keywords": [
 		"interpreter",
@@ -36,29 +28,34 @@
 		"dist",
 		"*.md"
 	],
-	"author": "nobo.zhou@foxmail.com",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/bplok20010/eval5/issues"
+		"url": "https://github.com/HuolalaTech/eval5/issues"
 	},
-	"homepage": "https://github.com/bplok20010/eval5#readme",
+	"homepage": "https://github.com/HuolalaTech/eval5#readme",
 	"devDependencies": {
 		"@babel/cli": "^7.8.4",
+		"@babel/plugin-transform-runtime": "^7.24.3",
+		"@babel/preset-env": "^7.24.4",
+		"@rollup/plugin-babel": "^6.0.4",
+		"@rollup/plugin-replace": "^5.0.5",
+		"@rollup/plugin-terser": "^0.4.4",
+		"@types/acorn": "^4.0.5",
+		"@types/estree": "0.0.41",
 		"@types/fs-extra": "^8.1.0",
 		"@types/jest": "^24.0.25",
-		"babel-plugin-search-and-replace": "^1.0.1",
-		"babel-preset-packez": "^1.0.0",
 		"fs-extra": "^8.1.0",
 		"jest": "^24.9.0",
 		"npm-run-all": "^4.1.5",
-		"packez": "^3.1.0",
-		"rimraf": "^3.0.0"
+		"rimraf": "^3.0.0",
+		"rollup": "^4.14.1",
+		"rollup-plugin-delete": "^2.0.0",
+		"rollup-plugin-license": "^3.3.1",
+		"rollup-plugin-typescript2": "^0.36.0",
+		"typescript": "^5.4.4"
 	},
 	"dependencies": {
-		"@babel/runtime": "^7.8.4",
-		"@types/acorn": "^4.0.5",
-		"@types/estree": "0.0.41",
-		"acorn": "^7.1.0"
+		"@babel/runtime": "^7.8.4"
 	},
 	"browserslist": [
 		">=0.25%",

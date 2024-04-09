@@ -1,4 +1,3 @@
-import { parse } from "acorn";
 import {
 	Messages,
 	MessageItem,
@@ -8,7 +7,7 @@ import {
 } from "./messages";
 import { Node, ESTree } from "./nodes";
 
-const version = "%VERSION%";
+const version = "__VERSION__";
 
 /////////types/////////
 type Getter = () => any;
@@ -24,7 +23,7 @@ type SwitchCaseClosure = () => CaseItem;
 type ReturnStringClosure = () => string;
 type ECMA_VERSION = 3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
 interface Options {
-	ecmaVersion?: ECMA_VERSION;
+	// ecmaVersion?: ECMA_VERSION;
 	timeout?: number;
 	rootContext?: Context | null;
 	globalContextInFunction?: any;
@@ -61,118 +60,127 @@ const SuperScopeName = Symbol("SuperScopeName");
 const RootScopeName = Symbol("RootScopeName");
 const GlobalScopeName = Symbol("GlobalScopeName");
 
+
+
+
 function isFunction<T>(func: T): boolean {
 	return typeof func === "function";
 }
 
-interface GeneratorReflection {
-	getOptions(): Readonly<Options>;
-	getCurrentScope(): Scope;
-	getGlobalScope(): Scope;
-	getCurrentContext(): Context;
-	getExecStartTime(): number;
-}
+// NOTE: temp disable the internal eval and Function
 
-class InternalInterpreterReflection {
-	protected interpreter: Interpreter;
-	constructor(interpreter: Interpreter) {
-		this.interpreter = interpreter;
-	}
 
-	generator(): GeneratorReflection {
-		const interpreter = this.interpreter;
+// interface GeneratorReflection {
+// 	getOptions(): Readonly<Options>;
+// 	getCurrentScope(): Scope;
+// 	getGlobalScope(): Scope;
+// 	getCurrentContext(): Context;
+// 	getExecStartTime(): number;
+// }
 
-		function getCurrentScope(this: Interpreter) {
-			return this.getCurrentScope();
-		}
 
-		function getGlobalScope(this: Interpreter) {
-			return this.getGlobalScope();
-		}
+// class InternalInterpreterReflection {
+// 	protected interpreter: Interpreter;
+// 	constructor(interpreter: Interpreter) {
+// 		this.interpreter = interpreter;
+// 	}
 
-		function getCurrentContext(this: Interpreter) {
-			return this.getCurrentContext();
-		}
+// 	generator(): GeneratorReflection {
+// 		const interpreter = this.interpreter;
 
-		return {
-			getOptions: interpreter.getOptions.bind(interpreter),
-			getCurrentScope: getCurrentScope.bind(interpreter),
-			getGlobalScope: getGlobalScope.bind(interpreter),
-			getCurrentContext: getCurrentContext.bind(interpreter),
-			getExecStartTime: interpreter.getExecStartTime.bind(interpreter),
-		};
-	}
-}
+// 		function getCurrentScope(this: Interpreter) {
+// 			return this.getCurrentScope();
+// 		}
 
-function internalEval(
-	reflection: InternalInterpreterReflection,
-	code?: string,
-	useGlobalScope: boolean = true
-): any {
-	if (!(reflection instanceof InternalInterpreterReflection)) {
-		throw new Error("Illegal call");
-	}
+// 		function getGlobalScope(this: Interpreter) {
+// 			return this.getGlobalScope();
+// 		}
 
-	if (typeof code !== "string") return code;
-	if (!code) return void 0;
+// 		function getCurrentContext(this: Interpreter) {
+// 			return this.getCurrentContext();
+// 		}
 
-	const instance = reflection.generator();
+// 		return {
+// 			getOptions: interpreter.getOptions.bind(interpreter),
+// 			getCurrentScope: getCurrentScope.bind(interpreter),
+// 			getGlobalScope: getGlobalScope.bind(interpreter),
+// 			getCurrentContext: getCurrentContext.bind(interpreter),
+// 			getExecStartTime: interpreter.getExecStartTime.bind(interpreter),
+// 		};
+// 	}
+// }
 
-	const opts = instance.getOptions();
 
-	const options: Options = {
-		timeout: opts.timeout,
-		_initEnv: function (this: Interpreter) {
-			// set caller context
-			if (!useGlobalScope) {
-				this.setCurrentContext(instance.getCurrentContext());
-			}
-			// share timeout
-			this.execStartTime = instance.getExecStartTime();
-			this.execEndTime = this.execStartTime;
-		},
-	};
 
-	const currentScope = useGlobalScope ? instance.getGlobalScope() : instance.getCurrentScope();
-	const interpreter = new Interpreter(currentScope, options);
+// function internalEval(
+// 	reflection: InternalInterpreterReflection,
+// 	code?: string,
+// 	useGlobalScope: boolean = true
+// ): any {
+// 	if (!(reflection instanceof InternalInterpreterReflection)) {
+// 		throw new Error("Illegal call");
+// 	}
 
-	return interpreter.evaluate(code);
-}
-Object.defineProperty(internalEval, "__IS_EVAL_FUNC", {
-	value: true,
-	writable: false,
-	enumerable: false,
-	configurable: false,
-});
+// 	if (typeof code !== "string") return code;
+// 	if (!code) return void 0;
 
-function internalFunction(
-	reflection: InternalInterpreterReflection,
-	...params: string[]
-): (...args: any[]) => any {
-	if (!(reflection instanceof InternalInterpreterReflection)) {
-		throw new Error("Illegal call");
-	}
+// 	const instance = reflection.generator();
 
-	const instance = reflection.generator();
+// 	const opts = instance.getOptions();
 
-	const code = params.pop();
+// 	const options: Options = {
+// 		timeout: opts.timeout,
+// 		_initEnv: function (this: Interpreter) {
+// 			// set caller context
+// 			if (!useGlobalScope) {
+// 				this.setCurrentContext(instance.getCurrentContext());
+// 			}
+// 			// share timeout
+// 			this.execStartTime = instance.getExecStartTime();
+// 			this.execEndTime = this.execStartTime;
+// 		},
+// 	};
 
-	const interpreter = new Interpreter(instance.getGlobalScope(), instance.getOptions());
+// 	const currentScope = useGlobalScope ? instance.getGlobalScope() : instance.getCurrentScope();
+// 	const interpreter = new Interpreter(currentScope, options);
 
-	const wrapCode = `
-		    (function anonymous(${params.join(",")}){
-		        ${code}
-		    });
-		    `;
+// 	return interpreter.evaluate(code);
+// }
+// Object.defineProperty(internalEval, "__IS_EVAL_FUNC", {
+// 	value: true,
+// 	writable: false,
+// 	enumerable: false,
+// 	configurable: false,
+// });
 
-	return interpreter.evaluate(wrapCode);
-}
-Object.defineProperty(internalFunction, "__IS_FUNCTION_FUNC", {
-	value: true,
-	writable: false,
-	enumerable: false,
-	configurable: false,
-});
+// function internalFunction(
+// 	reflection: InternalInterpreterReflection,
+// 	...params: string[]
+// ): (...args: any[]) => any {
+// 	if (!(reflection instanceof InternalInterpreterReflection)) {
+// 		throw new Error("Illegal call");
+// 	}
+
+// 	const instance = reflection.generator();
+
+// 	const code = params.pop();
+
+// 	const interpreter = new Interpreter(instance.getGlobalScope(), instance.getOptions());
+
+// 	const wrapCode = `
+// 		    (function anonymous(${params.join(",")}){
+// 		        ${code}
+// 		    });
+// 		    `;
+
+// 	return interpreter.evaluate(wrapCode);
+// }
+// Object.defineProperty(internalFunction, "__IS_FUNCTION_FUNC", {
+// 	value: true,
+// 	writable: false,
+// 	enumerable: false,
+// 	configurable: false,
+// });
 
 class Return {
 	value: any;
@@ -258,8 +266,8 @@ const BuildInObjects: ScopeData = {
 	encodeURIComponent,
 	escape,
 	unescape,
-	eval: internalEval,
-	Function: internalFunction,
+	// eval: internalEval,
+	// Function: internalFunction,
 };
 // ES5 Object
 if (typeof JSON !== "undefined") {
@@ -301,8 +309,8 @@ if (typeof Reflect !== "undefined") {
 
 export class Interpreter {
 	static readonly version: string = version;
-	static readonly eval = internalEval;
-	static readonly Function = internalFunction;
+	// static readonly eval = internalEval;
+	// static readonly Function = internalFunction;
 	static ecmaVersion: ECMA_VERSION = 5;
 	// alert.call(globalContextInFunction, 1);
 	// fix: alert.call({}, 1); // Illegal invocation
@@ -336,7 +344,7 @@ export class Interpreter {
 
 	constructor(context: Context | Scope = Interpreter.global, options: Options = {}) {
 		this.options = {
-			ecmaVersion: options.ecmaVersion || Interpreter.ecmaVersion,
+			// ecmaVersion: options.ecmaVersion || Interpreter.ecmaVersion,
 			timeout: options.timeout || 0,
 			rootContext: options.rootContext,
 			globalContextInFunction:
@@ -406,9 +414,9 @@ export class Interpreter {
 		return this.options;
 	}
 
-	protected getGlobalScope() {
-		return this.globalScope;
-	}
+	// protected getGlobalScope() {
+	// 	return this.globalScope;
+	// }
 
 	protected getCurrentScope() {
 		return this.currentScope;
@@ -450,25 +458,25 @@ export class Interpreter {
 		this.currentScope = scope;
 	}
 
-	evaluate(code: string = "") {
-		let node: unknown;
+	// evaluate(code: string = "") {
+	// 	let node: unknown;
 
-		if (!code) return;
+	// 	if (!code) return;
 
-		node = parse(code, {
-			ranges: true,
-			locations: true,
-			ecmaVersion: this.options.ecmaVersion || Interpreter.ecmaVersion,
-		});
+	// 	node = parse(code, {
+	// 		ranges: true,
+	// 		locations: true,
+	// 		ecmaVersion: this.options.ecmaVersion || Interpreter.ecmaVersion,
+	// 	});
 
-		return this.evaluateNode(node as ESTree.Program, code);
-	}
+	// 	return this.evaluateNode(node as ESTree.Program, code);
+	// }
 
-	appendCode(code: string) {
-		return this.evaluate(code);
-	}
+	// appendCode(code: string) {
+	// 	return this.evaluate(code);
+	// }
 
-	protected evaluateNode(node: ESTree.Program, source: string = "") {
+	evaluateNode(node: ESTree.Program, source: string = "") {
 		this.value = undefined;
 		this.source = source;
 		this.sourceList.push(source);
@@ -1009,26 +1017,28 @@ export class Interpreter {
 
 					// obj.eval = eval
 					// obj.eval(...)
-					if (func.__IS_EVAL_FUNC) {
-						return (code?: string) => {
-							return (func as typeof internalEval)(
-								new InternalInterpreterReflection(this),
-								code,
-								true
-							);
-						};
-					}
+
+					// if (func.__IS_EVAL_FUNC) {
+					// 	return (code?: string) => {
+					// 		return (func as typeof internalEval)(
+					// 			new InternalInterpreterReflection(this),
+					// 			code,
+					// 			true
+					// 		);
+					// 	};
+					// }
 
 					// obj.func = Function
 					// obj.func(...)
-					if (func.__IS_FUNCTION_FUNC) {
-						return (...args: string[]) => {
-							return (func as typeof internalFunction)(
-								new InternalInterpreterReflection(this),
-								...args
-							);
-						};
-					}
+
+					// if (func.__IS_FUNCTION_FUNC) {
+					// 	return (...args: string[]) => {
+					// 		return (func as typeof internalFunction)(
+					// 			new InternalInterpreterReflection(this),
+					// 			...args
+					// 		);
+					// 	};
+					// }
 
 					// method call
 					// eg：obj.say(...)
@@ -1068,46 +1078,46 @@ export class Interpreter {
 					// function test(){
 					//    eval(...); //note: use local scope in eval5，but in Browser is use global scope
 					// }
-					if (node.type === "Identifier" && func.__IS_EVAL_FUNC && name === "eval") {
-						return (code?: string) => {
-							const scope = this.getScopeFromName(name, this.getCurrentScope());
-							const useGlobalScope =
-								scope.name === SuperScopeName ||
-								// !scope.parent || // super scope
-								scope.name === GlobalScopeName ||
-								// this.globalScope === scope ||
-								scope.name === RootScopeName;
-							// use local scope if calling eval in super scope
-							return (func as typeof internalEval)(
-								new InternalInterpreterReflection(this),
-								code,
-								!useGlobalScope
-							);
-						};
-					}
+					// if (node.type === "Identifier" && func.__IS_EVAL_FUNC && name === "eval") {
+					// 	return (code?: string) => {
+					// 		const scope = this.getScopeFromName(name, this.getCurrentScope());
+					// 		const useGlobalScope =
+					// 			scope.name === SuperScopeName ||
+					// 			// !scope.parent || // super scope
+					// 			scope.name === GlobalScopeName ||
+					// 			// this.globalScope === scope ||
+					// 			scope.name === RootScopeName;
+					// 		// use local scope if calling eval in super scope
+					// 		return (func as typeof internalEval)(
+					// 			new InternalInterpreterReflection(this),
+					// 			code,
+					// 			!useGlobalScope
+					// 		);
+					// 	};
+					// }
 					// use global scope
 					// var g_eval = eval;
 					// g_eval("a+1");
 					//(0,eval)(...) ...eval alias
-					if (func.__IS_EVAL_FUNC) {
-						return (code?: string) => {
-							return (func as typeof internalEval)(
-								new InternalInterpreterReflection(this),
-								code,
-								true
-							);
-						};
-					}
+					// if (func.__IS_EVAL_FUNC) {
+					// 	return (code?: string) => {
+					// 		return (func as typeof internalEval)(
+					// 			new InternalInterpreterReflection(this),
+					// 			code,
+					// 			true
+					// 		);
+					// 	};
+					// }
 
 					// Function('a', 'b', 'return a+b')
-					if (func.__IS_FUNCTION_FUNC) {
-						return (...args: string[]) => {
-							return (func as typeof internalFunction)(
-								new InternalInterpreterReflection(this),
-								...args
-							);
-						};
-					}
+					// if (func.__IS_FUNCTION_FUNC) {
+					// 	return (...args: string[]) => {
+					// 		return (func as typeof internalFunction)(
+					// 			new InternalInterpreterReflection(this),
+					// 			...args
+					// 		);
+					// 	};
+					// }
 
 					let ctx = this.options.globalContextInFunction;
 					// with(obj) {
@@ -1257,12 +1267,13 @@ export class Interpreter {
 			}
 
 			// new Function(...)
-			if (construct.__IS_FUNCTION_FUNC) {
-				return (construct as typeof internalFunction)(
-					new InternalInterpreterReflection(this),
-					...args.map(arg => arg())
-				);
-			}
+
+			// if (construct.__IS_FUNCTION_FUNC) {
+			// 	return (construct as typeof internalFunction)(
+			// 		new InternalInterpreterReflection(this),
+			// 		...args.map(arg => arg())
+			// 	);
+			// }
 
 			return new construct(...args.map(arg => arg()));
 		};
