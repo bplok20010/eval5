@@ -7,14 +7,15 @@
 	"types": "./lib/index.d.ts",
 	"scripts": {
 		"start": "tsc -w",
-		"build": "run-s clear build:* bundle:dev bundle:prod bundle:banner",
+		"build": "run-s clear build:* bundle:dev bundle:version bundle:prod bundle:banner",
 		"build:lib": "tsc",
-		"build:cjs": "babel lib --config-file=./babel.config.js  --out-dir dist/cjs",
-		"build:esm": "babel lib --config-file=./babel.config.esm.js  --out-dir dist/esm",
+		"build:cjs": "tsc --module commonjs --target ES5 --outDir dist/cjs --declaration false",
+		"build:esm": "tsc --module esnext --target ES6 --outDir dist/esm --declaration false",
 		"clear": "rimraf lib dist umd",
-		"bundle:dev": "packez bundle ./src/index.ts -d umd -c",
-		"bundle:prod": "packez bundle ./src/index.ts -d umd --state prod",
+		"bundle:dev": "rollup -c",
+		"bundle:prod": "rollup -c rollup.config.min.mjs",
 		"bundle:banner": "node scripts/banner.js",
+		"bundle:version": "node scripts/version.js",
 		"prepublishOnly": "run-s test build",
 		"test": "jest"
 	},
@@ -44,6 +45,10 @@
 	"homepage": "https://github.com/bplok20010/eval5#readme",
 	"devDependencies": {
 		"@babel/cli": "^7.8.4",
+		"@rollup/plugin-commonjs": "^26.0.1",
+		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@rollup/plugin-typescript": "^11.1.6",
+		"rollup-plugin-terser": "^7.0.2",
 		"@types/fs-extra": "^8.1.0",
 		"@types/jest": "^24.0.25",
 		"babel-plugin-search-and-replace": "^1.0.1",
@@ -51,7 +56,7 @@
 		"fs-extra": "^8.1.0",
 		"jest": "^24.9.0",
 		"npm-run-all": "^4.1.5",
-		"packez": "^3.1.0",
+		"rollup": "^4.20.0",
 		"rimraf": "^3.0.0"
 	},
 	"dependencies": {
